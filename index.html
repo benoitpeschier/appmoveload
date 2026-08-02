@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveLoad Coach — suivi des athlètes</title>
+<style>
+  :root {
+    --bg: #F5F6F7;
+    --card-bg: #FFFFFF;
+    --card-bg-hover: #FBFCFC;
+    --border: #E2E5E8;
+    --border-strong: #C7CCD1;
+    --ink: #1C232B;
+    --ink-soft: #5B6572;
+    --ink-muted: #8A93A0;
+    --accent: #2E6F72;
+    --accent-soft: #E7F0F0;
+    --warn-bg: #FCEEE9;
+    --warn-border: #E8B79A;
+    --warn-ink: #8A4A1F;
+
+    --i1: #007AFF;
+    --i2: #FF9500;
+    --i3: #FF3B30;
+    --z1: #1E8449;
+    --z2: #B8860B;
+    --z3: #AF52DE;
+
+    --a-lea: #2a78d6;
+    --a-karim: #eb6834;
+    --a-sofia: #1baf7a;
+    --a-tom: #eda100;
+    --a-nina: #e87ba4;
+    --a-hugo: #008300;
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161C;
+    --card-bg: #181D24;
+    --card-bg-hover: #1D232B;
+    --border: #2A313A;
+    --border-strong: #3A424D;
+    --ink: #ECEDEF;
+    --ink-soft: #98A1AC;
+    --ink-muted: #6E7683;
+    --accent: #5FB4B0;
+    --accent-soft: #1A2B2A;
+    --warn-bg: #2B2019;
+    --warn-border: #6B4326;
+    --warn-ink: #E8B79A;
+
+    --i2: #9B7D14;
+
+    --a-lea: #3987e5;
+    --a-karim: #d95926;
+    --a-sofia: #199e70;
+    --a-tom: #c98500;
+    --a-nina: #d55181;
+    --a-hugo: #008300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161C;
+      --card-bg: #181D24;
+      --card-bg-hover: #1D232B;
+      --border: #2A313A;
+      --border-strong: #3A424D;
+      --ink: #ECEDEF;
+      --ink-soft: #98A1AC;
+      --ink-muted: #6E7683;
+      --accent: #5FB4B0;
+      --accent-soft: #1A2B2A;
+      --warn-bg: #2B2019;
+      --warn-border: #6B4326;
+      --warn-ink: #E8B79A;
+      --i2: #9B7D14;
+      --a-lea: #3987e5;
+      --a-karim: #d95926;
+      --a-sofia: #199e70;
+      --a-tom: #c98500;
+      --a-nina: #d55181;
+      --a-hugo: #008300;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .dash {
+    font-family: -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 1.75rem 1.25rem 3rem;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  .dash * { font-variant-numeric: tabular-nums; }
+
+  .top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0; letter-spacing: -0.01em; }
+  .top-meta { font-size: 13px; color: var(--ink-soft); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 1rem;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .card:hover, .card:focus-visible { border-color: var(--border-strong); background: var(--card-bg-hover); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+  .athlete-name { font-size: 15px; font-weight: 500; margin: 0 0 2px; }
+  .athlete-meta { font-size: 12.5px; color: var(--ink-soft); }
+  .badge {
+    font-size: 10.5px; font-weight: 500; letter-spacing: 0.02em;
+    padding: 0.2rem 0.5rem; border-radius: 999px; white-space: nowrap;
+    background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-border);
+  }
+
+  .bar-row { display: flex; flex-direction: column; gap: 3px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-muted); }
+  .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border); }
+  .bar > span { height: 100%; }
+  .bar > span + span { border-left: 2px solid var(--card-bg); }
+
+  .card-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 0.2rem; }
+  .trend { display: flex; align-items: center; gap: 6px; }
+  .trend-delta { font-size: 12px; font-weight: 500; }
+  .trend-delta.up { color: var(--warn-ink); }
+  .trend-delta.down { color: var(--accent); }
+  .trend-delta.flat { color: var(--ink-muted); }
+  .spark { display: block; }
+
+  .detail {
+    display: none;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.4rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .detail.open { display: block; }
+  .detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .back-btn {
+    font: inherit; font-size: 13px; color: var(--accent); background: none; border: none;
+    cursor: pointer; padding: 0.3rem 0; display: flex; align-items: center; gap: 4px;
+  }
+  .detail-title { font-size: 17px; font-weight: 500; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+  .detail-section h3 { font-size: 12.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); margin: 0 0 0.6rem; }
+  .legend { display: flex; gap: 0.9rem; flex-wrap: wrap; margin-top: 0.5rem; font-size: 12px; color: var(--ink-soft); }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  .tooltip {
+    position: absolute; pointer-events: none; font-size: 11.5px;
+    background: var(--ink); color: var(--card-bg); padding: 4px 8px; border-radius: 6px;
+    transform: translate(-50%, -130%); white-space: nowrap; opacity: 0; transition: opacity 0.1s;
+    z-index: 5;
+  }
+  .chart-wrap { position: relative; }
+
+  .empty-note { font-size: 12.5px; color: var(--ink-muted); font-style: italic; }
+
+  .tabs { display: flex; gap: 0.35rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    font: inherit; font-size: 13.5px; font-weight: 500; color: var(--ink-soft);
+    background: none; border: none; cursor: pointer;
+    padding: 0.55rem 0.15rem; margin-right: 1.1rem; border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--accent); }
+  .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .cal-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    font: inherit; font-size: 12.5px; font-weight: 500; color: var(--ink-soft);
+    background: var(--card-bg); border: none; padding: 0.4rem 0.8rem; cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.active { background: var(--accent-soft); color: var(--accent); }
+
+  .cal-nav { display: flex; align-items: center; gap: 0.6rem; }
+  .nav-btn {
+    font: inherit; font-size: 13px; color: var(--ink-soft); background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 7px; width: 28px; height: 28px; cursor: pointer;
+  }
+  .nav-btn:hover { border-color: var(--border-strong); }
+  .cal-label { font-size: 13.5px; font-weight: 500; min-width: 130px; text-align: center; }
+
+  .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500;
+    padding: 0.3rem 0.65rem 0.3rem 0.45rem; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--card-bg); color: var(--ink-soft); cursor: pointer; user-select: none;
+  }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .chip.off { opacity: 0.4; }
+  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-dow { font-size: 11px; color: var(--ink-muted); text-align: center; padding-bottom: 4px; }
+  .cal-day {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+    min-height: 74px; padding: 5px 6px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .cal-day.out { background: transparent; border-color: transparent; }
+  .cal-day.today { border-color: var(--accent); }
+  .day-num { font-size: 11px; color: var(--ink-muted); }
+  .day-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+  .a-chip {
+    width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 600; color: #fff; cursor: default; position: relative;
+  }
+  .cal-grid.week .cal-day { min-height: 150px; }
+  .cal-grid.week .day-chips { flex-direction: column; gap: 5px; }
+  .week-chip { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink); }
+  .week-chip .mini-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; display: flex; background: var(--border); }
+  .week-chip .mini-bar > span { height: 100%; }
+</style>
+</head>
+<body>
+
+<div class="dash">
+  <div class="top">
+    <h1>Suivi des athlètes</h1>
+    <div class="top-meta" id="lastSync">Dernière synchro : —</div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" id="tabOverviewBtn" role="tab" aria-selected="true">Vue d'ensemble</button>
+    <button class="tab-btn" id="tabCalendarBtn" role="tab" aria-selected="false">Calendrier</button>
+  </div>
+
+  <div class="view active" id="viewOverview">
+    <div class="detail" id="detail"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="view" id="viewCalendar">
+    <div class="filters" id="calFilters"></div>
+    <div class="cal-controls">
+      <div class="seg" id="calModeSeg">
+        <button class="active" data-mode="month">Mois</button>
+        <button data-mode="week">Semaine</button>
+      </div>
+      <div class="cal-nav">
+        <button class="nav-btn" id="calPrev" aria-label="Précédent">‹</button>
+        <span class="cal-label" id="calLabel"></span>
+        <button class="nav-btn" id="calNext" aria-label="Suivant">›</button>
+      </div>
+    </div>
+    <div class="chart-wrap" id="calGridWrap">
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+  import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+  // These aren't secret — Firebase's own security model puts real protection
+  // in Firestore rules, not in hiding the project id/API key. The actual
+  // shared secret is the team code below (read from ?team=, never hardcoded).
+  const firebaseConfig = { apiKey: "AIzaSyDnSvSGlXZLKqRCgoiFqlkEFSpkPZ72YTU", projectId: "appmoveload" };
+  const PALETTE = ["var(--a-lea)","var(--a-karim)","var(--a-sofia)","var(--a-tom)","var(--a-nina)","var(--a-hugo)"];
+  const RADAR_WINDOWS = [5, 10, 30, 45, 90, 180];
+
+  const lastSyncEl = document.getElementById("lastSync");
+
+  function resolveTeamCode() {
+    const params = new URLSearchParams(location.search);
+    let code = params.get("team") || localStorage.getItem("moveload_team_code");
+    if (!code) code = prompt("Code d'équipe MoveLoad :");
+    if (code) {
+      localStorage.setItem("moveload_team_code", code);
+      const url = new URL(location.href);
+      url.searchParams.set("team", code);
+      history.replaceState(null, "", url);
+    }
+    return code;
+  }
+
+  const teamCode = resolveTeamCode();
+  let athletes = [];
+  const activeAthletes = new Set();
+  const knownAthleteIds = new Set();
+  const sessionUnsubByAthlete = new Map();
+
+  function ensureAthlete(id) {
+    let a = athletes.find(x => x.id === id);
+    if (!a) {
+      a = { id, name: id, gender: "H", boatType: null, sessions: [], color: PALETTE[athletes.length % PALETTE.length] };
+      athletes.push(a);
+    }
+    return a;
+  }
+
+  function deriveAthlete(a) {
+    const sorted = [...a.sessions].sort((x, y) => x.date.localeCompare(y.date));
+    const last = sorted[sorted.length - 1];
+    a.initial = (a.name || "?").charAt(0).toUpperCase();
+    a.lastSession = last ? last.date : null;
+    a.duration = last ? last.duration : 0;
+    a.boatType = last ? last.boatType : null;
+    a.hr = last ? last.hr : [0, 0, 0];
+    a.mech = last ? last.mech : [0, 0, 0];
+    a.rpe = last ? last.rpe : null;
+
+    const daysSince = last ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
+    if (daysSince !== null && daysSince > 10) {
+      a.status = "watch";
+      a.note = "Aucune séance depuis " + daysSince + " jours";
+    } else {
+      a.status = "ok";
+      a.note = undefined;
+    }
+
+    a.history = sorted
+      .filter(s => s.mechanicalPeaks && s.mechanicalPeaks["45"] != null)
+      .slice(-8)
+      .map(s => ({ d: shortDate(s.date), v: s.mechanicalPeaks["45"] }));
+
+    const sameBoat = sorted.filter(s => s.boatType === a.boatType);
+    const records = {};
+    RADAR_WINDOWS.forEach(w => {
+      const vals = sameBoat.map(s => s.mechanicalPeaks && s.mechanicalPeaks[String(w)]).filter(v => v != null);
+      records[w] = vals.length ? Math.max(...vals) : 0;
+    });
+    a.records = records;
+  }
+
+  function onDataChanged() {
+    render();
+    renderCalFilters();
+    if (viewCalendar.classList.contains("active")) renderCalendar();
+  }
+
+  function startListening(db) {
+    const athletesCol = collection(db, "teams", teamCode, "athletes");
+    onSnapshot(athletesCol, snapshot => {
+      snapshot.docChanges().forEach(change => {
+        const id = change.doc.id;
+        if (change.type === "removed") {
+          const idx = athletes.findIndex(x => x.id === id);
+          if (idx !== -1) athletes.splice(idx, 1);
+          const unsub = sessionUnsubByAthlete.get(id);
+          if (unsub) { unsub(); sessionUnsubByAthlete.delete(id); }
+          return;
+        }
+        const a = ensureAthlete(id);
+        const data = change.doc.data();
+        a.name = data.name || a.name;
+        a.gender = data.gender || a.gender;
+
+        if (!sessionUnsubByAthlete.has(id)) {
+          const sessionsCol = collection(db, "teams", teamCode, "athletes", id, "sessions");
+          const unsub = onSnapshot(sessionsCol, sessSnap => {
+            a.sessions = sessSnap.docs.map(d => {
+              const s = d.data();
+              const dateObj = s.date && s.date.toDate ? s.date.toDate() : new Date(s.date);
+              return {
+                date: isoDate(dateObj),
+                duration: Math.round((s.durationSeconds || 0) / 60),
+                hr: [s.hrZone1Seconds || 0, s.hrZone2Seconds || 0, s.hrZone3Seconds || 0],
+                mech: [s.mechZone1Seconds || 0, s.mechZone2Seconds || 0, s.mechZone3Seconds || 0],
+                rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
+                boatType: s.boatType || null,
+                mechanicalPeaks: s.mechanicalPeaks || {}
+              };
+            });
+            deriveAthlete(a);
+            onDataChanged();
+          });
+          sessionUnsubByAthlete.set(id, unsub);
+        } else {
+          deriveAthlete(a);
+        }
+      });
+      onDataChanged();
+      lastSyncEl.textContent = "Connecté en direct";
+    }, err => {
+      lastSyncEl.textContent = "Erreur de synchro : " + err.message;
+    });
+  }
+
+  if (!teamCode) {
+    lastSyncEl.textContent = "Aucun code d'équipe fourni — ajoute ?team=... à l'URL.";
+  } else {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    lastSyncEl.textContent = "Connexion…";
+    signInAnonymously(auth)
+      .then(() => startListening(db))
+      .catch(err => { lastSyncEl.textContent = "Erreur de connexion : " + err.message; });
+  }
+
+  function fmtMinSec(sec) {
+    const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+    return m + ":" + String(s).padStart(2, "0");
+  }
+  function relDate(iso) {
+    const d = new Date(iso + "T12:00:00");
+    const days = Math.round((new Date() - d) / 86400000);
+    if (days <= 0) return "aujourd'hui";
+    if (days === 1) return "hier";
+    return "il y a " + days + " j";
+  }
+  function shortDate(iso) {
+    const d = new Date(iso + "T12:00:00");
+    return d.getDate() + " " + MONTH_NAMES[d.getMonth()].slice(0, 3);
+  }
+  function rpeLabel(rpe) {
+    return rpe == null ? "—" : rpe + "/10";
+  }
+  function stackBar(values, colors) {
+    const total = values.reduce((a,b) => a+b, 0) || 1;
+    return values.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${colors[i]}"></span>`).join("");
+  }
+  function sparkline(history, w, h) {
+    const vals = history.map(p => p.v);
+    const denom = vals.length > 1 ? vals.length - 1 : 1;
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const span = (max - min) || 1;
+    const pts = vals.map((v,i) => {
+      const x = (i/denom) * (w-8) + 4;
+      const y = h - 4 - ((v-min)/span) * (h-8);
+      return [x,y];
+    });
+    const path = pts.map((p,i) => (i===0?"M":"L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const last = pts[pts.length-1];
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Tendance récente">
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="var(--accent)"/>
+    </svg>`;
+  }
+  function trendDelta(history) {
+    const first = history[0].v, last = history[history.length-1].v;
+    const pct = first ? ((last-first)/first*100) : 0;
+    const dir = pct > 8 ? "up" : pct < -8 ? "down" : "flat";
+    const arrow = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
+    return { dir, label: `${arrow} ${Math.abs(pct).toFixed(0)}%` };
+  }
+
+  function cardHTML(a) {
+    const trend = trendDelta(a.history);
+    const badge = a.status === "watch" ? `<span class="badge">À surveiller</span>` : "";
+    return `
+      <article class="card" tabindex="0" data-id="${a.id}" role="button" aria-label="Voir le détail de ${a.name}">
+        <div class="card-head">
+          <div>
+            <p class="athlete-name">${a.name}</p>
+            <p class="athlete-meta">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}</p>
+          </div>
+          ${badge}
+        </div>
+        <div class="bar-row">
+          <div class="bar-label"><span>Charge cardio</span><span>${fmtMinSec(a.hr[2])} en I3</span></div>
+          <div class="bar">${stackBar(a.hr, ["var(--i1)","var(--i2)","var(--i3)"])}</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label"><span>Charge mécanique</span><span>${fmtMinSec(a.mech[2])} en zone 3</span></div>
+          <div class="bar">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
+        </div>
+        <div class="card-foot">
+          <div class="trend">
+            ${sparkline(a.history, 64, 24)}
+            <span class="trend-delta ${trend.dir}">${trend.label}</span>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  const RADAR_LABELS = {5:"5 s", 10:"10 s", 30:"30 s", 45:"45 s", 90:"90 s", 180:"3 min"};
+  const GENDER_LABEL = {H:"Homme", F:"Femme"};
+
+  function peerGroup(a) {
+    return athletes.filter(x => x.sessions.length > 0 && x.gender === a.gender && x.boatType === a.boatType);
+  }
+
+  const RADAR_SCALE_MIN = 50; // zoomed-in scale: center = 50%, edge = 100%, so small gaps read clearly
+
+  function radarSVG(a) {
+    const peers = peerGroup(a);
+    const n = RADAR_WINDOWS.length;
+    const cx = 130, cy = 116, R = 84;
+    const angleFor = i => (Math.PI * 2 * i / n) - Math.PI / 2;
+    const radiusFor = pct => R * Math.max(0, Math.min(1, (pct - RADAR_SCALE_MIN) / (100 - RADAR_SCALE_MIN)));
+    const pts = RADAR_WINDOWS.map((wnd, i) => {
+      const best = Math.max(0, ...peers.map(p => p.records[wnd]));
+      const pct = best > 0 ? Math.min(100, Math.round((a.records[wnd] / best) * 100)) : 0;
+      return { wnd, pct, value: a.records[wnd], best, angle: angleFor(i) };
+    });
+
+    const ringPath = frac => RADAR_WINDOWS.map((_, i) => {
+      const ang = angleFor(i);
+      const x = cx + Math.cos(ang) * R * frac, y = cy + Math.sin(ang) * R * frac;
+      return (i === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1);
+    }).join(" ") + " Z";
+    const rings = [0.25, 0.5, 0.75, 1].map(f => `<path d="${ringPath(f)}" fill="none" stroke="var(--border)" stroke-width="1"/>`).join("");
+    const spokes = RADAR_WINDOWS.map((_, i) => {
+      const ang = angleFor(i);
+      const x = cx + Math.cos(ang) * R, y = cy + Math.sin(ang) * R;
+      return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
+    }).join("");
+    const scaleTicks = [50, 75, 100].map(v => {
+      const y = cy - R * (v - RADAR_SCALE_MIN) / (100 - RADAR_SCALE_MIN);
+      return `<text x="${(cx - 6).toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-muted)">${v}%</text>`;
+    }).join("");
+
+    const dataPath = pts.map((p, i) => {
+      const r = radiusFor(p.pct);
+      const x = cx + Math.cos(p.angle) * r, y = cy + Math.sin(p.angle) * r;
+      return (i === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1);
+    }).join(" ") + " Z";
+    const visibleDots = pts.map(p => {
+      const r = radiusFor(p.pct);
+      const x = cx + Math.cos(p.angle) * r, y = cy + Math.sin(p.angle) * r;
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8" fill="var(--accent)"/>`;
+    }).join("");
+    const dots = pts.map(p => {
+      const r = radiusFor(p.pct);
+      const x = cx + Math.cos(p.angle) * r, y = cy + Math.sin(p.angle) * r;
+      const label = `${RADAR_LABELS[p.wnd]} — ${p.pct}%`;
+      const value = `${p.value.toFixed(2)} m/s² (meilleur ${p.best.toFixed(2)})`;
+      return `<circle class="hoverpt" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9" fill="transparent" data-label="${label}" data-value="${value}"/>`;
+    }).join("");
+    const labels = RADAR_WINDOWS.map((wnd, i) => {
+      const ang = angleFor(i);
+      const x = cx + Math.cos(ang) * (R + 18), y = cy + Math.sin(ang) * (R + 18);
+      return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="10.5" fill="var(--ink-muted)">${RADAR_LABELS[wnd]}</text>`;
+    }).join("");
+
+    const svg = `<svg width="100%" viewBox="0 0 260 232" role="img" aria-label="Comparaison en pourcentage du meilleur de la catégorie, échelle 50 à 100%">
+      ${rings}${spokes}
+      <path d="${dataPath}" fill="var(--accent)" fill-opacity="0.22" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+      ${visibleDots}${scaleTicks}${labels}${dots}
+    </svg>`;
+    return { svg, peerCount: peers.length };
+  }
+
+  function detailHTML(a) {
+    const trend = trendDelta(a.history);
+    const w = 560, h = 160, padL = 30, padB = 24, padT = 12;
+    const vals = a.history.length ? a.history.map(p => p.v) : [0];
+    const denom = vals.length > 1 ? vals.length - 1 : 1;
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const span = (max - min) || 1;
+    const plotW = w - padL - 12, plotH = h - padT - padB;
+    const pts = vals.map((v,i) => {
+      const x = padL + (i/denom) * plotW;
+      const y = padT + plotH - ((v-min)/span) * plotH;
+      return [x,y];
+    });
+    const path = pts.map((p,i) => (i===0?"M":"L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const dots = a.history.length
+      ? pts.map((p,i) => `<circle class="hoverpt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="9" fill="transparent" data-label="${a.history[i].d}" data-value="${a.history[i].v.toFixed(2)} m/s²"/>`).join("")
+      : "";
+    const visibleDots = pts.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.8" fill="var(--accent)"/>`).join("");
+    const xLabels = a.history.map((p,i) => `<text class="ts" x="${pts[i][0].toFixed(1)}" y="${h-6}" text-anchor="middle" fill="var(--ink-muted)" font-size="10">${p.d}</text>`).join("");
+    const gridLine = `<line x1="${padL}" y1="${padT+plotH}" x2="${w-8}" y2="${padT+plotH}" stroke="var(--border)" stroke-width="1"/>`;
+
+    const radar = radarSVG(a);
+    const categoryLabel = `${GENDER_LABEL[a.gender]} · ${a.boatType}`;
+    const radarNote = radar.peerCount <= 1
+      ? `<p class="empty-note" style="margin-top:0.6rem">Seul(e) athlète ${categoryLabel} — pas de comparaison possible.</p>`
+      : `<p class="athlete-meta" style="margin-top:0.6rem">${categoryLabel} · ${radar.peerCount} athlètes</p>`;
+
+    return `
+      <div class="detail-head">
+        <button class="back-btn" id="backBtn">‹ Retour à la vue d'ensemble</button>
+      </div>
+      <p class="detail-title">${a.name}</p>
+      <p class="athlete-meta" style="margin-bottom:1.1rem">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)} ${a.note ? "— " + a.note : ""}</p>
+      <div class="detail-grid">
+        <div class="detail-section">
+          <h3>Répartition — dernière séance</h3>
+          <div class="bar-row" style="margin-bottom:10px">
+            <div class="bar-label"><span>Cardio</span></div>
+            <div class="bar" style="height:12px">${stackBar(a.hr, ["var(--i1)","var(--i2)","var(--i3)"])}</div>
+            <div class="legend">
+              <span class="legend-item"><span class="legend-dot" style="background:var(--i1)"></span>I1 ${fmtMinSec(a.hr[0])}</span>
+              <span class="legend-item"><span class="legend-dot" style="background:var(--i2)"></span>I2 ${fmtMinSec(a.hr[1])}</span>
+              <span class="legend-item"><span class="legend-dot" style="background:var(--i3)"></span>I3 ${fmtMinSec(a.hr[2])}</span>
+            </div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label"><span>Mécanique</span></div>
+            <div class="bar" style="height:12px">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
+            <div class="legend">
+              <span class="legend-item"><span class="legend-dot" style="background:var(--z1)"></span>Zone 1 ${fmtMinSec(a.mech[0])}</span>
+              <span class="legend-item"><span class="legend-dot" style="background:var(--z2)"></span>Zone 2 ${fmtMinSec(a.mech[1])}</span>
+              <span class="legend-item"><span class="legend-dot" style="background:var(--z3)"></span>Zone 3 ${fmtMinSec(a.mech[2])}</span>
+            </div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h3>Tendance — pic d'accélération 45 s <span class="trend-delta ${trend.dir}">${trend.label}</span></h3>
+          <div class="chart-wrap">
+            <svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="Évolution du pic d'accélération 45 secondes">
+              ${gridLine}
+              <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              ${visibleDots}
+              ${xLabels}
+              ${dots}
+            </svg>
+            <div class="tooltip"></div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h3>Records par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)</h3>
+          <div class="chart-wrap">
+            ${radar.svg}
+            <div class="tooltip"></div>
+          </div>
+          ${radarNote}
+        </div>
+      </div>`;
+  }
+
+  const grid = document.getElementById("grid");
+  const detail = document.getElementById("detail");
+
+  function renderableAthletes() {
+    return athletes.filter(a => a.sessions.length > 0);
+  }
+
+  function render() {
+    const renderable = renderableAthletes();
+    grid.innerHTML = renderable.length
+      ? renderable.map(cardHTML).join("")
+      : `<p class="empty-note">En attente de la première séance synchronisée…</p>`;
+    grid.querySelectorAll(".card").forEach(card => {
+      const open = () => showDetail(card.dataset.id);
+      card.addEventListener("click", open);
+      card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+    });
+  }
+
+  function showDetail(id) {
+    const a = athletes.find(x => x.id === id);
+    detail.innerHTML = detailHTML(a);
+    detail.classList.add("open");
+    document.getElementById("backBtn").addEventListener("click", () => {
+      detail.classList.remove("open");
+      detail.innerHTML = "";
+    });
+    detail.querySelectorAll(".hoverpt").forEach(pt => {
+      const wrapEl = pt.closest(".chart-wrap");
+      const tip = wrapEl.querySelector(".tooltip");
+      pt.addEventListener("mouseenter", () => {
+        const wrap = wrapEl.getBoundingClientRect();
+        const ptRect = pt.getBoundingClientRect();
+        tip.textContent = pt.dataset.label + " · " + pt.dataset.value;
+        tip.style.left = (ptRect.left + ptRect.width / 2 - wrap.left) + "px";
+        tip.style.top = (ptRect.top + ptRect.height / 2 - wrap.top) + "px";
+        tip.style.opacity = "1";
+      });
+      pt.addEventListener("mouseleave", () => { tip.style.opacity = "0"; });
+    });
+    detail.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  render();
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  const tabOverviewBtn = document.getElementById("tabOverviewBtn");
+  const tabCalendarBtn = document.getElementById("tabCalendarBtn");
+  const viewOverview = document.getElementById("viewOverview");
+  const viewCalendar = document.getElementById("viewCalendar");
+
+  function activateTab(name) {
+    const isOverview = name === "overview";
+    tabOverviewBtn.classList.toggle("active", isOverview);
+    tabOverviewBtn.setAttribute("aria-selected", String(isOverview));
+    tabCalendarBtn.classList.toggle("active", !isOverview);
+    tabCalendarBtn.setAttribute("aria-selected", String(!isOverview));
+    viewOverview.classList.toggle("active", isOverview);
+    viewCalendar.classList.toggle("active", !isOverview);
+    if (!isOverview) renderCalendar();
+  }
+  tabOverviewBtn.addEventListener("click", () => activateTab("overview"));
+  tabCalendarBtn.addEventListener("click", () => activateTab("calendar"));
+
+  // ── Calendar state ────────────────────────────────────────────────────
+  let calMode = "month";
+  let calCursor = new Date();
+
+  const calFilters = document.getElementById("calFilters");
+
+  function renderCalFilters() {
+    const renderable = renderableAthletes();
+    renderable.forEach(a => {
+      if (!knownAthleteIds.has(a.id)) {
+        knownAthleteIds.add(a.id);
+        activeAthletes.add(a.id); // new athletes default to visible, matching the original behavior
+      }
+    });
+    calFilters.innerHTML = renderable.map(a => `
+      <span class="chip ${activeAthletes.has(a.id) ? "" : "off"}" data-id="${a.id}" tabindex="0" role="button" aria-pressed="${activeAthletes.has(a.id)}">
+        <span class="dot" style="background:${a.color}"></span>${a.name.split(" ")[0]}
+      </span>`).join("");
+    calFilters.querySelectorAll(".chip").forEach(chip => {
+      const toggle = () => {
+        const id = chip.dataset.id;
+        if (activeAthletes.has(id)) { activeAthletes.delete(id); chip.classList.add("off"); chip.setAttribute("aria-pressed","false"); }
+        else { activeAthletes.add(id); chip.classList.remove("off"); chip.setAttribute("aria-pressed","true"); }
+        renderCalendar();
+      };
+      chip.addEventListener("click", toggle);
+      chip.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+    });
+  }
+
+  document.getElementById("calModeSeg").querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("calModeSeg").querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      calMode = btn.dataset.mode;
+      renderCalendar();
+    });
+  });
+  document.getElementById("calPrev").addEventListener("click", () => { shiftCursor(-1); renderCalendar(); });
+  document.getElementById("calNext").addEventListener("click", () => { shiftCursor(1); renderCalendar(); });
+
+  function shiftCursor(dir) {
+    if (calMode === "month") calCursor.setMonth(calCursor.getMonth() + dir);
+    else calCursor.setDate(calCursor.getDate() + dir * 7);
+    calCursor = new Date(calCursor);
+  }
+
+  const DOW = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+  const MONTH_NAMES = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+  function isoDate(d) {
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function sessionsOn(iso) {
+    return athletes
+      .filter(a => activeAthletes.has(a.id))
+      .map(a => ({ a, s: a.sessions.find(s => s.date === iso) }))
+      .filter(x => x.s);
+  }
+  function mechPctLabel(mech) {
+    const total = mech.reduce((x,y) => x+y, 0) || 1;
+    const pcts = mech.map(v => Math.round(v/total*100));
+    return `Z1 ${pcts[0]}% · Z2 ${pcts[1]}% · Z3 ${pcts[2]}%`;
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById("calGrid");
+    const label = document.getElementById("calLabel");
+    grid.className = "cal-grid" + (calMode === "week" ? " week" : "");
+
+    let days = [];
+    if (calMode === "month") {
+      const year = calCursor.getFullYear(), month = calCursor.getMonth();
+      label.textContent = MONTH_NAMES[month] + " " + year;
+      const first = new Date(year, month, 1);
+      const startOffset = (first.getDay() + 6) % 7; // Monday-first
+      const gridStart = new Date(year, month, 1 - startOffset);
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(gridStart);
+        d.setDate(gridStart.getDate() + i);
+        days.push({ date: d, out: d.getMonth() !== month });
+      }
+    } else {
+      const startOffset = (calCursor.getDay() + 6) % 7;
+      const weekStart = new Date(calCursor);
+      weekStart.setDate(calCursor.getDate() - startOffset);
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+      const fmt = d => d.getDate() + " " + MONTH_NAMES[d.getMonth()].slice(0,3);
+      label.textContent = fmt(weekStart) + " – " + fmt(weekEnd);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        days.push({ date: d, out: false });
+      }
+    }
+
+    const dow = DOW.map(d => `<div class="cal-dow">${d}</div>`).join("");
+    const cells = days.map(({date, out}) => {
+      const iso = isoDate(date);
+      const hits = sessionsOn(iso);
+      const isToday = iso === isoDate(new Date());
+      let inner;
+      if (calMode === "month") {
+        const chips = hits.map(({a,s}) => {
+          const tipLabel = a.name + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech);
+          return `<span class="a-chip" style="background:${a.color}" data-tip="${tipLabel}">${a.initial}</span>`;
+        }).join("");
+        inner = `<div class="day-num">${date.getDate()}</div><div class="day-chips">${chips}</div>`;
+      } else {
+        const rows = hits.map(({a,s}) => {
+          const total = s.mech.reduce((x,y)=>x+y,0) || 1;
+          const bar = s.mech.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${["var(--z1)","var(--z2)","var(--z3)"][i]}"></span>`).join("");
+          const tipLabel = a.name + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech);
+          return `<div class="week-chip" data-tip="${tipLabel}">
+            <span class="a-chip" style="background:${a.color}">${a.initial}</span>
+            <span class="mini-bar">${bar}</span>
+          </div>`;
+        }).join("");
+        inner = `<div class="day-num">${date.getDate()}</div><div class="day-chips">${rows || '<span class="empty-note">—</span>'}</div>`;
+      }
+      return `<div class="cal-day ${out?"out":""} ${isToday?"today":""}">${inner}</div>`;
+    }).join("");
+
+    grid.innerHTML = dow + cells;
+
+    const calWrap = document.getElementById("calGridWrap");
+    let tip = document.getElementById("calTip");
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "tooltip";
+      tip.id = "calTip";
+      calWrap.appendChild(tip);
+    }
+    grid.querySelectorAll("[data-tip]").forEach(el => {
+      el.addEventListener("mouseenter", () => {
+        const wrap = calWrap.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        tip.textContent = el.dataset.tip;
+        tip.style.left = (r.left + r.width/2 - wrap.left) + "px";
+        tip.style.top = (r.top - wrap.top) + "px";
+        tip.style.opacity = "1";
+      });
+      el.addEventListener("mouseleave", () => { tip.style.opacity = "0"; });
+    });
+  }
+</script>
+</body>
+</html>
