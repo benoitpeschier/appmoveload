@@ -320,6 +320,7 @@
     a.hr = last ? last.hr : [0, 0, 0];
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
+    a.lastSessionPeaks = last ? (last.mechanicalPeaks || {}) : {};
 
     const daysSince = last ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
     if (daysSince !== null && daysSince > 10) {
@@ -554,6 +555,63 @@
     return { svg, peerCount: peers.length };
   }
 
+  /// Session vs. own-record curve — same 6 windows as the radar, evenly spaced
+  /// by index (not by actual seconds) so a short 5s-45s gap doesn't visually
+  /// dwarf the 45s-3min gap, matching the app's own categorical-axis chart.
+  function mechCurveSVG(a) {
+    const w = 280, h = 200, padL = 34, padR = 14, padT = 14, padB = 26;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const n = RADAR_WINDOWS.length;
+    const xFor = i => padL + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
+
+    const sessionVals = RADAR_WINDOWS.map(wnd => a.lastSessionPeaks ? a.lastSessionPeaks[String(wnd)] : null);
+    const recordVals = RADAR_WINDOWS.map(wnd => a.records ? a.records[wnd] : null);
+    const allVals = [...sessionVals, ...recordVals].filter(v => v != null);
+    const maxV = allVals.length ? Math.max(...allVals) : 1;
+    const yFor = v => padT + plotH - (v / (maxV || 1)) * plotH;
+
+    const lineFor = (vals, dashed) => {
+      const pts = vals.map((v, i) => v == null ? null : [xFor(i), yFor(v)]);
+      let path = "";
+      pts.forEach((p, i) => {
+        if (!p) return;
+        path += (path === "" ? "M" : "L") + p[0].toFixed(1) + " " + p[1].toFixed(1) + " ";
+      });
+      const dash = dashed ? ' stroke-dasharray="5 4"' : "";
+      return { path: path.trim(), pts };
+    };
+
+    const sessionLine = lineFor(sessionVals, false);
+    const recordLine = lineFor(recordVals, true);
+
+    const dotsFor = (line, label) => line.pts.map((p, i) => {
+      if (!p) return "";
+      const val = (label === "Séance" ? sessionVals : recordVals)[i];
+      return `<circle class="hoverpt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="8" fill="transparent" data-label="${RADAR_LABELS[RADAR_WINDOWS[i]]} — ${label}" data-value="${val.toFixed(2)} m/s²"/>`;
+    }).join("");
+    const visibleDotsFor = (line, color) => line.pts.map(p => p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="${color}"/>` : "").join("");
+
+    const xLabels = RADAR_WINDOWS.map((wnd, i) => `<text x="${xFor(i).toFixed(1)}" y="${h - 8}" text-anchor="middle" font-size="10" fill="var(--ink-muted)">${RADAR_LABELS[wnd]}</text>`).join("");
+    const yTicks = [0, 0.5, 1].map(f => {
+      const val = maxV * f;
+      const y = yFor(val);
+      return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>
+        <text x="${(padL - 6).toFixed(1)}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--ink-muted)">${val.toFixed(1)}</text>`;
+    }).join("");
+
+    const svg = `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="Courbe d'accélération de la dernière séance comparée au record personnel, sur les six fenêtres de temps">
+      ${yTicks}
+      <path d="${recordLine.path}" fill="none" stroke="var(--ink-muted)" stroke-width="1.5" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${sessionLine.path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${visibleDotsFor(recordLine, "var(--ink-muted)")}
+      ${visibleDotsFor(sessionLine, "var(--accent)")}
+      ${xLabels}
+      ${dotsFor(recordLine, "Record")}
+      ${dotsFor(sessionLine, "Séance")}
+    </svg>`;
+    return svg;
+  }
+
   function detailHTML(a) {
     const trend = trendDelta(a.history);
     const w = 560, h = 160, padL = 30, padB = 24, padT = 12;
@@ -620,6 +678,17 @@
               ${dots}
             </svg>
             <div class="tooltip"></div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h3>Courbe — dernière séance vs record</h3>
+          <div class="chart-wrap">
+            ${mechCurveSVG(a)}
+            <div class="tooltip"></div>
+          </div>
+          <div class="legend" style="margin-top:0.5rem">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Séance</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--ink-muted)"></span>Record</span>
           </div>
         </div>
         <div class="detail-section">
