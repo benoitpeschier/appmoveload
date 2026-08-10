@@ -236,7 +236,14 @@
 <div class="dash">
   <div class="top">
     <h1>Suivi des athlètes</h1>
-    <div class="top-meta" id="lastSync">Dernière synchro : —</div>
+    <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+      <div class="seg" id="sessionModeSeg">
+        <button class="active" data-mode="all">Toutes</button>
+        <button data-mode="training">Entraînement</button>
+        <button data-mode="test">Tests</button>
+      </div>
+      <div class="top-meta" id="lastSync">Dernière synchro : —</div>
+    </div>
   </div>
 
   <div class="tabs" role="tablist">
@@ -300,6 +307,11 @@
   const activeAthletes = new Set();
   const knownAthleteIds = new Set();
   const sessionUnsubByAthlete = new Map();
+  let sessionFilterMode = "all"; // "all" | "training" | "test"
+
+  function matchesFilterMode(s) {
+    return sessionFilterMode === "all" || (sessionFilterMode === "test" ? s.isTest : !s.isTest);
+  }
 
   function ensureAthlete(id) {
     let a = athletes.find(x => x.id === id);
@@ -311,7 +323,7 @@
   }
 
   function deriveAthlete(a) {
-    const sorted = [...a.sessions].sort((x, y) => x.date.localeCompare(y.date));
+    const sorted = [...a.sessions].filter(matchesFilterMode).sort((x, y) => x.date.localeCompare(y.date));
     const last = sorted[sorted.length - 1];
     a.initial = (a.name || "?").charAt(0).toUpperCase();
     a.lastSession = last ? last.date : null;
@@ -320,6 +332,7 @@
     a.hr = last ? last.hr : [0, 0, 0];
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
+    a.lastSessionIsTest = last ? !!last.isTest : false;
     a.lastSessionPeaks = last ? (last.mechanicalPeaks || {}) : {};
 
     const daysSince = last ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
@@ -381,6 +394,7 @@
                 mech: [s.mechZone1Seconds || 0, s.mechZone2Seconds || 0, s.mechZone3Seconds || 0],
                 rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
                 boatType: s.boatType || null,
+                isTest: !!s.isTest,
                 mechanicalPeaks: s.mechanicalPeaks || {}
               };
             });
@@ -466,7 +480,7 @@
         <div class="card-head">
           <div>
             <p class="athlete-name">${a.name}</p>
-            <p class="athlete-meta">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}</p>
+            <p class="athlete-meta">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}</p>
           </div>
           ${badge}
         </div>
@@ -644,7 +658,7 @@
         <button class="back-btn" id="backBtn">‹ Retour à la vue d'ensemble</button>
       </div>
       <p class="detail-title">${a.name}</p>
-      <p class="athlete-meta" style="margin-bottom:1.1rem">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)} ${a.note ? "— " + a.note : ""}</p>
+      <p class="athlete-meta" style="margin-bottom:1.1rem">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""} ${a.note ? "— " + a.note : ""}</p>
       <div class="detail-grid">
         <div class="detail-section">
           <h3>Répartition — dernière séance</h3>
@@ -706,7 +720,7 @@
   const detail = document.getElementById("detail");
 
   function renderableAthletes() {
-    return athletes.filter(a => a.sessions.length > 0);
+    return athletes.filter(a => a.sessions.some(matchesFilterMode));
   }
 
   function render() {
@@ -721,11 +735,15 @@
     });
   }
 
-  function showDetail(id) {
+  let openDetailId = null;
+
+  function renderDetail(id) {
     const a = athletes.find(x => x.id === id);
+    openDetailId = id;
     detail.innerHTML = detailHTML(a);
     detail.classList.add("open");
     document.getElementById("backBtn").addEventListener("click", () => {
+      openDetailId = null;
       detail.classList.remove("open");
       detail.innerHTML = "";
     });
@@ -742,6 +760,10 @@
       });
       pt.addEventListener("mouseleave", () => { tip.style.opacity = "0"; });
     });
+  }
+
+  function showDetail(id) {
+    renderDetail(id);
     detail.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -765,6 +787,18 @@
   }
   tabOverviewBtn.addEventListener("click", () => activateTab("overview"));
   tabCalendarBtn.addEventListener("click", () => activateTab("calendar"));
+
+  // ── Session filter (toutes / entraînement / tests) ──────────────────────
+  document.getElementById("sessionModeSeg").querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("sessionModeSeg").querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      sessionFilterMode = btn.dataset.mode;
+      athletes.forEach(deriveAthlete);
+      onDataChanged();
+      if (openDetailId) renderDetail(openDetailId);
+    });
+  });
 
   // ── Calendar state ────────────────────────────────────────────────────
   let calMode = "month";
@@ -822,7 +856,7 @@
   function sessionsOn(iso) {
     return athletes
       .filter(a => activeAthletes.has(a.id))
-      .map(a => ({ a, s: a.sessions.find(s => s.date === iso) }))
+      .map(a => ({ a, s: a.sessions.find(s => s.date === iso && matchesFilterMode(s)) }))
       .filter(x => x.s);
   }
   function mechPctLabel(mech) {
