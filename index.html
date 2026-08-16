@@ -334,6 +334,7 @@
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
     a.lastSessionIsTest = last ? !!last.isTest : false;
+    a.lastSessionName = last ? (last.name || "") : "";
     a.lastSessionPeaks = last ? (last.mechanicalPeaks || {}) : {};
 
     const daysSince = last ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
@@ -396,6 +397,7 @@
                 rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
                 boatType: s.boatType || null,
                 isTest: !!s.isTest,
+                name: (s.name || "").trim(),
                 mechanicalPeaks: s.mechanicalPeaks || {}
               };
             });
@@ -473,15 +475,25 @@
     return { dir, label: `${arrow} ${Math.abs(pct).toFixed(0)}%` };
   }
 
+  /// Athlete and session names are free text typed on a phone, and every
+  /// render path here builds HTML by string interpolation — an apostrophe in
+  /// "Fractionné 8x2'" or a stray angle bracket would otherwise mangle the
+  /// markup.
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, ch => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[ch]);
+  }
+
   function cardHTML(a) {
     const trend = trendDelta(a.history);
     const badge = a.status === "watch" ? `<span class="badge">À surveiller</span>` : "";
     return `
-      <article class="card" tabindex="0" data-id="${a.id}" role="button" aria-label="Voir le détail de ${a.name}">
+      <article class="card" tabindex="0" data-id="${a.id}" role="button" aria-label="Voir le détail de ${esc(a.name)}">
         <div class="card-head">
           <div>
-            <p class="athlete-name">${a.name}</p>
-            <p class="athlete-meta">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}</p>
+            <p class="athlete-name">${esc(a.name)}</p>
+            <p class="athlete-meta">Dernière séance : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}</p>
           </div>
           ${badge}
         </div>
@@ -658,8 +670,8 @@
       <div class="detail-head">
         <button class="back-btn" id="backBtn">‹ Retour à la vue d'ensemble</button>
       </div>
-      <p class="detail-title">${a.name}</p>
-      <p class="athlete-meta" style="margin-bottom:1.1rem">Dernière séance : ${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""} ${a.note ? "— " + a.note : ""}</p>
+      <p class="detail-title">${esc(a.name)}</p>
+      <p class="athlete-meta" style="margin-bottom:1.1rem">Dernière séance : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
       <div class="detail-grid">
         <div class="detail-section">
           <h3>Répartition — dernière séance</h3>
@@ -905,7 +917,7 @@
       let inner;
       if (calMode === "month") {
         const chips = hits.map(({a,s}) => {
-          const tipLabel = a.name + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech);
+          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech));
           return `<span class="a-chip" style="background:${a.color}" data-tip="${tipLabel}">${a.initial}</span>`;
         }).join("");
         inner = `<div class="day-num">${date.getDate()}</div><div class="day-chips">${chips}</div>`;
@@ -913,7 +925,7 @@
         const rows = hits.map(({a,s}) => {
           const total = s.mech.reduce((x,y)=>x+y,0) || 1;
           const bar = s.mech.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${["var(--z1)","var(--z2)","var(--z3)"][i]}"></span>`).join("");
-          const tipLabel = a.name + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech);
+          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech));
           return `<div class="week-chip" data-tip="${tipLabel}">
             <span class="a-chip" style="background:${a.color}">${a.initial}</span>
             <span class="mini-bar">${bar}</span>
