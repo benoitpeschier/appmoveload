@@ -251,6 +251,7 @@
   #inviteCard dt { font-weight:600; margin-top:.5rem; }
   #inviteCard dd { margin:.15rem 0 0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
     word-break:break-all; }
+  .chart-note { font-size:11px; color:var(--ink-muted); margin:.35rem 0 0; }
 </style>
 </head>
 <body>
@@ -431,11 +432,21 @@
 
     const sameBoat = sorted.filter(s => s.boatType === a.boatType);
     const records = {};
+    // Each window's record can come from a different session — a 3 s best from
+    // a sprint, a 3 min best from a long piece — so the date is kept per
+    // window rather than as one date for the whole curve.
+    const recordDates = {};
     RADAR_WINDOWS.forEach(w => {
-      const vals = sameBoat.map(s => s.mechanicalPeaks && s.mechanicalPeaks[String(w)]).filter(v => v != null);
-      records[w] = vals.length ? Math.max(...vals) : 0;
+      let best = 0, bestDate = null;
+      sameBoat.forEach(s => {
+        const v = s.mechanicalPeaks && s.mechanicalPeaks[String(w)];
+        if (v != null && v > best) { best = v; bestDate = s.date; }
+      });
+      records[w] = best;
+      recordDates[w] = bestDate;
     });
     a.records = records;
+    a.recordDates = recordDates;
   }
 
   function onDataChanged() {
@@ -608,7 +619,10 @@
     const angleFor = i => (Math.PI * 2 * i / n) - Math.PI / 2;
     const radiusFor = pct => R * Math.max(0, Math.min(1, (pct - RADAR_SCALE_MIN) / (100 - RADAR_SCALE_MIN)));
     const pts = RADAR_WINDOWS.map((wnd, i) => {
-      const best = Math.max(0, ...peers.map(p => p.records[wnd]));
+      // Include the athlete's own record: they are by definition part of
+      // their category, so an empty peer group should read as "best of the
+      // field" rather than silently flattening the chart to nothing.
+      const best = Math.max(a.records[wnd] || 0, ...peers.map(p => p.records[wnd] || 0));
       const pct = best > 0 ? Math.min(100, Math.round((a.records[wnd] / best) * 100)) : 0;
       return { wnd, pct, value: a.records[wnd], best, angle: angleFor(i) };
     });
@@ -692,7 +706,9 @@
     const dotsFor = (line, label) => line.pts.map((p, i) => {
       if (!p) return "";
       const val = (label === "Séance" ? sessionVals : recordVals)[i];
-      return `<circle class="hoverpt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="8" fill="transparent" data-label="${RADAR_LABELS[RADAR_WINDOWS[i]]} — ${label}" data-value="${val.toFixed(2)} m/s²"/>`;
+      const when = label === "Record" && a.recordDates ? a.recordDates[RADAR_WINDOWS[i]] : null;
+      const value = val.toFixed(2) + " m/s²" + (when ? " · " + shortDate(when) : "");
+      return `<circle class="hoverpt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="8" fill="transparent" data-label="${RADAR_LABELS[RADAR_WINDOWS[i]]} — ${label}" data-value="${value}"/>`;
     }).join("");
     const visibleDotsFor = (line, color) => line.pts.map(p => p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="${color}"/>` : "").join("");
 
@@ -795,6 +811,9 @@
             <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Séance</span>
             <span class="legend-item"><span class="legend-dot" style="background:var(--ink-muted)"></span>Record</span>
           </div>
+          <!-- Each window's record can come from a different session, so the
+               date belongs to the point rather than to the curve. -->
+          <p class="chart-note">Survole un point du record pour voir sa valeur et la date où il a été établi.</p>
         </div>
         <div class="detail-section">
           <h3>Records tous temps par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)</h3>
@@ -840,7 +859,12 @@
     return Object.assign({}, a, {
       lastSession: s.date,
       duration: s.duration,
-      boatType: s.boatType,
+      // Deliberately NOT overriding boatType. It is an athlete-level property
+      // — the boat of their most recent session — and it decides both which
+      // sessions count towards their records and who their peer group is.
+      // Replacing it with the viewed session's boat emptied the peer group
+      // whenever the two differed (a session synced without a boat type set
+      // it to null), and the radar collapsed to a dot with no error anywhere.
       hr: s.hr,
       mech: s.mech,
       rpe: s.rpe,
