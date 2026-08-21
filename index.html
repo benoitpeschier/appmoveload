@@ -402,13 +402,42 @@
     return a;
   }
 
+  /// The boat an athlete is *categorised* under, for their records and for
+  /// the peer group they are compared against.
+  ///
+  /// Deliberately the most-used boat, not the most recent one. Taking the
+  /// latest session let a single outing in another boat reclassify an
+  /// athlete's whole history: one C1 session moved a K1 paddler into the C1
+  /// category, hid every K1 record behind a same-boat filter that no longer
+  /// matched, and compared him against C1 athletes. Ties go to whichever boat
+  /// was used most recently, so a genuine switch still takes effect as soon
+  /// as it is no longer a minority.
+  function dominantBoatType(sorted, last) {
+    const counts = new Map();
+    sorted.forEach(s => {
+      if (!s.boatType) return;
+      counts.set(s.boatType, (counts.get(s.boatType) || 0) + 1);
+    });
+    if (counts.size === 0) return last ? last.boatType : null;
+
+    let best = null, bestCount = -1;
+    // Walk newest first so an equal count resolves to the more recent boat.
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const boat = sorted[i].boatType;
+      if (!boat) continue;
+      const count = counts.get(boat);
+      if (count > bestCount) { best = boat; bestCount = count; }
+    }
+    return best;
+  }
+
   function deriveAthlete(a) {
     const sorted = [...a.sessions].filter(matchesFilterMode).sort((x, y) => x.date.localeCompare(y.date));
     const last = sorted[sorted.length - 1];
     a.initial = (a.name || "?").charAt(0).toUpperCase();
     a.lastSession = last ? last.date : null;
     a.duration = last ? last.duration : 0;
-    a.boatType = last ? last.boatType : null;
+    a.boatType = dominantBoatType(sorted, last);
     a.hr = last ? last.hr : [0, 0, 0];
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
