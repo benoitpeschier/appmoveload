@@ -233,6 +233,24 @@
   .week-chip { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink); }
   .week-chip .mini-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; display: flex; background: var(--border); }
   .week-chip .mini-bar > span { height: 100%; }
+
+  #inviteOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55);
+    display:flex; align-items:center; justify-content:center; padding:1rem; z-index:50; }
+  #inviteOverlay[hidden] { display:none; }
+  #inviteCard { background:var(--card, #fff); color:inherit; border-radius:14px;
+    padding:1.5rem; max-width:420px; width:100%; max-height:90vh; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,.35); }
+  #inviteCard h2 { margin:0 0 .75rem; font-size:1.1rem; }
+  #inviteCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
+  /* White quiet zone regardless of theme — scanners need the contrast. */
+  #inviteQR { background:#fff; padding:12px; border-radius:10px; margin:1rem 0;
+    display:flex; justify-content:center; }
+  #inviteQR svg { width:100%; max-width:260px; height:auto; display:block; }
+  .invite-warn { color:var(--warn, #b06a00); }
+  #inviteCard dl { font-size:12px; margin:.5rem 0 0; }
+  #inviteCard dt { font-weight:600; margin-top:.5rem; }
+  #inviteCard dd { margin:.15rem 0 0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    word-break:break-all; }
 </style>
 </head>
 <body>
@@ -247,6 +265,7 @@
         <button data-mode="test">Tests</button>
       </div>
       <div class="top-meta" id="lastSync">Dernière synchro : —</div>
+      <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;">Inviter un athlète</button>
       <a href="guide.html#coach" style="font-size:13px; color:var(--accent); text-decoration:none;">Mode d'emploi</a>
     </div>
   </div>
@@ -280,6 +299,21 @@
   </div>
 </div>
 
+<div id="inviteOverlay" hidden>
+  <div id="inviteCard" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
+    <h2 id="inviteTitle">Inviter un athlète</h2>
+    <p>Dans MoveLoad, l'athlète ouvre <strong>Réglages &gt; Synchronisation &gt; Scanner un QR code</strong> et vise cette image. Les trois réglages sont remplis d'un coup.</p>
+    <div id="inviteQR"></div>
+    <p class="invite-warn">Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.</p>
+    <details>
+      <summary>Saisie manuelle</summary>
+      <dl id="inviteFields"></dl>
+    </details>
+    <button class="nav-btn" id="inviteClose" style="width:auto; padding:0.4rem 1rem;">Fermer</button>
+  </div>
+</div>
+
+<script src="vendor-qrcode.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
@@ -293,6 +327,45 @@
   const RADAR_WINDOWS = [3, 6, 9, 15, 30, 45, 90, 180];
 
   const lastSyncEl = document.getElementById("lastSync");
+
+  // --- Inviting an athlete -------------------------------------------------
+  // Must match SyncSettings.shareablePayload in SyncKit. Built by hand rather
+  // than with URLSearchParams, which encodes a space as "+"; Swift's
+  // URLComponents reads "+" as a literal plus, so a team code containing a
+  // space would arrive corrupted on the phone.
+  function invitePayload(code) {
+    const q = [["c", code], ["p", firebaseConfig.projectId], ["k", firebaseConfig.apiKey]]
+      .map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&");
+    return "moveload://team?" + q;
+  }
+
+  function showInvite(code) {
+    const payload = invitePayload(code);
+
+    // Generated in the browser, never sent anywhere: the team code is the only
+    // thing guarding this team's data, so handing it to a QR-image web service
+    // would be giving the secret away to render a picture of it.
+    const qr = qrcode(0, "M");
+    qr.addData(payload);
+    qr.make();
+    document.getElementById("inviteQR").innerHTML = qr.createSvgTag({ scalable: true, margin: 0 });
+
+    document.getElementById("inviteFields").innerHTML =
+      [["Code d'équipe", code],
+       ["ID de projet", firebaseConfig.projectId],
+       ["Clé API Web", firebaseConfig.apiKey]]
+        .map(([k, v]) => "<dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd>").join("");
+
+    document.getElementById("inviteOverlay").hidden = false;
+  }
+
+  function hideInvite() { document.getElementById("inviteOverlay").hidden = true; }
+
+  document.getElementById("inviteClose").addEventListener("click", hideInvite);
+  document.getElementById("inviteOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "inviteOverlay") hideInvite();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideInvite(); });
 
   function resolveTeamCode() {
     const params = new URLSearchParams(location.search);
@@ -308,6 +381,7 @@
   }
 
   const teamCode = resolveTeamCode();
+  document.getElementById("inviteBtn").addEventListener("click", () => showInvite(teamCode));
   let athletes = [];
   const activeAthletes = new Set();
   const knownAthleteIds = new Set();
