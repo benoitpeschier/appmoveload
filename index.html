@@ -252,6 +252,11 @@
   #inviteCard dd { margin:.15rem 0 0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
     word-break:break-all; }
   .chart-note { font-size:11px; color:var(--ink-muted); margin:.35rem 0 0; }
+  .boat-picker { margin-top: 0.75rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .boat-picker-label { font-size: 12px; color: var(--ink-muted); }
+  .boat-picker .chart-note { flex-basis: 100%; margin: 0; }
+  .link-btn { font: inherit; font-size: 12px; color: var(--accent); background: none;
+    border: none; padding: 0; cursor: pointer; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -402,6 +407,27 @@
     return a;
   }
 
+  /// Boats the coach has picked by hand, overriding the guess below.
+  ///
+  /// Kept on this browser rather than in Firestore: it is one coach's reading
+  /// of one athlete, it needs no write access, and getting it wrong costs a
+  /// re-pick rather than corrupted training data. The cost is that a coach on
+  /// a second device makes the choice again.
+  const BOAT_OVERRIDE_KEY = "moveload_boat_overrides_" + teamCode;
+
+  function loadBoatOverrides() {
+    try { return JSON.parse(localStorage.getItem(BOAT_OVERRIDE_KEY)) || {}; }
+    catch { return {}; }
+  }
+
+  let boatOverrides = loadBoatOverrides();
+
+  function setBoatOverride(athleteId, boat) {
+    if (boat) boatOverrides[athleteId] = boat;
+    else delete boatOverrides[athleteId];
+    try { localStorage.setItem(BOAT_OVERRIDE_KEY, JSON.stringify(boatOverrides)); } catch {}
+  }
+
   /// The boat an athlete is *categorised* under, for their records and for
   /// the peer group they are compared against.
   ///
@@ -437,7 +463,15 @@
     a.initial = (a.name || "?").charAt(0).toUpperCase();
     a.lastSession = last ? last.date : null;
     a.duration = last ? last.duration : 0;
-    a.boatType = dominantBoatType(sorted, last);
+    // Boats the athlete has actually paddled — offering one they have never
+    // used would only produce an empty radar.
+    a.availableBoats = [...new Set(sorted.map(x => x.boatType).filter(Boolean))];
+    a.defaultBoatType = dominantBoatType(sorted, last);
+    // An override is honoured only while it still matches a boat in the data,
+    // so a stale choice cannot quietly empty the records.
+    const chosen = boatOverrides[a.id];
+    a.boatIsOverridden = !!chosen && a.availableBoats.includes(chosen);
+    a.boatType = a.boatIsOverridden ? chosen : a.defaultBoatType;
     a.hr = last ? last.hr : [0, 0, 0];
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
@@ -851,8 +885,29 @@
             <div class="tooltip"></div>
           </div>
           ${radarNote}
+          ${boatPickerHTML(a)}
         </div>
       </div>`;
+  }
+
+  /// Lets the coach say which boat an athlete should be read as, because the
+  /// rule below can only guess. Shown under the radar, since it is what the
+  /// radar and the records are grouped by.
+  function boatPickerHTML(a) {
+    if (a.availableBoats.length < 2 && !a.boatIsOverridden) return "";
+    const buttons = a.availableBoats.map(boat =>
+      `<button data-boat="${esc(boat)}" class="${boat === a.boatType ? "active" : ""}">${esc(boat)}</button>`
+    ).join("");
+    const reset = a.boatIsOverridden
+      ? ` <button class="link-btn" id="boatReset">Revenir à ${esc(a.defaultBoatType)} (automatique)</button>`
+      : "";
+    return `<div class="boat-picker">
+      <span class="boat-picker-label">Embarcation analysée</span>
+      <span class="seg" id="boatSeg">${buttons}</span>${reset}
+      <p class="chart-note">Records et comparaison ne portent que sur les séances dans cette embarcation.${
+        a.boatIsOverridden ? "" : ` Par défaut, la plus utilisée${a.availableBoats.length > 1 ? " de son historique" : ""}.`
+      }</p>
+    </div>`;
   }
 
   const grid = document.getElementById("grid");
@@ -888,12 +943,13 @@
     return Object.assign({}, a, {
       lastSession: s.date,
       duration: s.duration,
-      // Deliberately NOT overriding boatType. It is an athlete-level property
-      // — the boat of their most recent session — and it decides both which
-      // sessions count towards their records and who their peer group is.
-      // Replacing it with the viewed session's boat emptied the peer group
-      // whenever the two differed (a session synced without a boat type set
-      // it to null), and the radar collapsed to a dot with no error anywhere.
+      // Deliberately NOT overriding boatType. It is an athlete-level
+      // property — the coach's choice, or the boat they use most — and it
+      // decides both which sessions count towards their records and who
+      // their peer group is. Replacing it with the viewed session's boat
+      // emptied the peer group whenever the two differed (a session synced
+      // without a boat type set it to null), and the radar collapsed to a
+      // dot with no error anywhere.
       hr: s.hr,
       mech: s.mech,
       rpe: s.rpe,
@@ -919,6 +975,22 @@
       detail.classList.remove("open");
       detail.innerHTML = "";
     });
+    // Re-derive rather than patch: changing the boat changes the records, the
+    // peer group and the curve, all of which are computed in deriveAthlete.
+    const rerenderWithBoat = boat => {
+      setBoatOverride(id, boat);
+      const athlete = athletes.find(x => x.id === id);
+      if (athlete) deriveAthlete(athlete);
+      renderDetail(id, sessionDate);
+      render();
+    };
+
+    detail.querySelectorAll("#boatSeg button").forEach(btn => {
+      btn.addEventListener("click", () => rerenderWithBoat(btn.dataset.boat));
+    });
+    const boatReset = document.getElementById("boatReset");
+    if (boatReset) boatReset.addEventListener("click", () => rerenderWithBoat(null));
+
     detail.querySelectorAll(".hoverpt").forEach(pt => {
       const wrapEl = pt.closest(".chart-wrap");
       const tip = wrapEl.querySelector(".tooltip");
