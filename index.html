@@ -252,6 +252,24 @@
   #inviteCard dd { margin:.15rem 0 0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
     word-break:break-all; }
   .chart-note { font-size:11px; color:var(--ink-muted); margin:.35rem 0 0; }
+  .help { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px;
+          border-radius:50%; border:1px solid var(--border); background:var(--card-bg);
+          color:var(--ink-muted); font-size:11px; line-height:1; cursor:help; margin-left:.35rem;
+          vertical-align:1px; position:relative; }
+  .help:hover, .help:focus-visible { border-color:var(--accent); color:var(--accent); }
+  .help > span { display:none; position:absolute; bottom:calc(100% + 8px); left:50%;
+          transform:translateX(-50%); width:262px; padding:.6rem .7rem; z-index:20;
+          background:var(--card-bg); border:1px solid var(--border); border-radius:8px;
+          box-shadow:0 6px 24px rgba(0,0,0,.18); font-size:12px; line-height:1.45;
+          color:var(--ink-soft); text-align:left; cursor:auto; }
+  .help:hover > span, .help:focus-within > span { display:block; }
+
+  .above { display:flex; align-items:baseline; gap:.6rem; flex-wrap:wrap; margin-top:.2rem; }
+  .above b { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:1.6rem; font-weight:600;
+             font-variant-numeric:tabular-nums; }
+  .above span { font-size:13px; color:var(--ink-muted); }
+  .above-bar { height:10px; border-radius:5px; background:var(--border); overflow:hidden; margin-top:.5rem; }
+  .above-bar i { display:block; height:100%; background:var(--z3); }
   .boat-picker { margin-top: 0.75rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
   .boat-picker-label { font-size: 12px; color: var(--ink-muted); }
   .boat-picker .chart-note { flex-basis: 100%; margin: 0; }
@@ -546,6 +564,7 @@
                 duration: Math.round((s.durationSeconds || 0) / 60),
                 hr: [s.hrZone1Seconds || 0, s.hrZone2Seconds || 0, s.hrZone3Seconds || 0],
                 mech: [s.mechZone1Seconds || 0, s.mechZone2Seconds || 0, s.mechZone3Seconds || 0],
+                aboveAnchor: s.secondsAboveAnchor || 0,
                 rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
                 boatType: s.boatType || null,
                 isTest: !!s.isTest,
@@ -674,6 +693,18 @@
   }
 
   const RADAR_SCALE_MIN = 50; // zoomed-in scale: center = 50%, edge = 100%, so small gaps read clearly
+
+  /// Seconds above the athlete's anchor, as a figure and as a share of the
+  /// time the zones counted — a number without a size is hard to weigh.
+  function aboveHTML(a) {
+    const counted = a.mech[0] + a.mech[1] + a.mech[2];
+    if (!a.aboveAnchor) {
+      return `<p class="chart-note">Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.</p>`;
+    }
+    const pct = counted > 0 ? Math.round(a.aboveAnchor / counted * 100) : 0;
+    return `<div class="above"><b>${fmtMinSec(a.aboveAnchor)}</b><span>${pct} % du temps compté</span></div>
+      <div class="above-bar"><i style="width:${Math.min(100, pct)}%"></i></div>`;
+  }
 
   function radarSVG(a) {
     const peers = peerGroup(a);
@@ -852,6 +883,10 @@
           </div>
         </div>
         <div class="detail-section">
+          <h3>Temps au-dessus de la référence 45 s<button class="help" aria-label="Explication">?<span>Temps passé à pagayer plus fort que la référence 45 s confirmée de l'athlète. Compté seconde par seconde sur le signal brut : les zones lissent sur 15 secondes et ne peuvent pas voir un effort plus court, celui-ci si.</span></button></h3>
+          ${aboveHTML(a)}
+        </div>
+        <div class="detail-section">
           <h3>Tendance — pic d'accélération 45 s <span class="trend-delta ${trend.dir}">${trend.label}</span></h3>
           <div class="chart-wrap">
             <svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="Évolution du pic d'accélération 45 secondes">
@@ -952,6 +987,7 @@
       // dot with no error anywhere.
       hr: s.hr,
       mech: s.mech,
+      aboveAnchor: s.aboveAnchor,
       rpe: s.rpe,
       lastSessionIsTest: !!s.isTest,
       lastSessionName: s.name || "",
