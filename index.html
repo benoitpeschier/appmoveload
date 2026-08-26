@@ -483,8 +483,9 @@
     a.duration = last ? last.duration : 0;
     // Boats the athlete has actually paddled — offering one they have never
     // used would only produce an empty radar.
-    a.availableBoats = [...new Set(sorted.map(x => x.boatType).filter(Boolean))];
-    a.defaultBoatType = dominantBoatType(sorted, last);
+    const paddling = sorted.filter(s => !s.isConditioning);
+    a.availableBoats = [...new Set(paddling.map(x => x.boatType).filter(Boolean))];
+    a.defaultBoatType = dominantBoatType(paddling, paddling[paddling.length - 1] || null);
     // An override is honoured only while it still matches a boat in the data,
     // so a stale choice cannot quietly empty the records.
     const chosen = boatOverrides[a.id];
@@ -494,6 +495,7 @@
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
     a.lastSessionIsTest = last ? !!last.isTest : false;
+    a.lastSessionIsConditioning = last ? !!last.isConditioning : false;
     a.lastSessionName = last ? (last.name || "") : "";
     a.lastSessionPeaks = last ? (last.mechanicalPeaks || {}) : {};
 
@@ -506,12 +508,12 @@
       a.note = undefined;
     }
 
-    a.history = sorted
+    a.history = paddling
       .filter(s => s.mechanicalPeaks && s.mechanicalPeaks["45"] != null)
       .slice(-8)
       .map(s => ({ d: shortDate(s.date), v: s.mechanicalPeaks["45"] }));
 
-    const sameBoat = sorted.filter(s => s.boatType === a.boatType);
+    const sameBoat = paddling.filter(s => s.boatType === a.boatType);
     const records = {};
     // Each window's record can come from a different session — a 3 s best from
     // a sprint, a 3 min best from a long piece — so the date is kept per
@@ -568,6 +570,7 @@
                 rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
                 boatType: s.boatType || null,
                 isTest: !!s.isTest,
+                isConditioning: !!s.isConditioning,
                 name: (s.name || "").trim(),
                 mechanicalPeaks: s.mechanicalPeaks || {}
               };
@@ -664,7 +667,7 @@
         <div class="card-head">
           <div>
             <p class="athlete-name">${esc(a.name)}</p>
-            <p class="athlete-meta">Dernière séance : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}</p>
+            <p class="athlete-meta">Dernière séance : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}${a.lastSessionIsConditioning ? " · PPG" : ""}</p>
           </div>
           ${badge}
         </div>
@@ -672,10 +675,12 @@
           <div class="bar-label"><span>Charge cardio</span><span>${fmtMinSec(a.hr[2])} en I3</span></div>
           <div class="bar">${stackBar(a.hr, ["var(--i1)","var(--i2)","var(--i3)"])}</div>
         </div>
+        ${a.lastSessionIsConditioning ? `
+        <p class="chart-note">Séance PPG — charge cardio uniquement.</p>` : `
         <div class="bar-row">
           <div class="bar-label"><span>Charge mécanique</span><span>${fmtMinSec(a.mech[2])} en zone 3</span></div>
           <div class="bar">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
-        </div>
+        </div>`}
         <div class="card-foot">
           <div class="trend">
             ${sparkline(a.history, 64, 24)}
@@ -859,7 +864,7 @@
         <button class="back-btn" id="backBtn">‹ Retour à la vue d'ensemble</button>
       </div>
       <p class="detail-title">${esc(a.name)}</p>
-      <p class="athlete-meta" style="margin-bottom:1.1rem">${a.isSpecificSession ? "Séance" : "Dernière séance"} : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
+      <p class="athlete-meta" style="margin-bottom:1.1rem">${a.isSpecificSession ? "Séance" : "Dernière séance"} : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}${a.lastSessionIsConditioning ? " · PPG" : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
       <div class="detail-grid">
         <div class="detail-section">
           <h3>Répartition — dernière séance</h3>
@@ -872,6 +877,8 @@
               <span class="legend-item"><span class="legend-dot" style="background:var(--i3)"></span>I3 ${fmtMinSec(a.hr[2])}</span>
             </div>
           </div>
+          ${a.lastSessionIsConditioning ? `
+          <p class="chart-note">Séance PPG — pas de charge mécanique. La marche, la course et les pauses sont comptées dans le cardio.</p>` : `
           <div class="bar-row">
             <div class="bar-label"><span>Mécanique</span></div>
             <div class="bar" style="height:12px">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
@@ -880,12 +887,13 @@
               <span class="legend-item"><span class="legend-dot" style="background:var(--z2)"></span>Zone 2 ${fmtMinSec(a.mech[1])}</span>
               <span class="legend-item"><span class="legend-dot" style="background:var(--z3)"></span>Zone 3 ${fmtMinSec(a.mech[2])}</span>
             </div>
-          </div>
+          </div>`}
         </div>
+        ${a.lastSessionIsConditioning ? "" : `
         <div class="detail-section">
           <h3>Temps au-dessus de la référence 45 s<button class="help" aria-label="Explication">?<span>Temps passé à pagayer plus fort que la référence 45 s confirmée de l'athlète. Compté seconde par seconde sur le signal brut : les zones lissent sur 15 secondes et ne peuvent pas voir un effort plus court, celui-ci si.</span></button></h3>
           ${aboveHTML(a)}
-        </div>
+        </div>`}
         <div class="detail-section">
           <h3>Tendance — pic d'accélération 45 s <span class="trend-delta ${trend.dir}">${trend.label}</span></h3>
           <div class="chart-wrap">
@@ -899,7 +907,7 @@
             <div class="tooltip"></div>
           </div>
         </div>
-        <div class="detail-section">
+        <div class="detail-section"${a.lastSessionIsConditioning ? ' hidden' : ''}>
           <h3>Courbe — dernière séance vs record</h3>
           <div class="chart-wrap">
             ${mechCurveSVG(a)}
@@ -990,6 +998,7 @@
       aboveAnchor: s.aboveAnchor,
       rpe: s.rpe,
       lastSessionIsTest: !!s.isTest,
+      lastSessionIsConditioning: !!s.isConditioning,
       lastSessionName: s.name || "",
       lastSessionPeaks: s.mechanicalPeaks || {},
       // The "nothing since N days" note is about how recent the athlete's
@@ -1144,6 +1153,20 @@
     const pcts = mech.map(v => Math.round(v/total*100));
     return `Z1 ${pcts[0]}% · Z2 ${pcts[1]}% · Z3 ${pcts[2]}%`;
   }
+  function hrPctLabel(hr) {
+    const total = hr.reduce((x,y) => x+y, 0) || 1;
+    const pcts = hr.map(v => Math.round(v/total*100));
+    return `I1 ${pcts[0]}% · I2 ${pcts[1]}% · I3 ${pcts[2]}%`;
+  }
+  // A PPG session carries no mechanical figures at all — the app does not
+  // produce them, because chest acceleration while running is stride and a
+  // stride peak would outrank anything done on the water. So wherever a
+  // mechanical bar would go, show the cardiac one.
+  function loadBars(s) {
+    return s.isConditioning
+      ? { values: s.hr, colors: ["var(--i1)","var(--i2)","var(--i3)"], label: hrPctLabel(s.hr) }
+      : { values: s.mech, colors: ["var(--z1)","var(--z2)","var(--z3)"], label: mechPctLabel(s.mech) };
+  }
 
   function renderCalendar() {
     const grid = document.getElementById("calGrid");
@@ -1184,15 +1207,16 @@
       let inner;
       if (calMode === "month") {
         const chips = hits.map(({a,s}) => {
-          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech));
+          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? " · PPG · " : " · ") + loadBars(s).label);
           return `<span class="a-chip open-session" style="background:${a.color}" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="Voir la séance de ${esc(a.name)}">${a.initial}</span>`;
         }).join("");
         inner = `<div class="day-num">${date.getDate()}</div><div class="day-chips">${chips}</div>`;
       } else {
         const rows = hits.map(({a,s}) => {
-          const total = s.mech.reduce((x,y)=>x+y,0) || 1;
-          const bar = s.mech.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${["var(--z1)","var(--z2)","var(--z3)"][i]}"></span>`).join("");
-          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + " · " + mechPctLabel(s.mech));
+          const load = loadBars(s);
+          const total = load.values.reduce((x,y)=>x+y,0) || 1;
+          const bar = load.values.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${load.colors[i]}"></span>`).join("");
+          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? " · PPG · " : " · ") + load.label);
           return `<div class="week-chip open-session" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="Voir la séance de ${esc(a.name)}">
             <span class="a-chip" style="background:${a.color}">${a.initial}</span>
             <span class="mini-bar">${bar}</span>
