@@ -281,22 +281,23 @@
 
 <div class="dash">
   <div class="top">
-    <h1>Suivi des athlètes</h1>
+    <h1 data-i18n="Suivi des athlètes">Suivi des athlètes</h1>
     <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
       <div class="seg" id="sessionModeSeg">
-        <button class="active" data-mode="all">Toutes</button>
-        <button data-mode="training">Entraînement</button>
-        <button data-mode="test">Tests</button>
+        <button class="active" data-mode="all" data-i18n="Toutes">Toutes</button>
+        <button data-mode="training" data-i18n="Entraînement">Entraînement</button>
+        <button data-mode="test" data-i18n="Tests">Tests</button>
       </div>
-      <div class="top-meta" id="lastSync">Dernière synchro : —</div>
-      <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;">Inviter un athlète</button>
-      <a href="guide.html#coach" style="font-size:13px; color:var(--accent); text-decoration:none;">Mode d'emploi</a>
+      <div class="top-meta" id="lastSync" data-i18n="Dernière synchro : —">Dernière synchro : —</div>
+      <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Inviter un athlète">Inviter un athlète</button>
+      <a id="guideLink" href="guide.html#coach" style="font-size:13px; color:var(--accent); text-decoration:none;" data-i18n="Mode d'emploi">Mode d'emploi</a>
+      <button class="nav-btn" id="langBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;">English</button>
     </div>
   </div>
 
   <div class="tabs" role="tablist">
-    <button class="tab-btn active" id="tabOverviewBtn" role="tab" aria-selected="true">Vue d'ensemble</button>
-    <button class="tab-btn" id="tabCalendarBtn" role="tab" aria-selected="false">Calendrier</button>
+    <button class="tab-btn active" id="tabOverviewBtn" role="tab" aria-selected="true" data-i18n="Vue d'ensemble">Vue d'ensemble</button>
+    <button class="tab-btn" id="tabCalendarBtn" role="tab" aria-selected="false" data-i18n="Calendrier">Calendrier</button>
   </div>
 
   <div class="view active" id="viewOverview">
@@ -308,13 +309,13 @@
     <div class="filters" id="calFilters"></div>
     <div class="cal-controls">
       <div class="seg" id="calModeSeg">
-        <button class="active" data-mode="month">Mois</button>
-        <button data-mode="week">Semaine</button>
+        <button class="active" data-mode="month" data-i18n="Mois">Mois</button>
+        <button data-mode="week" data-i18n="Semaine">Semaine</button>
       </div>
       <div class="cal-nav">
-        <button class="nav-btn" id="calPrev" aria-label="Précédent">‹</button>
+        <button class="nav-btn" id="calPrev" aria-label="Précédent" data-i18n-aria="Précédent">‹</button>
         <span class="cal-label" id="calLabel"></span>
-        <button class="nav-btn" id="calNext" aria-label="Suivant">›</button>
+        <button class="nav-btn" id="calNext" aria-label="Suivant" data-i18n-aria="Suivant">›</button>
       </div>
     </div>
     <div class="chart-wrap" id="calGridWrap">
@@ -325,15 +326,15 @@
 
 <div id="inviteOverlay" hidden>
   <div id="inviteCard" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
-    <h2 id="inviteTitle">Inviter un athlète</h2>
-    <p>Dans MoveLoad, l'athlète ouvre <strong>Réglages &gt; Synchronisation &gt; Scanner un QR code</strong> et vise cette image. Les trois réglages sont remplis d'un coup.</p>
+    <h2 id="inviteTitle" data-i18n="Inviter un athlète">Inviter un athlète</h2>
+    <p data-i18n-html="Dans MoveLoad, l'athlète ouvre &lt;strong&gt;Réglages &amp;gt; Synchronisation &amp;gt; Scanner un QR code&lt;/strong&gt; et vise cette image. Les trois réglages sont remplis d'un coup.">Dans MoveLoad, l'athlète ouvre <strong>Réglages &gt; Synchronisation &gt; Scanner un QR code</strong> et vise cette image. Les trois réglages sont remplis d'un coup.</p>
     <div id="inviteQR"></div>
-    <p class="invite-warn">Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.</p>
+    <p class="invite-warn" data-i18n="Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.">Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.</p>
     <details>
-      <summary>Saisie manuelle</summary>
+      <summary data-i18n="Saisie manuelle">Saisie manuelle</summary>
       <dl id="inviteFields"></dl>
     </details>
-    <button class="nav-btn" id="inviteClose" style="width:auto; padding:0.4rem 1rem;">Fermer</button>
+    <button class="nav-btn" id="inviteClose" style="width:auto; padding:0.4rem 1rem;" data-i18n="Fermer">Fermer</button>
   </div>
 </div>
 
@@ -348,6 +349,126 @@
   // shared secret is the team code below (read from ?team=, never hardcoded).
   const firebaseConfig = { apiKey: "AIzaSyDnSvSGlXZLKqRCgoiFqlkEFSpkPZ72YTU", projectId: "appmoveload" };
   const PALETTE = ["var(--a-lea)","var(--a-karim)","var(--a-sofia)","var(--a-tom)","var(--a-nina)","var(--a-hugo)"];
+
+  // ── Langue / language ───────────────────────────────────────────────────
+  // French is the key, exactly as in the iOS app: a missing translation falls
+  // back to readable French rather than to a bare identifier, and the source
+  // stays legible. Editing a French string orphans its translation — rename
+  // the key here at the same time.
+  const EN = {
+    "Voir la séance de": "View the session of",
+    "Femme": "Female",
+    "Homme": "Male",
+    " · Test": " · Test",
+    " · PPG": " · Conditioning",
+    " : ": ": ",
+    " Par défaut, la plus utilisée": " By default, the most used",
+    " de son historique": " in their history",
+    "% du temps compté": "% of counted time",
+    "(automatique)": "(automatic)",
+    "Aucun code d'équipe fourni — ajoute ?team=... à l'URL.": "No team code supplied — add ?team=… to the URL.",
+    "Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.": "No time above the reference — or no 45 s reference confirmed for this athlete yet.",
+    "Aucune séance depuis %d jours": "No session for %d days",
+    "Calendrier": "Calendar",
+    "Cardio": "Cardio",
+    "Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.": "This code contains the team code, which is the only thing protecting the team's data. Do not publish it, and do not leave it on an unattended screen.",
+    "Charge cardio": "Cardio load",
+    "Charge mécanique": "Mechanical load",
+    "Clé API Web": "Web API key",
+    "Code d'équipe": "Team code",
+    "Code d'équipe MoveLoad :": "MoveLoad team code:",
+    "Comparaison en pourcentage du meilleur de la catégorie, échelle 50 à 100%": "Comparison as a percentage of the best in the category, scale 50 to 100%",
+    "Connecté en direct": "Connected live",
+    "Connexion…": "Connecting…",
+    "Courbe d'accélération de la dernière séance comparée au record personnel, sur les six fenêtres de temps": "Acceleration curve of the last session against the personal record, over the six time windows",
+    "Courbe — dernière séance vs record": "Curve — last session vs record",
+    "Dans MoveLoad, l'athlète ouvre <strong>Réglages &gt; Synchronisation &gt; Scanner un QR code</strong> et vise cette image. Les trois réglages sont remplis d'un coup.": "In MoveLoad, the athlete opens <strong>Settings &gt; Sync &gt; Scan a QR code</strong> and points it at this image. All three settings are filled in at once.",
+    "Dernière synchro : —": "Last sync: —",
+    "Dernière séance": "Last session",
+    "Dernière séance : ": "Last session: ",
+    "Embarcation analysée": "Boat analysed",
+    "En attente de la première séance synchronisée…": "Waiting for the first synced session…",
+    "Entraînement": "Training",
+    "Explication": "Explanation",
+    "Fermer": "Close",
+    "ID de projet Firebase": "Firebase project ID",
+    "Inviter un athlète": "Invite an athlete",
+    "Mode d'emploi": "User guide",
+    "Mois": "Month",
+    "MoveLoad Coach — suivi des athlètes": "MoveLoad Coach — athlete tracking",
+    "Mécanique": "Mechanical",
+    "Précédent": "Previous",
+    "Record": "Record",
+    "Records et comparaison ne portent que sur les séances dans cette embarcation.": "Records and comparison cover only sessions in this boat.",
+    "Records tous temps par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)": "All-time records by window — % of the best in the category (scale 50–100%)",
+    "Revenir à": "Back to",
+    "Répartition — dernière séance": "Split — last session",
+    "Saisie manuelle": "Manual entry",
+    "Semaine": "Week",
+    "Seul(e) athlète": "Only athlete in",
+    "Suivant": "Next",
+    "Suivi des athlètes": "Athlete tracking",
+    "Survole un point du record pour voir sa valeur et la date où il a été établi.": "Hover a record point to see its value and the date it was set.",
+    "Séance": "Session",
+    "Séance PPG — charge cardio uniquement.": "Conditioning session — cardio load only.",
+    "Séance PPG — pas de charge mécanique. La marche, la course et les pauses sont comptées dans le cardio.": "Conditioning session — no mechanical load. Walking, running and pauses all count towards the cardio figures.",
+    "Temps au-dessus de la référence 45 s": "Time above the 45 s reference",
+    "Temps passé à pagayer plus fort que la référence 45 s confirmée de l'athlète. Compté seconde par seconde sur le signal brut : les zones lissent sur 15 secondes et ne peuvent pas voir un effort plus court, celui-ci si.": "Time spent paddling harder than the athlete's confirmed 45 s reference. Counted second by second on the raw signal: the zones smooth over 15 seconds and cannot see a shorter effort, whereas this can.",
+    "Tendance récente": "Recent trend",
+    "Tendance — pic d'accélération 45 s": "Trend — 45 s acceleration peak",
+    "Tests": "Tests",
+    "Toutes": "All",
+    "Voir le détail de": "View details for",
+    "Vue d'ensemble": "Overview",
+    "Zone 1": "Zone 1",
+    "Zone 2": "Zone 2",
+    "Zone 3": "Zone 3",
+    "athlètes": "athletes",
+    "aujourd'hui": "today",
+    "en I3": "in I3",
+    "en zone 3": "in zone 3",
+    "hier": "yesterday",
+    "il y a %d j": "%d d ago",
+    "À surveiller": "Watch",
+    "Évolution du pic d'accélération 45 secondes": "Change in the 45-second acceleration peak",
+    "— pas de comparaison possible.": "— no comparison possible.",
+    "‹ Retour à la vue d'ensemble": "‹ Back to the overview"
+  };
+  const LANG = (() => {
+    const asked = new URL(location.href).searchParams.get("lang");
+    if (asked === "fr" || asked === "en") { try { localStorage.setItem("moveload-lang", asked); } catch (e) {} return asked; }
+    let saved = null;
+    try { saved = localStorage.getItem("moveload-lang"); } catch (e) {}
+    if (saved === "fr" || saved === "en") return saved;
+    return (navigator.language || "fr").toLowerCase().startsWith("en") ? "en" : "fr";
+  })();
+  const LOCALE = LANG === "en" ? "en-GB" : "fr-FR";
+  function t(fr) { return LANG === "en" ? (EN[fr] ?? fr) : fr; }
+
+  // The static shell carries its French in the markup, so it is translated in
+  // place on load rather than re-rendered.
+  function translateStaticShell() {
+    document.documentElement.lang = LANG;
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+    document.querySelectorAll("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"))); });
+    document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+    document.title = t("MoveLoad Coach — suivi des athlètes");
+    const guide = document.getElementById("guideLink");
+    if (guide && LANG === "en") guide.setAttribute("href", "guide.en.html#coach");
+    const toggle = document.getElementById("langBtn");
+    if (toggle) {
+      // Shows the language it switches *to*, which is what a reader who cannot
+      // read the current one needs to see.
+      toggle.textContent = LANG === "en" ? "Français" : "English";
+      toggle.addEventListener("click", () => {
+        try { localStorage.setItem("moveload-lang", LANG === "en" ? "fr" : "en"); } catch (e) {}
+        const url = new URL(location.href);
+        url.searchParams.set("lang", LANG === "en" ? "fr" : "en");
+        location.href = url.toString();
+      });
+    }
+  }
+
   const RADAR_WINDOWS = [3, 6, 9, 15, 30, 45, 90, 180];
 
   const lastSyncEl = document.getElementById("lastSync");
@@ -375,9 +496,9 @@
     document.getElementById("inviteQR").innerHTML = qr.createSvgTag({ scalable: true, margin: 0 });
 
     document.getElementById("inviteFields").innerHTML =
-      [["Code d'équipe", code],
+      [[t("Code d'équipe"), code],
        ["ID de projet", firebaseConfig.projectId],
-       ["Clé API Web", firebaseConfig.apiKey]]
+       [t("Clé API Web"), firebaseConfig.apiKey]]
         .map(([k, v]) => "<dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd>").join("");
 
     document.getElementById("inviteOverlay").hidden = false;
@@ -394,7 +515,7 @@
   function resolveTeamCode() {
     const params = new URLSearchParams(location.search);
     let code = params.get("team") || localStorage.getItem("moveload_team_code");
-    if (!code) code = prompt("Code d'équipe MoveLoad :");
+    if (!code) code = prompt(t("Code d'équipe MoveLoad :"));
     if (code) {
       localStorage.setItem("moveload_team_code", code);
       const url = new URL(location.href);
@@ -404,6 +525,7 @@
     return code;
   }
 
+  translateStaticShell();
   const teamCode = resolveTeamCode();
   document.getElementById("inviteBtn").addEventListener("click", () => showInvite(teamCode));
   let athletes = [];
@@ -502,7 +624,7 @@
     const daysSince = last ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
     if (daysSince !== null && daysSince > 10) {
       a.status = "watch";
-      a.note = "Aucune séance depuis " + daysSince + " jours";
+      a.note = t("Aucune séance depuis %d jours").replace("%d", daysSince);
     } else {
       a.status = "ok";
       a.note = undefined;
@@ -584,19 +706,19 @@
         }
       });
       onDataChanged();
-      lastSyncEl.textContent = "Connecté en direct";
+      lastSyncEl.textContent = t("Connecté en direct");
     }, err => {
       lastSyncEl.textContent = "Erreur de synchro : " + err.message;
     });
   }
 
   if (!teamCode) {
-    lastSyncEl.textContent = "Aucun code d'équipe fourni — ajoute ?team=... à l'URL.";
+    lastSyncEl.textContent = t("Aucun code d'équipe fourni — ajoute ?team=... à l'URL.");
   } else {
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    lastSyncEl.textContent = "Connexion…";
+    lastSyncEl.textContent = t("Connexion…");
     signInAnonymously(auth)
       .then(() => startListening(db))
       .catch(err => { lastSyncEl.textContent = "Erreur de connexion : " + err.message; });
@@ -609,9 +731,9 @@
   function relDate(iso) {
     const d = new Date(iso + "T12:00:00");
     const days = Math.round((new Date() - d) / 86400000);
-    if (days <= 0) return "aujourd'hui";
-    if (days === 1) return "hier";
-    return "il y a " + days + " j";
+    if (days <= 0) return t("aujourd'hui");
+    if (days === 1) return t("hier");
+    return t("il y a %d j").replace("%d", days);
   }
   function shortDate(iso) {
     const d = new Date(iso + "T12:00:00");
@@ -636,7 +758,7 @@
     });
     const path = pts.map((p,i) => (i===0?"M":"L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
     const last = pts[pts.length-1];
-    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Tendance récente">
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Tendance récente")}">
       <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
       <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="var(--accent)"/>
     </svg>`;
@@ -661,24 +783,24 @@
 
   function cardHTML(a) {
     const trend = trendDelta(a.history);
-    const badge = a.status === "watch" ? `<span class="badge">À surveiller</span>` : "";
+    const badge = a.status === "watch" ? `<span class="badge">${t("À surveiller")}</span>` : "";
     return `
-      <article class="card" tabindex="0" data-id="${a.id}" role="button" aria-label="Voir le détail de ${esc(a.name)}">
+      <article class="card" tabindex="0" data-id="${a.id}" role="button" aria-label="${t("Voir le détail de")} ${esc(a.name)}">
         <div class="card-head">
           <div>
             <p class="athlete-name">${esc(a.name)}</p>
-            <p class="athlete-meta">Dernière séance : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}${a.lastSessionIsConditioning ? " · PPG" : ""}</p>
+            <p class="athlete-meta">${t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""}</p>
           </div>
           ${badge}
         </div>
         <div class="bar-row">
-          <div class="bar-label"><span>Charge cardio</span><span>${fmtMinSec(a.hr[2])} en I3</span></div>
+          <div class="bar-label"><span>${t("Charge cardio")}</span><span>${fmtMinSec(a.hr[2])} ${t("en I3")}</span></div>
           <div class="bar">${stackBar(a.hr, ["var(--i1)","var(--i2)","var(--i3)"])}</div>
         </div>
         ${a.lastSessionIsConditioning ? `
-        <p class="chart-note">Séance PPG — charge cardio uniquement.</p>` : `
+        <p class="chart-note">${t("Séance PPG — charge cardio uniquement.")}</p>` : `
         <div class="bar-row">
-          <div class="bar-label"><span>Charge mécanique</span><span>${fmtMinSec(a.mech[2])} en zone 3</span></div>
+          <div class="bar-label"><span>${t("Charge mécanique")}</span><span>${fmtMinSec(a.mech[2])} ${t("en zone 3")}</span></div>
           <div class="bar">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
         </div>`}
         <div class="card-foot">
@@ -691,7 +813,7 @@
   }
 
   const RADAR_LABELS = {3:"3 s", 6:"6 s", 9:"9 s", 15:"15 s", 30:"30 s", 45:"45 s", 90:"90 s", 180:"3 min"};
-  const GENDER_LABEL = {H:"Homme", F:"Femme"};
+  const GENDER_LABEL = {H: t("Homme"), F: t("Femme")};
 
   function peerGroup(a) {
     return athletes.filter(x => x.sessions.length > 0 && x.gender === a.gender && x.boatType === a.boatType);
@@ -704,10 +826,10 @@
   function aboveHTML(a) {
     const counted = a.mech[0] + a.mech[1] + a.mech[2];
     if (!a.aboveAnchor) {
-      return `<p class="chart-note">Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.</p>`;
+      return `<p class="chart-note">${t("Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.")}</p>`;
     }
     const pct = counted > 0 ? Math.round(a.aboveAnchor / counted * 100) : 0;
-    return `<div class="above"><b>${fmtMinSec(a.aboveAnchor)}</b><span>${pct} % du temps compté</span></div>
+    return `<div class="above"><b>${fmtMinSec(a.aboveAnchor)}</b><span>${pct} ${t("% du temps compté")}</span></div>
       <div class="above-bar"><i style="width:${Math.min(100, pct)}%"></i></div>`;
   }
 
@@ -765,7 +887,7 @@
       return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="10.5" fill="var(--ink-muted)">${RADAR_LABELS[wnd]}</text>`;
     }).join("");
 
-    const svg = `<svg width="100%" viewBox="0 0 260 232" role="img" aria-label="Comparaison en pourcentage du meilleur de la catégorie, échelle 50 à 100%">
+    const svg = `<svg width="100%" viewBox="0 0 260 232" role="img" aria-label="${t("Comparaison en pourcentage du meilleur de la catégorie, échelle 50 à 100%")}">
       ${rings}${spokes}
       <path d="${dataPath}" fill="var(--accent)" fill-opacity="0.22" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
       ${visibleDots}${scaleTicks}${labels}${dots}
@@ -804,8 +926,8 @@
 
     const dotsFor = (line, label) => line.pts.map((p, i) => {
       if (!p) return "";
-      const val = (label === "Séance" ? sessionVals : recordVals)[i];
-      const when = label === "Record" && a.recordDates ? a.recordDates[RADAR_WINDOWS[i]] : null;
+      const val = (label === t("Séance") ? sessionVals : recordVals)[i];
+      const when = label === t("Record") && a.recordDates ? a.recordDates[RADAR_WINDOWS[i]] : null;
       const value = val.toFixed(2) + " m/s²" + (when ? " · " + shortDate(when) : "");
       return `<circle class="hoverpt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="8" fill="transparent" data-label="${RADAR_LABELS[RADAR_WINDOWS[i]]} — ${label}" data-value="${value}"/>`;
     }).join("");
@@ -819,7 +941,7 @@
         <text x="${(padL - 6).toFixed(1)}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--ink-muted)">${val.toFixed(1)}</text>`;
     }).join("");
 
-    const svg = `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="Courbe d'accélération de la dernière séance comparée au record personnel, sur les six fenêtres de temps">
+    const svg = `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Courbe d'accélération de la dernière séance comparée au record personnel, sur les six fenêtres de temps")}">
       ${yTicks}
       <path d="${recordLine.path}" fill="none" stroke="var(--ink-muted)" stroke-width="1.5" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="${sessionLine.path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -827,7 +949,7 @@
       ${visibleDotsFor(sessionLine, "var(--accent)")}
       ${xLabels}
       ${dotsFor(recordLine, "Record")}
-      ${dotsFor(sessionLine, "Séance")}
+      ${dotsFor(sessionLine, t("Séance"))}
     </svg>`;
     return svg;
   }
@@ -856,20 +978,20 @@
     const radar = radarSVG(a);
     const categoryLabel = `${GENDER_LABEL[a.gender]} · ${a.boatType}`;
     const radarNote = radar.peerCount <= 1
-      ? `<p class="empty-note" style="margin-top:0.6rem">Seul(e) athlète ${categoryLabel} — pas de comparaison possible.</p>`
-      : `<p class="athlete-meta" style="margin-top:0.6rem">${categoryLabel} · ${radar.peerCount} athlètes</p>`;
+      ? `<p class="empty-note" style="margin-top:0.6rem">${t("Seul(e) athlète")} ${categoryLabel} ${t("— pas de comparaison possible.")}</p>`
+      : `<p class="athlete-meta" style="margin-top:0.6rem">${categoryLabel} · ${radar.peerCount} ${t("athlètes")}</p>`;
 
     return `
       <div class="detail-head">
-        <button class="back-btn" id="backBtn">‹ Retour à la vue d'ensemble</button>
+        <button class="back-btn" id="backBtn">${t("‹ Retour à la vue d'ensemble")}</button>
       </div>
       <p class="detail-title">${esc(a.name)}</p>
-      <p class="athlete-meta" style="margin-bottom:1.1rem">${a.isSpecificSession ? "Séance" : "Dernière séance"} : ${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? " · Test" : ""}${a.lastSessionIsConditioning ? " · PPG" : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
+      <p class="athlete-meta" style="margin-bottom:1.1rem">${a.isSpecificSession ? t("Séance") : t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
       <div class="detail-grid">
         <div class="detail-section">
-          <h3>Répartition — dernière séance</h3>
+          <h3>${t("Répartition — dernière séance")}</h3>
           <div class="bar-row" style="margin-bottom:10px">
-            <div class="bar-label"><span>Cardio</span></div>
+            <div class="bar-label"><span>${t("Cardio")}</span></div>
             <div class="bar" style="height:12px">${stackBar(a.hr, ["var(--i1)","var(--i2)","var(--i3)"])}</div>
             <div class="legend">
               <span class="legend-item"><span class="legend-dot" style="background:var(--i1)"></span>I1 ${fmtMinSec(a.hr[0])}</span>
@@ -878,9 +1000,9 @@
             </div>
           </div>
           ${a.lastSessionIsConditioning ? `
-          <p class="chart-note">Séance PPG — pas de charge mécanique. La marche, la course et les pauses sont comptées dans le cardio.</p>` : `
+          <p class="chart-note">${t("Séance PPG — pas de charge mécanique. La marche, la course et les pauses sont comptées dans le cardio.")}</p>` : `
           <div class="bar-row">
-            <div class="bar-label"><span>Mécanique</span></div>
+            <div class="bar-label"><span>${t("Mécanique")}</span></div>
             <div class="bar" style="height:12px">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
             <div class="legend">
               <span class="legend-item"><span class="legend-dot" style="background:var(--z1)"></span>Zone 1 ${fmtMinSec(a.mech[0])}</span>
@@ -891,13 +1013,13 @@
         </div>
         ${a.lastSessionIsConditioning ? "" : `
         <div class="detail-section">
-          <h3>Temps au-dessus de la référence 45 s<button class="help" aria-label="Explication">?<span>Temps passé à pagayer plus fort que la référence 45 s confirmée de l'athlète. Compté seconde par seconde sur le signal brut : les zones lissent sur 15 secondes et ne peuvent pas voir un effort plus court, celui-ci si.</span></button></h3>
+          <h3>${t("Temps au-dessus de la référence 45 s")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Temps passé à pagayer plus fort que la référence 45 s confirmée de l'athlète. Compté seconde par seconde sur le signal brut : les zones lissent sur 15 secondes et ne peuvent pas voir un effort plus court, celui-ci si.")}</span></button></h3>
           ${aboveHTML(a)}
         </div>`}
         <div class="detail-section">
-          <h3>Tendance — pic d'accélération 45 s <span class="trend-delta ${trend.dir}">${trend.label}</span></h3>
+          <h3>${t("Tendance — pic d'accélération 45 s")} <span class="trend-delta ${trend.dir}">${trend.label}</span></h3>
           <div class="chart-wrap">
-            <svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="Évolution du pic d'accélération 45 secondes">
+            <svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Évolution du pic d'accélération 45 secondes")}">
               ${gridLine}
               <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               ${visibleDots}
@@ -908,21 +1030,21 @@
           </div>
         </div>
         <div class="detail-section"${a.lastSessionIsConditioning ? ' hidden' : ''}>
-          <h3>Courbe — dernière séance vs record</h3>
+          <h3>${t("Courbe — dernière séance vs record")}</h3>
           <div class="chart-wrap">
             ${mechCurveSVG(a)}
             <div class="tooltip"></div>
           </div>
           <div class="legend" style="margin-top:0.5rem">
-            <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Séance</span>
-            <span class="legend-item"><span class="legend-dot" style="background:var(--ink-muted)"></span>Record</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>${t("Séance")}</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--ink-muted)"></span>${t("Record")}</span>
           </div>
           <!-- Each window's record can come from a different session, so the
                date belongs to the point rather than to the curve. -->
-          <p class="chart-note">Survole un point du record pour voir sa valeur et la date où il a été établi.</p>
+          <p class="chart-note">${t("Survole un point du record pour voir sa valeur et la date où il a été établi.")}</p>
         </div>
         <div class="detail-section">
-          <h3>Records tous temps par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)</h3>
+          <h3>${t("Records tous temps par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)")}</h3>
           <div class="chart-wrap">
             ${radar.svg}
             <div class="tooltip"></div>
@@ -942,13 +1064,13 @@
       `<button data-boat="${esc(boat)}" class="${boat === a.boatType ? "active" : ""}">${esc(boat)}</button>`
     ).join("");
     const reset = a.boatIsOverridden
-      ? ` <button class="link-btn" id="boatReset">Revenir à ${esc(a.defaultBoatType)} (automatique)</button>`
+      ? ` <button class="link-btn" id="boatReset">${t("Revenir à")} ${esc(a.defaultBoatType)} ${t("(automatique)")}</button>`
       : "";
     return `<div class="boat-picker">
-      <span class="boat-picker-label">Embarcation analysée</span>
+      <span class="boat-picker-label">${t("Embarcation analysée")}</span>
       <span class="seg" id="boatSeg">${buttons}</span>${reset}
-      <p class="chart-note">Records et comparaison ne portent que sur les séances dans cette embarcation.${
-        a.boatIsOverridden ? "" : ` Par défaut, la plus utilisée${a.availableBoats.length > 1 ? " de son historique" : ""}.`
+      <p class="chart-note">${t("Records et comparaison ne portent que sur les séances dans cette embarcation.")}${
+        a.boatIsOverridden ? "" : `${t(" Par défaut, la plus utilisée")}${a.availableBoats.length > 1 ? t(" de son historique") : ""}.`
       }</p>
     </div>`;
   }
@@ -964,7 +1086,7 @@
     const renderable = renderableAthletes();
     grid.innerHTML = renderable.length
       ? renderable.map(cardHTML).join("")
-      : `<p class="empty-note">En attente de la première séance synchronisée…</p>`;
+      : `<p class="empty-note">${t("En attente de la première séance synchronisée…")}</p>`;
     grid.querySelectorAll(".card").forEach(card => {
       const open = () => showDetail(card.dataset.id);
       card.addEventListener("click", open);
@@ -1136,8 +1258,23 @@
     calCursor = new Date(calCursor);
   }
 
-  const DOW = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
-  const MONTH_NAMES = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  // Built from the locale rather than hard-coded, so the calendar reads in the
+  // reader's language. Monday-first either way — that is the training week.
+  const DOW = (() => {
+    const f = new Intl.DateTimeFormat(LOCALE, { weekday: "short" });
+    return [...Array(7)].map((_, i) => {
+      const d = new Date(Date.UTC(2024, 0, 1 + i)); // 2024-01-01 was a Monday
+      const s = f.format(d);
+      return s.charAt(0).toUpperCase() + s.slice(1).replace(/\.$/, "");
+    });
+  })();
+  const MONTH_NAMES = (() => {
+    const f = new Intl.DateTimeFormat(LOCALE, { month: "long" });
+    return [...Array(12)].map((_, m) => {
+      const s = f.format(new Date(Date.UTC(2024, m, 15)));
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    });
+  })();
 
   function isoDate(d) {
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
@@ -1207,8 +1344,8 @@
       let inner;
       if (calMode === "month") {
         const chips = hits.map(({a,s}) => {
-          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? " · PPG · " : " · ") + loadBars(s).label);
-          return `<span class="a-chip open-session" style="background:${a.color}" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="Voir la séance de ${esc(a.name)}">${a.initial}</span>`;
+          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + loadBars(s).label);
+          return `<span class="a-chip open-session" style="background:${a.color}" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">${a.initial}</span>`;
         }).join("");
         inner = `<div class="day-num">${date.getDate()}</div><div class="day-chips">${chips}</div>`;
       } else {
@@ -1216,8 +1353,8 @@
           const load = loadBars(s);
           const total = load.values.reduce((x,y)=>x+y,0) || 1;
           const bar = load.values.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${load.colors[i]}"></span>`).join("");
-          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? " · PPG · " : " · ") + load.label);
-          return `<div class="week-chip open-session" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="Voir la séance de ${esc(a.name)}">
+          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + load.label);
+          return `<div class="week-chip open-session" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">
             <span class="a-chip" style="background:${a.color}">${a.initial}</span>
             <span class="mini-bar">${bar}</span>
           </div>`;
