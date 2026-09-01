@@ -356,6 +356,10 @@
   // stays legible. Editing a French string orphans its translation — rename
   // the key here at the same time.
   const EN = {
+    "secondes": "seconds",
+    "Le signal d'accélération sur les neuf meilleures secondes de la séance, échantillon par échantillon. Chaque bosse est un coup : on y lit la montée en charge, le placement du pic et la propreté du retour. Uniquement sur les séances de test, où les conditions sont comparables.": "The acceleration signal over the session's best nine seconds, sample by sample. Each hump is one stroke: it shows how the pull builds, where it peaks, and how clean the recovery is. Test sessions only, where conditions are comparable.",
+    "Accélération sur les neuf meilleures secondes": "Acceleration over the best nine seconds",
+    "Coup de pagaie — 9 meilleures secondes": "Stroke — best nine seconds",
     "Voir la séance de": "View the session of",
     "Femme": "Female",
     "Homme": "Male",
@@ -618,6 +622,8 @@
     a.rpe = last ? last.rpe : null;
     a.lastSessionIsTest = last ? !!last.isTest : false;
     a.lastSessionIsConditioning = last ? !!last.isConditioning : false;
+    a.strokeSignal = last ? last.strokeSignal : null;
+    a.strokeRateHz = last ? last.strokeRateHz : 0;
     a.lastSessionName = last ? (last.name || "") : "";
     a.lastSessionPeaks = last ? (last.mechanicalPeaks || {}) : {};
 
@@ -693,6 +699,8 @@
                 boatType: s.boatType || null,
                 isTest: !!s.isTest,
                 isConditioning: !!s.isConditioning,
+                strokeSignal: Array.isArray(s.bestNineSecondsSignal) ? s.bestNineSecondsSignal : null,
+                strokeRateHz: s.bestNineSecondsRateHz || 0,
                 name: (s.name || "").trim(),
                 mechanicalPeaks: s.mechanicalPeaks || {}
               };
@@ -831,6 +839,38 @@
     const pct = counted > 0 ? Math.round(a.aboveAnchor / counted * 100) : 0;
     return `<div class="above"><b>${fmtMinSec(a.aboveAnchor)}</b><span>${pct} ${t("% du temps compté")}</span></div>
       <div class="above-bar"><i style="width:${Math.min(100, pct)}%"></i></div>`;
+  }
+
+  /// The athlete's best nine seconds, sample for sample.
+  ///
+  /// Every other figure here is a total or a peak; this is the only one that
+  /// shows a *shape*. Each hump is one stroke, so what the coach reads is how
+  /// the pull builds, where it peaks, and whether the recovery comes back to
+  /// the same floor every time — none of which a number can carry.
+  function strokeSVG(a) {
+    const signal = a.strokeSignal;
+    if (!Array.isArray(signal) || signal.length < 2) return "";
+
+    const w = 560, h = 150, padL = 30, padT = 10, plotH = h - padT - 22;
+    const peak = Math.max(...signal, 0.001);
+    const rate = a.strokeRateHz > 0 ? a.strokeRateHz : signal.length / 9;
+    const x = i => padL + (i / (signal.length - 1)) * (w - padL - 8);
+    const y = v => padT + plotH - (Math.max(0, v) / peak) * plotH;
+
+    const path = signal.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    // A second-by-second grid: stroke rate is read off it by eye.
+    const ticks = [];
+    for (let sec = 0; sec <= 9; sec++) {
+      const px = x(Math.min(signal.length - 1, Math.round(sec * rate)));
+      ticks.push(`<line x1="${px.toFixed(1)}" y1="${padT}" x2="${px.toFixed(1)}" y2="${(padT + plotH).toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`);
+      ticks.push(`<text x="${px.toFixed(1)}" y="${h - 6}" text-anchor="middle" font-size="10" fill="var(--ink-muted)">${sec}</text>`);
+    }
+    return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Accélération sur les neuf meilleures secondes")}">
+      ${ticks.join("")}
+      <line x1="${padL}" y1="${(padT + plotH).toFixed(1)}" x2="${w - 8}" y2="${(padT + plotH).toFixed(1)}" stroke="var(--border)" stroke-width="1"/>
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round"/>
+      <text x="4" y="${(padT + 9).toFixed(1)}" font-size="10" fill="var(--ink-muted)">${peak.toFixed(1)}</text>
+    </svg>`;
   }
 
   function radarSVG(a) {
@@ -1011,6 +1051,12 @@
             </div>
           </div>`}
         </div>
+        ${!a.strokeSignal ? "" : `
+        <div class="detail-section" style="grid-column:1/-1">
+          <h3>${t("Coup de pagaie — 9 meilleures secondes")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Le signal d'accélération sur les neuf meilleures secondes de la séance, échantillon par échantillon. Chaque bosse est un coup : on y lit la montée en charge, le placement du pic et la propreté du retour. Uniquement sur les séances de test, où les conditions sont comparables.")}</span></button></h3>
+          <div class="chart-wrap">${strokeSVG(a)}</div>
+          <p class="chart-note">${t("secondes")}</p>
+        </div>`}
         ${a.lastSessionIsConditioning ? "" : `
         <div class="detail-section">
           <h3>${t("Temps au-dessus de la référence 45 s")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Temps passé à pagayer plus fort que la référence 45 s confirmée de l'athlète. Compté seconde par seconde sur le signal brut : les zones lissent sur 15 secondes et ne peuvent pas voir un effort plus court, celui-ci si.")}</span></button></h3>
@@ -1121,6 +1167,8 @@
       rpe: s.rpe,
       lastSessionIsTest: !!s.isTest,
       lastSessionIsConditioning: !!s.isConditioning,
+      strokeSignal: s.strokeSignal,
+      strokeRateHz: s.strokeRateHz,
       lastSessionName: s.name || "",
       lastSessionPeaks: s.mechanicalPeaks || {},
       // The "nothing since N days" note is about how recent the athlete's
