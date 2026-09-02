@@ -409,7 +409,8 @@
            signInWithEmailAndPassword, createUserWithEmailAndPassword,
            GoogleAuthProvider, signInWithPopup
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, query, where
+         } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
   // These aren't secret — Firebase's own security model puts real protection
   // in Firestore rules, not in hiding the project id/API key. The actual
@@ -845,7 +846,12 @@
   }
 
   function startListening(db) {
-    const athletesCol = collection(db, "teams", teamCode, "athletes");
+    // Athletes are no longer a subcollection of the team: they live once at
+    // athletes/{id} and carry the teams they belong to, so the dashboard asks
+    // for "the ones in my team" instead of walking a team-shaped path. An
+    // athlete in two squads now has one set of sessions, not one per squad.
+    const athletesCol = query(
+      collection(db, "athletes"), where("teamIds", "array-contains", teamCode));
     onSnapshot(athletesCol, snapshot => {
       snapshot.docChanges().forEach(change => {
         const id = change.doc.id;
@@ -866,7 +872,7 @@
         a.gender = data.gender || a.gender;
 
         if (!sessionUnsubByAthlete.has(id)) {
-          const sessionsCol = collection(db, "teams", teamCode, "athletes", id, "sessions");
+          const sessionsCol = collection(db, "athletes", id, "sessions");
           const unsub = onSnapshot(sessionsCol, sessSnap => {
             a.sessions = sessSnap.docs.map(d => {
               const s = d.data();
@@ -899,7 +905,8 @@
         // Thresholds the coach set for this athlete, in a document the phone
         // never writes — so there is one owner and no write conflict.
         if (!hrvConfigUnsubByAthlete.has(id)) {
-          const cfgDoc = doc(db, "teams", teamCode, "athletes", id, "config", "hrvThresholds");
+          carryOverThresholds(db, id);
+          const cfgDoc = doc(db, "athletes", id, "config", "hrvThresholds");
           // The error callback is not optional here. Without it a denied read
           // fails silently, the editor falls back to the defaults, and nothing
           // looks wrong — which is exactly how a rule that never covered the
@@ -919,7 +926,7 @@
         }
 
         if (!hrvUnsubByAthlete.has(id)) {
-          const hrvCol = collection(db, "teams", teamCode, "athletes", id, "hrv");
+          const hrvCol = collection(db, "athletes", id, "hrv");
           const unsubHrv = onSnapshot(hrvCol, hrvSnap => {
             a.hrv = hrvSnap.docs.map(d => {
               const t = d.data();
@@ -996,6 +1003,47 @@
   function authMessage(err) {
     const known = AUTH_MESSAGES[err && err.code];
     return known ? t(known) : (err && err.message) || String(err);
+  }
+
+  /// The coach's own membership documents.
+  ///
+  /// Has to happen before the first listener opens: every athlete path is
+  /// authorised by reading users/{uid}, so a dashboard that starts listening
+  /// first is refused on every document. Written for anonymous accounts too —
+  /// an anonymous uid is a uid, which is what keeps the account optional.
+  async function ensureMembership(db, user) {
+    const userRef = doc(db, "users", user.uid);
+    // Read before write: a coach can run several squads, and this page knows
+    // only the one in the URL.
+    let teamIds = [];
+    try {
+      const snap = await getDoc(userRef);
+      if (snap.exists() && Array.isArray(snap.data().teamIds)) teamIds = snap.data().teamIds;
+    } catch (e) { /* first run, or a read the rules refuse — the write decides */ }
+    if (!teamIds.includes(teamCode)) teamIds = teamIds.concat([teamCode]);
+
+    await setDoc(userRef, { teamIds }, { merge: true });
+    await setDoc(doc(db, "teams", teamCode, "members", user.uid), { role: "coach" }, { merge: true });
+  }
+
+  /// One-off carry-over of the coach's fatigue thresholds from the
+  /// pre-migration path.
+  ///
+  /// Without it they fall back to the defaults without saying so, and the
+  /// morning verdicts quietly change meaning — the same silence that hid the
+  /// missing rules. Runs once per athlete and does nothing thereafter.
+  /// Delete together with the legacy rules in phase C.
+  async function carryOverThresholds(db, athleteId) {
+    const target = doc(db, "athletes", athleteId, "config", "hrvThresholds");
+    try {
+      if ((await getDoc(target)).exists()) return;
+      const legacy = await getDoc(
+        doc(db, "teams", teamCode, "athletes", athleteId, "config", "hrvThresholds"));
+      if (legacy.exists()) await setDoc(target, legacy.data());
+    } catch (e) {
+      // Legacy documents already gone, or the legacy rule already withdrawn.
+      // Either way there is nothing left to carry.
+    }
   }
 
   let authInstance = null;
@@ -1134,11 +1182,16 @@
         return;
       }
       renderAccountButton(user);
-      // The data lives under teams/{code}, not under a uid, so the listeners
-      // survive an identity change and only ever need opening once.
+      // Opened once: the listeners are keyed by team, not by identity, so a
+      // sign-in on top of an anonymous session does not need them restarted.
       if (!listening) {
         listening = true;
-        startListening(db);
+        ensureMembership(db, user)
+          .then(() => startListening(db))
+          .catch(err => {
+            listening = false;
+            lastSyncEl.textContent = t("Erreur de synchro : ") + err.message;
+          });
       }
     });
   }
@@ -1893,7 +1946,7 @@
   async function saveThresholds(athleteId, values) {
     const status = document.getElementById("thrStatus");
     try {
-      await setDoc(doc(firestore, "teams", teamCode, "athletes", athleteId, "config", "hrvThresholds"), values);
+      await setDoc(doc(firestore, "athletes", athleteId, "config", "hrvThresholds"), values);
       if (status) status.textContent = t("Seuils enregistrés.");
     } catch (e) {
       if (status) status.textContent = t("Échec de l'enregistrement : ") + e.message;
