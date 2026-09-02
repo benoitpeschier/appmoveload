@@ -878,7 +878,14 @@
               const s = d.data();
               const dateObj = s.date && s.date.toDate ? s.date.toDate() : new Date(s.date);
               return {
+                // The document id, because a date does not identify a session:
+                // four of them in one day is an ordinary test morning.
+                id: d.id,
                 date: isoDate(dateObj),
+                // The full instant, kept alongside the day so several sessions
+                // in one day can be ordered and told apart.
+                startedAt: dateObj.getTime(),
+                startedAtLabel: dateObj.toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" }),
                 duration: Math.round((s.durationSeconds || 0) / 60),
                 hr: [s.hrZone1Seconds || 0, s.hrZone2Seconds || 0, s.hrZone3Seconds || 0],
                 mech: [s.mechZone1Seconds || 0, s.mechZone2Seconds || 0, s.mechZone3Seconds || 0],
@@ -1767,14 +1774,15 @@
 
   let openDetailId = null;
   /// Set when the detail shows one particular session rather than the latest —
-  /// clicking a day in the calendar, for instance.
-  let openDetailDate = null;
+  /// clicking a day in the calendar, for instance. A session id rather than a
+  /// date: a day can hold several, and a date could only ever name the first.
+  let openDetailSession = null;
 
-  /// A copy of the athlete whose "last session" fields describe `sessionDate`
+  /// A copy of the athlete whose "last session" fields describe `sessionId`
   /// instead, so the detail view can render any session without duplicating it.
-  function athleteViewFor(a, sessionDate) {
-    if (!sessionDate) return a;
-    const s = a.sessions.find(x => x.date === sessionDate);
+  function athleteViewFor(a, sessionId) {
+    if (!sessionId) return a;
+    const s = a.sessions.find(x => x.id === sessionId);
     if (!s) return a;
     return Object.assign({}, a, {
       lastSession: s.date,
@@ -1803,15 +1811,15 @@
     });
   }
 
-  function renderDetail(id, sessionDate) {
-    const a = athleteViewFor(athletes.find(x => x.id === id), sessionDate);
+  function renderDetail(id, sessionId) {
+    const a = athleteViewFor(athletes.find(x => x.id === id), sessionId);
     openDetailId = id;
-    openDetailDate = sessionDate || null;
+    openDetailSession = sessionId || null;
     detail.innerHTML = detailHTML(a);
     detail.classList.add("open");
     document.getElementById("backBtn").addEventListener("click", () => {
       openDetailId = null;
-      openDetailDate = null;
+      openDetailSession = null;
       detail.classList.remove("open");
       detail.innerHTML = "";
     });
@@ -1821,7 +1829,7 @@
       setBoatOverride(id, boat);
       const athlete = athletes.find(x => x.id === id);
       if (athlete) deriveAthlete(athlete);
-      renderDetail(id, sessionDate);
+      renderDetail(id, sessionId);
       render();
     };
 
@@ -1868,8 +1876,8 @@
     });
   }
 
-  function showDetail(id, sessionDate) {
-    renderDetail(id, sessionDate);
+  function showDetail(id, sessionId) {
+    renderDetail(id, sessionId);
     detail.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -2017,7 +2025,7 @@
       sessionFilterMode = btn.dataset.mode;
       athletes.forEach(deriveAthlete);
       onDataChanged();
-      if (openDetailId) renderDetail(openDetailId, openDetailDate);
+      if (openDetailId) renderDetail(openDetailId, openDetailSession);
     });
   });
 
@@ -2089,11 +2097,19 @@
   function isoDate(d) {
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
   }
+  /// Every session on a day, athlete by athlete, earliest first.
+  ///
+  /// This used to `find` one session per athlete per day, so an athlete who
+  /// trained twice showed once and the rest of the day was invisible — with
+  /// nothing to say so. Ordering is by start time rather than by document id,
+  /// which Firestore returns in an order of its own.
   function sessionsOn(iso) {
     return athletes
       .filter(a => activeAthletes.has(a.id))
-      .map(a => ({ a, s: a.sessions.find(s => s.date === iso && matchesFilterMode(s)) }))
-      .filter(x => x.s);
+      .flatMap(a => a.sessions
+        .filter(s => s.date === iso && matchesFilterMode(s))
+        .map(s => ({ a, s })))
+      .sort((x, y) => (x.s.startedAt || 0) - (y.s.startedAt || 0));
   }
   /// Athletes who tested on a given day. The pill sits over the session
   /// colours so one square can carry both, and the eye compares yesterday's
@@ -2166,8 +2182,8 @@
       let inner;
       if (calMode === "month") {
         const chips = hits.map(({a,s}) => {
-          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + loadBars(s).label);
-          return `<span class="a-chip open-session" style="background:${a.color}" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">${a.initial}</span>`;
+          const tipLabel = esc(a.name + " " + (s.startedAtLabel || "") + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + loadBars(s).label);
+          return `<span class="a-chip open-session" style="background:${a.color}" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-session="${esc(s.id)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">${a.initial}</span>`;
         }).join("");
         inner = `<div class="day-num">${date.getDate()}${hrvPill(iso)}</div><div class="day-chips">${chips}</div>`;
       } else {
@@ -2175,8 +2191,8 @@
           const load = loadBars(s);
           const total = load.values.reduce((x,y)=>x+y,0) || 1;
           const bar = load.values.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${load.colors[i]}"></span>`).join("");
-          const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + load.label);
-          return `<div class="week-chip open-session" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">
+          const tipLabel = esc(a.name + " " + (s.startedAtLabel || "") + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + load.label);
+          return `<div class="week-chip open-session" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-session="${esc(s.id)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">
             <span class="a-chip" style="background:${a.color}">${a.initial}</span>
             <span class="mini-bar">${bar}</span>
           </div>`;
@@ -2214,7 +2230,7 @@
       const open = () => {
         tip.style.opacity = "0";
         activateTab("overview");
-        showDetail(el.dataset.id, el.dataset.date);
+        showDetail(el.dataset.id, el.dataset.session);
       };
       el.addEventListener("click", open);
       el.addEventListener("keydown", e => {
