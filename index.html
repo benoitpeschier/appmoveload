@@ -534,6 +534,8 @@
     "— pas de comparaison possible.": "— no comparison possible.",
     "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
     "Se connecter": "Sign in",
+    "Seuils illisibles — les valeurs affichées sont celles par défaut. ": "Thresholds unreadable — the values shown are the defaults. ",
+    "Embarcation non renseignée sur cette séance — aucun record comparable. L'athlète peut la choisir dans le détail de la séance.": "No boat set on this session — no comparable record. The athlete can pick one on the session's detail page.",
     "Continuer avec Google": "Continue with Google",
     "ou": "or",
     "Le navigateur a bloqué la fenêtre Google. Autorisez les pop-ups pour ce site, puis réessayez.": "The browser blocked the Google window. Allow pop-ups for this site, then try again.",
@@ -773,23 +775,47 @@
       .slice(-8)
       .map(s => ({ d: shortDate(s.date), v: s.mechanicalPeaks["45"] }));
 
-    const sameBoat = paddling.filter(s => s.boatType === a.boatType);
-    const records = {};
     // Each window's record can come from a different session — a 3 s best from
     // a sprint, a 3 min best from a long piece — so the date is kept per
     // window rather than as one date for the whole curve.
-    const recordDates = {};
-    RADAR_WINDOWS.forEach(w => {
-      let best = 0, bestDate = null;
-      sameBoat.forEach(s => {
-        const v = s.mechanicalPeaks && s.mechanicalPeaks[String(w)];
-        if (v != null && v > best) { best = v; bestDate = s.date; }
+    function bestByWindow(pool) {
+      const records = {}, dates = {};
+      RADAR_WINDOWS.forEach(w => {
+        let best = 0, bestDate = null;
+        pool.forEach(s => {
+          const v = s.mechanicalPeaks && s.mechanicalPeaks[String(w)];
+          if (v != null && v > best) { best = v; bestDate = s.date; }
+        });
+        records[w] = best;
+        dates[w] = bestDate;
       });
-      records[w] = best;
-      recordDates[w] = bestDate;
-    });
-    a.records = records;
-    a.recordDates = recordDates;
+      return { records, dates };
+    }
+
+    const own = bestByWindow(paddling.filter(s => s.boatType === a.boatType));
+    a.records = own.records;
+    a.recordDates = own.dates;
+
+    // The session-vs-record curve draws one line from the last session and one
+    // from a record pool, so both have to describe the same boat. They did not:
+    // the record was always filtered to the athlete's dominant boat while the
+    // session line was whatever was recorded last. A session in another boat —
+    // or, far more often, one whose boat was simply never set, which the app
+    // syncs as an empty string — sat outside the pool and could therefore be
+    // drawn *above* the record, reading as a personal best that exists nowhere.
+    const curveBoat = last && !last.isConditioning ? last.boatType : null;
+    a.curveBoat = curveBoat;
+    if (!curveBoat) {
+      a.curveRecords = null;
+      a.curveRecordDates = null;
+    } else if (curveBoat === a.boatType) {
+      a.curveRecords = own.records;
+      a.curveRecordDates = own.dates;
+    } else {
+      const other = bestByWindow(paddling.filter(s => s.boatType === curveBoat));
+      a.curveRecords = other.records;
+      a.curveRecordDates = other.dates;
+    }
   }
 
   function onDataChanged() {
@@ -856,9 +882,16 @@
         // never writes — so there is one owner and no write conflict.
         if (!hrvConfigUnsubByAthlete.has(id)) {
           const cfgDoc = doc(db, "teams", teamCode, "athletes", id, "config", "hrvThresholds");
+          // The error callback is not optional here. Without it a denied read
+          // fails silently, the editor falls back to the defaults, and nothing
+          // looks wrong — which is exactly how a rule that never covered the
+          // config subcollection went unnoticed until somebody pressed Save.
           const unsubCfg = onSnapshot(cfgDoc, snap => {
             a.hrvThresholds = snap.exists() ? snap.data() : null;
             deriveAthlete(a);
+            onDataChanged();
+          }, err => {
+            a.hrvThresholdsError = err.message;
             onDataChanged();
           });
           hrvConfigUnsubByAthlete.set(id, unsubCfg);
@@ -1447,7 +1480,10 @@
     const xFor = i => padL + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
 
     const sessionVals = RADAR_WINDOWS.map(wnd => a.lastSessionPeaks ? a.lastSessionPeaks[String(wnd)] : null);
-    const recordVals = RADAR_WINDOWS.map(wnd => a.records ? a.records[wnd] : null);
+    // Null when the last session's boat is unknown: there is no record that
+    // compares to it, and drawing the wrong boat's record would be worse than
+    // drawing none.
+    const recordVals = RADAR_WINDOWS.map(wnd => a.curveRecords ? a.curveRecords[wnd] : null);
     const allVals = [...sessionVals, ...recordVals].filter(v => v != null);
     const maxV = allVals.length ? Math.max(...allVals) : 1;
     const yFor = v => padT + plotH - (v / (maxV || 1)) * plotH;
@@ -1469,7 +1505,7 @@
     const dotsFor = (line, label) => line.pts.map((p, i) => {
       if (!p) return "";
       const val = (label === t("Séance") ? sessionVals : recordVals)[i];
-      const when = label === t("Record") && a.recordDates ? a.recordDates[RADAR_WINDOWS[i]] : null;
+      const when = label === t("Record") && a.curveRecordDates ? a.curveRecordDates[RADAR_WINDOWS[i]] : null;
       const value = val.toFixed(2) + " m/s²" + (when ? " · " + shortDate(when) : "");
       return `<circle class="hoverpt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="8" fill="transparent" data-label="${RADAR_LABELS[RADAR_WINDOWS[i]]} — ${label}" data-value="${value}"/>`;
     }).join("");
@@ -1585,11 +1621,13 @@
           </div>
           <div class="legend" style="margin-top:0.5rem">
             <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>${t("Séance")}</span>
-            <span class="legend-item"><span class="legend-dot" style="background:var(--ink-muted)"></span>${t("Record")}</span>
+            ${a.curveRecords ? `<span class="legend-item"><span class="legend-dot" style="background:var(--ink-muted)"></span>${t("Record")} · ${esc(a.curveBoat)}</span>` : ""}
           </div>
           <!-- Each window's record can come from a different session, so the
                date belongs to the point rather than to the curve. -->
-          <p class="chart-note">${t("Survole un point du record pour voir sa valeur et la date où il a été établi.")}</p>
+          ${a.curveRecords
+            ? `<p class="chart-note">${t("Survole un point du record pour voir sa valeur et la date où il a été établi.")}</p>`
+            : `<p class="chart-note invite-warn">${t("Embarcation non renseignée sur cette séance — aucun record comparable. L'athlète peut la choisir dans le détail de la séance.")}</p>`}
         </div>
         <div class="detail-section" style="grid-column:1/-1">
           <h3>${t("Seuils de fatigue")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Les seuils de Schmidt, en pourcentage de variation contre la médiane des six tests précédents. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.")}</span></button></h3>
@@ -1817,7 +1855,10 @@
       <div class="thr-actions">
         <button class="nav-btn" id="thrSave" style="width:auto">${t("Enregistrer les seuils")}</button>
         <button class="link-btn" id="thrReset">${t("Revenir aux valeurs par défaut")}</button>
-        <span id="thrStatus" class="chart-note"></span>
+        <span id="thrStatus" class="chart-note${a.hrvThresholdsError ? " invite-warn" : ""}">${
+          a.hrvThresholdsError
+            ? esc(t("Seuils illisibles — les valeurs affichées sont celles par défaut. ") + a.hrvThresholdsError)
+            : ""}</span>
       </div>`;
   }
 
