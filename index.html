@@ -291,6 +291,17 @@
   #inviteCard dd { margin:.15rem 0 0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
     word-break:break-all; }
   .chart-note { font-size:11px; color:var(--ink-muted); margin:.35rem 0 0; }
+  /* A drawer's summary reads as one of the section headings, so it sits in a
+     card without announcing itself as a different kind of thing. */
+  .drawer > summary { font-size:12.5px; font-weight:500; text-transform:uppercase;
+    letter-spacing:0.03em; color:var(--ink-soft); cursor:pointer; list-style:none;
+    display:flex; align-items:center; gap:.4rem; }
+  .drawer > summary::-webkit-details-marker { display:none; }
+  .drawer > summary::before { content:"\25B8"; font-size:10px; line-height:1;
+    transition:transform .15s ease; }
+  .drawer[open] > summary::before { transform:rotate(90deg); }
+  .drawer > summary:hover { color:var(--accent); }
+  .drawer-body { margin-top:.8rem; }
   .help { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px;
           border-radius:50%; border:1px solid var(--border); background:var(--card-bg);
           color:var(--ink-muted); font-size:11px; line-height:1; cursor:help; margin-left:.35rem;
@@ -601,6 +612,13 @@
 
   const lastSyncEl = document.getElementById("lastSync");
 
+  // A listener without an error callback reports a refused read as an empty
+  // collection, which is indistinguishable from an athlete who has simply not
+  // synced yet — the failure mode that hid the missing hrv and config rules.
+  function listenerFailed(what, err) {
+    lastSyncEl.textContent = t("Erreur de synchro : ") + what + " — " + err.message;
+  }
+
   // --- Inviting an athlete -------------------------------------------------
   // Must match SyncSettings.shareablePayload in SyncKit. Built by hand rather
   // than with URLSearchParams, which encodes a space as "+"; Swift's
@@ -871,7 +889,7 @@
             });
             deriveAthlete(a);
             onDataChanged();
-          });
+          }, err => listenerFailed("sessions", err));
           sessionUnsubByAthlete.set(id, unsub);
         }
 
@@ -892,6 +910,9 @@
             onDataChanged();
           }, err => {
             a.hrvThresholdsError = err.message;
+            // A failure hidden inside a closed drawer is the same silence this
+            // whole class of bug lived in, so it goes to the sync line too.
+            listenerFailed(t("Seuils de fatigue"), err);
             onDataChanged();
           });
           hrvConfigUnsubByAthlete.set(id, unsubCfg);
@@ -917,7 +938,7 @@
             }).sort((x, y) => x.date.localeCompare(y.date));
             deriveAthlete(a);
             onDataChanged();
-          });
+          }, err => listenerFailed("HRV", err));
           hrvUnsubByAthlete.set(id, unsubHrv);
         }
 
@@ -1629,10 +1650,6 @@
             ? `<p class="chart-note">${t("Survole un point du record pour voir sa valeur et la date où il a été établi.")}</p>`
             : `<p class="chart-note invite-warn">${t("Embarcation non renseignée sur cette séance — aucun record comparable. L'athlète peut la choisir dans le détail de la séance.")}</p>`}
         </div>
-        <div class="detail-section" style="grid-column:1/-1">
-          <h3>${t("Seuils de fatigue")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Les seuils de Schmidt, en pourcentage de variation contre la médiane des six tests précédents. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.")}</span></button></h3>
-          ${thresholdEditor(a)}
-        </div>
         <div class="detail-section">
           <h3>${t("Records tous temps par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)")}</h3>
           <div class="chart-wrap">
@@ -1641,6 +1658,17 @@
           </div>
           ${radarNote}
           ${boatPickerHTML(a)}
+        </div>
+        <!-- A drawer, and under the radar: eleven number fields for something
+             set once per athlete was the largest block on the card. -->
+        <div class="detail-section" style="grid-column:1/-1">
+          <details class="drawer">
+            <summary>${t("Seuils de fatigue")}</summary>
+            <div class="drawer-body">
+              <p class="chart-note" style="margin:0 0 0.8rem">${t("Les seuils de Schmidt, en pourcentage de variation contre la médiane des six tests précédents. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.")}</p>
+              ${thresholdEditor(a)}
+            </div>
+          </details>
         </div>
       </div>`;
   }
