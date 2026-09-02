@@ -409,7 +409,7 @@
            signInWithEmailAndPassword, createUserWithEmailAndPassword,
            GoogleAuthProvider, signInWithPopup
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, query, where
+  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
   // These aren't secret — Firebase's own security model puts real protection
@@ -846,12 +846,12 @@
   }
 
   function startListening(db) {
-    // Athletes are no longer a subcollection of the team: they live once at
-    // athletes/{id} and carry the teams they belong to, so the dashboard asks
-    // for "the ones in my team" instead of walking a team-shaped path. An
-    // athlete in two squads now has one set of sessions, not one per squad.
-    const athletesCol = query(
-      collection(db, "athletes"), where("teamIds", "array-contains", teamCode));
+    // The squad's roster: one small pointer per athlete, name and gender.
+    // The data itself moved out from under the team to athletes/{id}, so an
+    // athlete in two squads has one set of sessions rather than one per
+    // squad — but discovery still starts from the team, which keeps the
+    // athletes collection from ever needing to be enumerable.
+    const athletesCol = collection(db, "teams", teamCode, "roster");
     onSnapshot(athletesCol, snapshot => {
       snapshot.docChanges().forEach(change => {
         const id = change.doc.id;
@@ -1007,10 +1007,12 @@
 
   /// The coach's own membership documents.
   ///
-  /// Has to happen before the first listener opens: every athlete path is
-  /// authorised by reading users/{uid}, so a dashboard that starts listening
-  /// first is refused on every document. Written for anonymous accounts too —
-  /// an anonymous uid is a uid, which is what keeps the account optional.
+  /// Not what authorises anything today — the rules still only ask for a
+  /// signed-in caller who knows the team id, exactly as before the migration.
+  /// This is the record that step 3 turns into real per-team access, and
+  /// writing it now means the data is already there when it does. Written for
+  /// anonymous accounts too: an anonymous uid is a uid, which is what keeps
+  /// the account optional.
   async function ensureMembership(db, user) {
     const userRef = doc(db, "users", user.uid);
     // Read before write: a coach can run several squads, and this page knows
@@ -1186,12 +1188,10 @@
       // sign-in on top of an anonymous session does not need them restarted.
       if (!listening) {
         listening = true;
-        ensureMembership(db, user)
-          .then(() => startListening(db))
-          .catch(err => {
-            listening = false;
-            lastSyncEl.textContent = t("Erreur de synchro : ") + err.message;
-          });
+        startListening(db);
+        // Recorded, not awaited: the rules no longer gate reads on it, so a
+        // dashboard that can be shown should be shown even if this fails.
+        ensureMembership(db, user).catch(err => listenerFailed(t("Compte"), err));
       }
     });
   }
