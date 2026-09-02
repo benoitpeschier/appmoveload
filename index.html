@@ -258,14 +258,29 @@
   .week-chip .mini-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; display: flex; background: var(--border); }
   .week-chip .mini-bar > span { height: 100%; }
 
-  #inviteOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55);
+  #inviteOverlay, #accountOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55);
     display:flex; align-items:center; justify-content:center; padding:1rem; z-index:50; }
-  #inviteOverlay[hidden] { display:none; }
-  #inviteCard { background:var(--card, #fff); color:inherit; border-radius:14px;
+  #inviteOverlay[hidden], #accountOverlay[hidden] { display:none; }
+  #inviteCard, #accountCard { background:var(--card-bg); color:var(--ink); border-radius:14px;
     padding:1.5rem; max-width:420px; width:100%; max-height:90vh; overflow-y:auto;
     box-shadow:0 20px 60px rgba(0,0,0,.35); }
-  #inviteCard h2 { margin:0 0 .75rem; font-size:1.1rem; }
-  #inviteCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
+  #inviteCard h2, #accountCard h2 { margin:0 0 .75rem; font-size:1.1rem; }
+  #inviteCard p, #accountCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
+  #accountCard label { display:block; font-size:12px; font-weight:600; margin:.75rem 0 .2rem; }
+  #accountCard input { width:100%; box-sizing:border-box; font:inherit; font-size:14px;
+    padding:.45rem .6rem; border:1px solid var(--border-strong); border-radius:8px;
+    background:var(--bg); color:var(--ink); }
+  #accountError { color:var(--i3); font-size:12px; margin:.6rem 0 0; }
+  #accountRow { display:flex; gap:.5rem; margin-top:1rem; flex-wrap:wrap; }
+  #accountGoogle { display:flex; align-items:center; justify-content:center; gap:.55rem;
+    width:100%; font:inherit; font-size:14px; padding:.5rem .8rem; cursor:pointer;
+    border:1px solid var(--border-strong); border-radius:8px;
+    background:var(--card-bg-hover); color:var(--ink); }
+  #accountGoogle:hover { border-color:var(--accent); }
+  #accountGoogle svg { width:17px; height:17px; flex:none; }
+  .account-or { display:flex; align-items:center; gap:.6rem; margin:.9rem 0 .2rem;
+    color:var(--ink-muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  .account-or::before, .account-or::after { content:""; flex:1; height:1px; background:var(--border); }
   /* White quiet zone regardless of theme — scanners need the contrast. */
   #inviteQR { background:#fff; padding:12px; border-radius:10px; margin:1rem 0;
     display:flex; justify-content:center; }
@@ -314,6 +329,7 @@
       </div>
       <div class="top-meta" id="lastSync" data-i18n="Dernière synchro : —">Dernière synchro : —</div>
       <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Inviter un athlète">Inviter un athlète</button>
+      <button class="nav-btn" id="accountBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Se connecter">Se connecter</button>
       <a id="guideLink" href="guide.html#coach" style="font-size:13px; color:var(--accent); text-decoration:none;" data-i18n="Mode d'emploi">Mode d'emploi</a>
       <button class="nav-btn" id="langBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;">English</button>
     </div>
@@ -368,16 +384,36 @@
   </div>
 </div>
 
+<div id="accountOverlay" hidden>
+  <div id="accountCard" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+    <h2 id="accountTitle" data-i18n="Compte coach">Compte coach</h2>
+    <div id="accountBody"></div>
+  </div>
+</div>
+
 <script src="vendor-qrcode.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged, signOut,
+           signInWithEmailAndPassword, createUserWithEmailAndPassword,
+           GoogleAuthProvider, signInWithPopup
+         } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
   import { getFirestore, collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
   // These aren't secret — Firebase's own security model puts real protection
   // in Firestore rules, not in hiding the project id/API key. The actual
   // shared secret is the team code below (read from ?team=, never hardcoded).
-  const firebaseConfig = { apiKey: "AIzaSyDnSvSGlXZLKqRCgoiFqlkEFSpkPZ72YTU", projectId: "appmoveload" };
+  // `authDomain` was not needed while the only sign-in was anonymous, which is
+  // a plain REST call. A popup provider is not: the SDK sends the browser to
+  // https://<authDomain>/__/auth/handler, and without it signInWithPopup fails
+  // outright with auth/auth-domain-config-required. Derived from the project id
+  // so the two cannot drift apart.
+  const FIREBASE_PROJECT_ID = "appmoveload";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDnSvSGlXZLKqRCgoiFqlkEFSpkPZ72YTU",
+    projectId: FIREBASE_PROJECT_ID,
+    authDomain: FIREBASE_PROJECT_ID + ".firebaseapp.com",
+  };
   const PALETTE = ["var(--a-lea)","var(--a-karim)","var(--a-sofia)","var(--a-tom)","var(--a-nina)","var(--a-hugo)"];
 
   // ── Langue / language ───────────────────────────────────────────────────
@@ -496,7 +532,33 @@
     "À surveiller": "Watch",
     "Évolution du pic d'accélération 45 secondes": "Change in the 45-second acceleration peak",
     "— pas de comparaison possible.": "— no comparison possible.",
-    "‹ Retour à la vue d'ensemble": "‹ Back to the overview"
+    "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
+    "Se connecter": "Sign in",
+    "Continuer avec Google": "Continue with Google",
+    "ou": "or",
+    "Le navigateur a bloqué la fenêtre Google. Autorisez les pop-ups pour ce site, puis réessayez.": "The browser blocked the Google window. Allow pop-ups for this site, then try again.",
+    "Cette adresse a déjà un compte avec un mot de passe. Connectez-vous avec le mot de passe.": "This address already has a password account. Sign in with the password.",
+    "Ce domaine n'est pas autorisé pour la connexion Google sur le projet Firebase.": "This domain is not authorised for Google sign-in on the Firebase project.",
+    "Erreur de synchro : ": "Sync error: ",
+    "Erreur de connexion : ": "Sign-in error: ",
+    "Compte coach": "Coach account",
+    "Gérer le compte": "Manage account",
+    "Se connecter ou créer un compte": "Sign in or create an account",
+    "Connecté en tant que": "Signed in as",
+    "Se déconnecter": "Sign out",
+    "Créer un compte": "Create an account",
+    "Créer le compte": "Create account",
+    "Adresse e-mail": "E-mail address",
+    "Mot de passe": "Password",
+    "Se déconnecter ne retire rien à l'équipe : les données restent, et le tableau de bord reste consultable.": "Signing out takes nothing away from the team: the data stays and the dashboard is still readable.",
+    "Un compte vous identifie sur n'importe quel ordinateur. Sans compte, le tableau de bord fonctionne, mais ce navigateur est le seul à vous reconnaître.": "An account identifies you on any computer. Without one the dashboard still works, but this browser is the only thing that recognises you.",
+    "Cette adresse a déjà un compte. Utilisez « Se connecter ».": "This address already has an account. Use \u201cSign in\u201d.",
+    "Cette adresse e-mail n'est pas valide.": "This e-mail address is not valid.",
+    "Le mot de passe doit faire au moins 6 caractères.": "The password must be at least 6 characters.",
+    "Adresse e-mail ou mot de passe incorrect.": "Incorrect e-mail address or password.",
+    "Ce compte a été désactivé.": "This account has been disabled.",
+    "Trop de tentatives. Réessayez dans quelques minutes.": "Too many attempts. Try again in a few minutes.",
+    "La connexion par e-mail n'est pas activée sur le projet Firebase.": "E-mail sign-in is not enabled on the Firebase project."
   };
   const LANG = (() => {
     const asked = new URL(location.href).searchParams.get("lang");
@@ -833,21 +895,198 @@
       onDataChanged();
       lastSyncEl.textContent = t("Connecté en direct");
     }, err => {
-      lastSyncEl.textContent = "Erreur de synchro : " + err.message;
+      lastSyncEl.textContent = t("Erreur de synchro : ") + err.message;
     });
   }
+
+  // --- Coach account -------------------------------------------------------
+  // The webapp has always signed in anonymously, which works because the rules
+  // only ask for *someone* to be signed in and no path contains a uid. A named
+  // account changes nothing about the data today; it is what the team model
+  // will hang roles off, and it is what lets a coach be recognised on a second
+  // machine. So it is offered, not required: an un-signed-in coach still sees
+  // the team exactly as before.
+  const AUTH_MESSAGES = {
+    "auth/email-already-in-use": "Cette adresse a déjà un compte. Utilisez « Se connecter ».",
+    "auth/invalid-email": "Cette adresse e-mail n'est pas valide.",
+    "auth/weak-password": "Le mot de passe doit faire au moins 6 caractères.",
+    "auth/missing-password": "Le mot de passe doit faire au moins 6 caractères.",
+    // The SDK collapses a wrong address and a wrong password into one code on
+    // purpose — telling them apart would say which addresses are registered.
+    "auth/invalid-credential": "Adresse e-mail ou mot de passe incorrect.",
+    "auth/user-not-found": "Adresse e-mail ou mot de passe incorrect.",
+    "auth/wrong-password": "Adresse e-mail ou mot de passe incorrect.",
+    "auth/user-disabled": "Ce compte a été désactivé.",
+    "auth/too-many-requests": "Trop de tentatives. Réessayez dans quelques minutes.",
+    "auth/operation-not-allowed": "La connexion par e-mail n'est pas activée sur le projet Firebase.",
+    "auth/popup-blocked": "Le navigateur a bloqué la fenêtre Google. Autorisez les pop-ups pour ce site, puis réessayez.",
+    // Fires when the same address already has a password account and the
+    // project is set to keep one account per e-mail address.
+    "auth/account-exists-with-different-credential":
+      "Cette adresse a déjà un compte avec un mot de passe. Connectez-vous avec le mot de passe.",
+    // The deployed domain has to be listed in Firebase > Authentication >
+    // Settings > Authorized domains; localhost is allowed out of the box, so
+    // this one only ever shows up in production.
+    "auth/unauthorized-domain": "Ce domaine n'est pas autorisé pour la connexion Google sur le projet Firebase.",
+  };
+
+  // Inlined rather than fetched: Google's own mark, drawn at 17px next to the
+  // label. A remote image would be one more thing to load before a dialog.
+  const GOOGLE_MARK =
+    '<svg viewBox="0 0 48 48" aria-hidden="true">' +
+    '<path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2.5 24 .5 14.6.5 6.5 5.9 2.6 13.7l7.8 6.1C12.3 13.9 17.7 9.5 24 9.5z"/>' +
+    '<path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.5 5.8c4.4-4 7-10 7-17.5z"/>' +
+    '<path fill="#FBBC05" d="M10.4 28.2c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C1 15.9 0 19.8 0 23.5s1 7.6 2.6 10.8l7.8-6.1z"/>' +
+    '<path fill="#34A853" d="M24 47c6.2 0 11.5-2 15.3-5.6l-7.5-5.8c-2.1 1.4-4.8 2.2-7.8 2.2-6.3 0-11.7-4.4-13.6-10.3l-7.8 6.1C6.5 41.6 14.6 47 24 47z"/>' +
+    "</svg>";
+  function authMessage(err) {
+    const known = AUTH_MESSAGES[err && err.code];
+    return known ? t(known) : (err && err.message) || String(err);
+  }
+
+  let authInstance = null;
+  let accountMode = "signIn";
+
+  function renderAccountButton(user) {
+    const btn = document.getElementById("accountBtn");
+    if (!btn) return;
+    const named = user && !user.isAnonymous && user.email;
+    btn.textContent = named ? user.email : t("Se connecter");
+    btn.title = named ? t("Gérer le compte") : t("Se connecter ou créer un compte");
+  }
+
+  function renderAccountDialog() {
+    const user = authInstance && authInstance.currentUser;
+    const body = document.getElementById("accountBody");
+    if (user && !user.isAnonymous) {
+      body.innerHTML =
+        "<p>" + t("Connecté en tant que") + " <strong>" + esc(user.email || "") + "</strong></p>" +
+        "<p>" + t("Se déconnecter ne retire rien à l'équipe : les données restent, et le tableau de bord reste consultable.") + "</p>" +
+        '<div id="accountRow">' +
+          '<button class="nav-btn" id="accountSignOut" style="width:auto; padding:0.4rem 1rem;">' + esc(t("Se déconnecter")) + "</button>" +
+          '<button class="nav-btn" id="accountClose" style="width:auto; padding:0.4rem 1rem;">' + esc(t("Fermer")) + "</button>" +
+        "</div>";
+      document.getElementById("accountSignOut").addEventListener("click", async () => {
+        await signOut(authInstance);
+        // Reloading rather than re-wiring: every Firestore listener on the page
+        // was opened with the old token, and a fresh load is both simpler and
+        // easier to reason about than swapping credentials underneath them.
+        location.reload();
+      });
+    } else {
+      const creating = accountMode === "create";
+      body.innerHTML =
+        '<div class="seg" id="accountSeg" style="margin-bottom:.5rem;">' +
+          '<button data-mode="signIn"' + (creating ? "" : ' class="active"') + ">" + esc(t("Se connecter")) + "</button>" +
+          '<button data-mode="create"' + (creating ? ' class="active"' : "") + ">" + esc(t("Créer un compte")) + "</button>" +
+        "</div>" +
+        "<p>" + t("Un compte vous identifie sur n'importe quel ordinateur. Sans compte, le tableau de bord fonctionne, mais ce navigateur est le seul à vous reconnaître.") + "</p>" +
+        // Google first: on the machine a coach actually uses, it is one click
+        // and no password to remember. The e-mail form stays for everyone else.
+        '<button id="accountGoogle">' + GOOGLE_MARK + "<span>" + esc(t("Continuer avec Google")) + "</span></button>" +
+        '<div class="account-or">' + esc(t("ou")) + "</div>" +
+        '<label for="accountEmail">' + esc(t("Adresse e-mail")) + "</label>" +
+        '<input id="accountEmail" type="email" autocomplete="username" spellcheck="false">' +
+        '<label for="accountPassword">' + esc(t("Mot de passe")) + "</label>" +
+        '<input id="accountPassword" type="password" autocomplete="' + (creating ? "new-password" : "current-password") + '">' +
+        '<p id="accountError" hidden></p>' +
+        '<div id="accountRow">' +
+          '<button class="nav-btn" id="accountSubmit" style="width:auto; padding:0.4rem 1rem;">' +
+            esc(creating ? t("Créer le compte") : t("Se connecter")) + "</button>" +
+          '<button class="nav-btn" id="accountClose" style="width:auto; padding:0.4rem 1rem;">' + esc(t("Fermer")) + "</button>" +
+        "</div>";
+
+      document.querySelectorAll("#accountSeg button").forEach(b => {
+        b.addEventListener("click", () => { accountMode = b.dataset.mode; renderAccountDialog(); });
+      });
+      const submit = document.getElementById("accountSubmit");
+      const errorEl = document.getElementById("accountError");
+      async function attempt() {
+        const email = document.getElementById("accountEmail").value.trim().toLowerCase();
+        const password = document.getElementById("accountPassword").value;
+        if (!email || password.length < 6) {
+          errorEl.textContent = t("Le mot de passe doit faire au moins 6 caractères.");
+          errorEl.hidden = false;
+          return;
+        }
+        submit.disabled = true;
+        errorEl.hidden = true;
+        try {
+          if (accountMode === "create") {
+            await createUserWithEmailAndPassword(authInstance, email, password);
+          } else {
+            await signInWithEmailAndPassword(authInstance, email, password);
+          }
+          location.reload();
+        } catch (err) {
+          errorEl.textContent = authMessage(err);
+          errorEl.hidden = false;
+          submit.disabled = false;
+        }
+      }
+      submit.addEventListener("click", attempt);
+      document.getElementById("accountPassword")
+        .addEventListener("keydown", e => { if (e.key === "Enter") attempt(); });
+
+      document.getElementById("accountGoogle").addEventListener("click", async () => {
+        errorEl.hidden = true;
+        try {
+          await signInWithPopup(authInstance, new GoogleAuthProvider());
+          location.reload();
+        } catch (err) {
+          // Closing the popup, or opening a second one, is a decision rather
+          // than a failure — saying "error" there would be a lie.
+          if (err && (err.code === "auth/popup-closed-by-user"
+                   || err.code === "auth/cancelled-popup-request")) return;
+          errorEl.textContent = authMessage(err);
+          errorEl.hidden = false;
+        }
+      });
+    }
+    document.getElementById("accountClose").addEventListener("click", hideAccount);
+  }
+
+  function showAccount() {
+    accountMode = "signIn";
+    renderAccountDialog();
+    document.getElementById("accountOverlay").hidden = false;
+  }
+  function hideAccount() { document.getElementById("accountOverlay").hidden = true; }
+
+  document.getElementById("accountBtn").addEventListener("click", showAccount);
+  document.getElementById("accountOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "accountOverlay") hideAccount();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideAccount(); });
 
   if (!teamCode) {
     lastSyncEl.textContent = t("Aucun code d'équipe fourni — ajoute ?team=... à l'URL.");
   } else {
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    authInstance = auth;
     firestore = getFirestore(app);
     const db = firestore;
     lastSyncEl.textContent = t("Connexion…");
-    signInAnonymously(auth)
-      .then(() => startListening(db))
-      .catch(err => { lastSyncEl.textContent = "Erreur de connexion : " + err.message; });
+
+    let listening = false;
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        // Nobody signed in — including the moment just after a sign-out. Fall
+        // back to the anonymous session so the dashboard never goes blank.
+        signInAnonymously(auth).catch(err => {
+          lastSyncEl.textContent = t("Erreur de connexion : ") + err.message;
+        });
+        return;
+      }
+      renderAccountButton(user);
+      // The data lives under teams/{code}, not under a uid, so the listeners
+      // survive an identity change and only ever need opening once.
+      if (!listening) {
+        listening = true;
+        startListening(db);
+      }
+    });
   }
 
   function fmtMinSec(sec) {

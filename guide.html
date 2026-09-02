@@ -540,6 +540,17 @@
         </div>
       </div>
       <div class="spec-group">
+        <div class="spec-group-label">Compte</div>
+        <div class="spec-row">
+          <div class="spec-field">Créer un compte ou se connecter</div>
+          <div class="spec-desc">Facultatif aujourd'hui. Un compte (adresse e-mail + mot de passe) te rattache à tes données plutôt qu'à ce téléphone : tu les retrouves après un changement d'appareil, et le coach pourra t'inviter dans une équipe. Sans compte, tout continue de fonctionner, mais seulement sur ce téléphone. À renseigner après la synchronisation ci-dessous : le compte est créé sur le projet Firebase de l'équipe.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-field">Se déconnecter</div>
+          <div class="spec-desc">N'efface rien : ni les séances de ce téléphone, ni celles déjà envoyées au coach. Il n'y a pas encore de réinitialisation du mot de passe par e-mail — note-le.</div>
+        </div>
+      </div>
+      <div class="spec-group">
         <div class="spec-group-label">Synchronisation</div>
         <div class="spec-row">
           <div class="spec-field">Code d'équipe · ID de projet · Clé API Web</div>
@@ -612,6 +623,8 @@
       <a class="access-url" href="index.html">benoitpeschier.github.io/appmoveload</a>
       <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">Au premier accès, le code d'équipe est demandé — retiens-le, il fait office de mot de passe partagé pour toute l'équipe.</p>
     </div>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">Le bouton <strong>Se connecter</strong> en haut à droite crée un compte coach ou t'y reconnecte, au choix avec <strong>Continuer avec Google</strong> ou une adresse e-mail et un mot de passe. C'est facultatif pour l'instant : le tableau de bord fonctionne sans. Avec un compte, tu es reconnu sur n'importe quel ordinateur au lieu de dépendre de ce seul navigateur — et c'est ce compte qui portera ton rôle quand les équipes arriveront.</p>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">Le projet est réglé sur <strong>un seul compte par adresse</strong> : Google et le mot de passe sur la même adresse ne créeront jamais deux comptes coach distincts. En revanche, si tu as commencé par un mot de passe, la connexion Google sur cette adresse peut être refusée — c'est Firebase qui demande de prouver que le compte est bien le tien. Dans ce cas, connecte-toi avec le mot de passe.</p>
 
     <h3>Navigation</h3>
     <div class="spec">

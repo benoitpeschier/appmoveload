@@ -540,6 +540,17 @@
         </div>
       </div>
       <div class="spec-group">
+        <div class="spec-group-label">Account</div>
+        <div class="spec-row">
+          <div class="spec-field">Create an account or sign in</div>
+          <div class="spec-desc">Optional for now. An account (e-mail address + password) ties you to your data rather than to this phone: you keep it when you change device, and the coach will be able to invite you to a team. Without an account everything still works, but only on this phone. Fill it in after the sync settings below: the account is created on the team's Firebase project.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-field">Sign out</div>
+          <div class="spec-desc">Deletes nothing: neither the sessions on this phone, nor those already sent to the coach. There is no e-mail password reset yet — write your password down.</div>
+        </div>
+      </div>
+      <div class="spec-group">
         <div class="spec-group-label">Sync</div>
         <div class="spec-row">
           <div class="spec-field">Team code · Project ID · Web API key</div>
@@ -612,6 +623,8 @@
       <a class="access-url" href="index.html">benoitpeschier.github.io/appmoveload</a>
       <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">On first visit the team code is asked for — remember it, it acts as a shared password for the whole squad.</p>
     </div>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">The <strong>Sign in</strong> button at the top right creates a coach account or signs you back into one, either with <strong>Continue with Google</strong> or with an e-mail address and a password. It is optional for now: the dashboard works without it. With an account you are recognised on any computer instead of depending on this one browser — and it is that account which will carry your role once teams arrive.</p>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">The project is set to <strong>one account per address</strong>: Google and a password on the same address will never create two separate coach accounts. That said, if you started with a password, Google sign-in on that address may be refused — Firebase asking you to prove the account is yours. If that happens, sign in with the password.</p>
 
     <h3>Navigation</h3>
     <div class="spec">
