@@ -170,6 +170,15 @@
   }
   .chart-wrap { position: relative; }
 
+  .hrv-row { display:flex; align-items:center; gap:10px; margin:6px 0; }
+  .hrv-name { flex:0 0 150px; font-size:13px; }
+  .hrv-cells { display:flex; gap:3px; flex:1; }
+  .hrv-cell { flex:1; height:22px; border-radius:3px; background:var(--accent); min-width:8px; }
+  .hrv-cell.empty { background:transparent; border:1px dashed var(--border); }
+  .hrv-pill {
+    display:inline-block; margin-left:4px; padding:0 4px; border-radius:6px;
+    font-size:10px; line-height:15px; background:var(--accent); color:#fff; vertical-align:middle;
+  }
   .empty-note { font-size: 12.5px; color: var(--ink-muted); font-style: italic; }
 
   .tabs { display: flex; gap: 0.35rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
@@ -298,11 +307,16 @@
   <div class="tabs" role="tablist">
     <button class="tab-btn active" id="tabOverviewBtn" role="tab" aria-selected="true" data-i18n="Vue d'ensemble">Vue d'ensemble</button>
     <button class="tab-btn" id="tabCalendarBtn" role="tab" aria-selected="false" data-i18n="Calendrier">Calendrier</button>
+    <button class="tab-btn" id="tabHrvBtn" role="tab" aria-selected="false" data-i18n="Suivi HRV">Suivi HRV</button>
   </div>
 
   <div class="view active" id="viewOverview">
     <div class="detail" id="detail"></div>
     <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="view" id="viewHrv">
+    <div id="hrvGrid"></div>
   </div>
 
   <div class="view" id="viewCalendar">
@@ -356,6 +370,12 @@
   // stays legible. Editing a French string orphans its translation — rename
   // the key here at the same time.
   const EN = {
+    "Quatorze jours. Chaque carré est un matin ; l'intensité suit le rMSSD allongé, comparé au meilleur de l'athlète. Un carré vide est un test non fait.": "Fourteen days. Each square is one morning; the intensity follows the supine rMSSD against that athlete's own best. An empty square is a test not done.",
+    "pas de test": "no test",
+    "Aucun test HRV synchronisé pour l'instant.": "No HRV test synced yet.",
+    "Suivi HRV": "HRV tracking",
+    "Quatorze derniers tests HRV": "Last fourteen HRV tests",
+    "HRV": "HRV",
     "secondes": "seconds",
     "Le signal d'accélération sur les neuf meilleures secondes de la séance. Chaque bosse est un coup : on y lit la montée en charge, le placement du pic et la propreté du retour. Sous la ligne pointillée, l'accélération est négative — c'est la décélération entre deux coups. La courbe est légèrement lissée (5 échantillons, moins d'un dixième de seconde) ; survole-la pour lire les valeurs. Uniquement sur les séances de test, où les conditions sont comparables.": "The acceleration signal over the session's best nine seconds. Each hump is one stroke: it shows how the pull builds, where it peaks, and how clean the recovery is. Below the dashed line acceleration is negative — that is the deceleration between strokes. The curve is lightly smoothed (5 samples, under a tenth of a second); hover it to read the values. Test sessions only, where conditions are comparable.",
     "Accélération sur les neuf meilleures secondes": "Acceleration over the best nine seconds",
@@ -536,6 +556,7 @@
   const activeAthletes = new Set();
   const knownAthleteIds = new Set();
   const sessionUnsubByAthlete = new Map();
+  const hrvUnsubByAthlete = new Map();
   let sessionFilterMode = "all"; // "all" | "training" | "test"
 
   function matchesFilterMode(s) {
@@ -622,6 +643,13 @@
     a.rpe = last ? last.rpe : null;
     a.lastSessionIsTest = last ? !!last.isTest : false;
     a.lastSessionIsConditioning = last ? !!last.isConditioning : false;
+    // Morning tests, most recent last. A missing day stays missing — never
+    // interpolated: a gap in the series is itself the signal, and often the
+    // first one, since an athlete who stops testing is usually an athlete
+    // something is wrong with.
+    a.hrv = a.hrv || [];
+    a.hrvRecent = a.hrv.slice(-14);
+    a.hrvToday = a.hrv.length ? a.hrv[a.hrv.length - 1] : null;
     a.strokeSignal = last ? last.strokeSignal : null;
     a.strokeRateHz = last ? last.strokeRateHz : 0;
     a.lastSessionName = last ? (last.name || "") : "";
@@ -676,6 +704,8 @@
           if (idx !== -1) athletes.splice(idx, 1);
           const unsub = sessionUnsubByAthlete.get(id);
           if (unsub) { unsub(); sessionUnsubByAthlete.delete(id); }
+          const unsubHrv = hrvUnsubByAthlete.get(id);
+          if (unsubHrv) { unsubHrv(); hrvUnsubByAthlete.delete(id); }
           return;
         }
         const a = ensureAthlete(id);
@@ -709,7 +739,36 @@
             onDataChanged();
           });
           sessionUnsubByAthlete.set(id, unsub);
-        } else {
+        }
+
+        // Morning tests. A separate collection and a separate listener: they
+        // arrive on their own rhythm — one a day, at dawn — and a session
+        // syncing in the evening should not wait on them or vice versa.
+        if (!hrvUnsubByAthlete.has(id)) {
+          const hrvCol = collection(db, "teams", teamCode, "athletes", id, "hrv");
+          const unsubHrv = onSnapshot(hrvCol, hrvSnap => {
+            a.hrv = hrvSnap.docs.map(d => {
+              const t = d.data();
+              const when = t.date && t.date.toDate ? t.date.toDate() : new Date(t.date);
+              return {
+                date: isoDate(when),
+                supine: { hr: t.supineMeanHR || 0, rmssd: t.supineRMSSD || 0,
+                          tp: t.supineTotalPower || 0, lfhf: t.supineLFOverHF || 0 },
+                standing: { hr: t.standingMeanHR || 0, rmssd: t.standingRMSSD || 0,
+                            tp: t.standingTotalPower || 0, lfhf: t.standingLFOverHF || 0 },
+                // The five answers are never sent — only this. See
+                // HRVTestSyncPayload on the app side.
+                wellness: (t.wellnessScore === undefined || t.wellnessScore === null) ? null : t.wellnessScore,
+                reliable: t.isReliable !== false
+              };
+            }).sort((x, y) => x.date.localeCompare(y.date));
+            deriveAthlete(a);
+            onDataChanged();
+          });
+          hrvUnsubByAthlete.set(id, unsubHrv);
+        }
+
+        if (sessionUnsubByAthlete.has(id)) {
           deriveAthlete(a);
         }
       });
@@ -811,6 +870,11 @@
           <div class="bar-label"><span>${t("Charge mécanique")}</span><span>${fmtMinSec(a.mech[2])} ${t("en zone 3")}</span></div>
           <div class="bar">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
         </div>`}
+        ${!a.hrvToday ? "" : `
+        <div class="bar-row">
+          <div class="bar-label"><span>${t("HRV")}</span><span>${hrvPillLabel(a.hrvToday)}</span></div>
+          ${hrvSparkline(a.hrvRecent)}
+        </div>`}
         <div class="card-foot">
           <div class="trend">
             ${sparkline(a.history, 64, 24)}
@@ -904,6 +968,47 @@
       <text x="4" y="${(padT + plotH).toFixed(1)}" font-size="10" fill="var(--ink-muted)">${lo.toFixed(1)}</text>
       ${dots.join("")}
     </svg>`;
+  }
+
+  /// Today's reading in one line: resting rate, rMSSD, and the wellness score
+  /// the athlete declared. The two are shown together because their
+  /// *disagreement* is the informative part — a good measurement under a bad
+  /// score, or the reverse, is what a coach wants to see.
+  function hrvPillLabel(test) {
+    const parts = [`${Math.round(test.supine.hr)} bpm`, `rMSSD ${Math.round(test.supine.rmssd)}`];
+    if (test.wellness != null) parts.push(`${test.wellness} %`);
+    if (!test.reliable) parts.push("?");
+    return parts.join(" · ");
+  }
+
+  /// Fourteen mornings, one bar each, height by rMSSD against the best of the
+  /// run. **A missing test is a gap, not a zero and not an interpolation** — a
+  /// run of blanks says the athlete stopped testing, which is often the first
+  /// sign of something and is invisible anywhere else.
+  function hrvSparkline(tests) {
+    if (!tests || !tests.length) return "";
+    const w = 220, h = 26;
+    const best = Math.max(...tests.map(x => x.supine.rmssd), 1);
+    const byDay = new Map(tests.map(x => [x.date, x]));
+
+    // Walk real calendar days so an absence takes up its own space.
+    const last = new Date(tests[tests.length - 1].date + "T12:00:00");
+    const cells = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(last); d.setDate(d.getDate() - i);
+      cells.push(byDay.get(isoDate(d)) || null);
+    }
+    const bw = w / cells.length;
+    const bars = cells.map((test, i) => {
+      const x = (i * bw + 1).toFixed(1);
+      if (!test) {
+        return `<rect x="${x}" y="${h - 3}" width="${(bw - 2).toFixed(1)}" height="2" fill="var(--border)"/>`;
+      }
+      const bh = Math.max(2, (test.supine.rmssd / best) * (h - 4));
+      const fill = test.reliable ? "var(--accent)" : "var(--ink-muted)";
+      return `<rect x="${x}" y="${(h - bh).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" rx="1"/>`;
+    }).join("");
+    return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Quatorze derniers tests HRV")}">${bars}</svg>`;
   }
 
   function radarSVG(a) {
@@ -1267,18 +1372,68 @@
   const viewOverview = document.getElementById("viewOverview");
   const viewCalendar = document.getElementById("viewCalendar");
 
+  const tabHrvBtn = document.getElementById("tabHrvBtn");
+  const viewHrv = document.getElementById("viewHrv");
+
   function activateTab(name) {
-    const isOverview = name === "overview";
-    tabOverviewBtn.classList.toggle("active", isOverview);
-    tabOverviewBtn.setAttribute("aria-selected", String(isOverview));
-    tabCalendarBtn.classList.toggle("active", !isOverview);
-    tabCalendarBtn.setAttribute("aria-selected", String(!isOverview));
-    viewOverview.classList.toggle("active", isOverview);
-    viewCalendar.classList.toggle("active", !isOverview);
-    if (!isOverview) renderCalendar();
+    const tabs = {
+      overview: [tabOverviewBtn, viewOverview],
+      calendar: [tabCalendarBtn, viewCalendar],
+      hrv: [tabHrvBtn, viewHrv],
+    };
+    for (const [key, [btn, view]] of Object.entries(tabs)) {
+      const on = key === name;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-selected", String(on));
+      view.classList.toggle("active", on);
+    }
+    if (name === "calendar") renderCalendar();
+    if (name === "hrv") renderHrvGrid();
   }
   tabOverviewBtn.addEventListener("click", () => activateTab("overview"));
   tabCalendarBtn.addEventListener("click", () => activateTab("calendar"));
+  tabHrvBtn.addEventListener("click", () => activateTab("hrv"));
+
+  /// One row per athlete, one square per day over fourteen days.
+  ///
+  /// The view no card can give. A drift reads as a band that darkens or
+  /// lightens across the week, and **a run of empty squares says an athlete
+  /// stopped testing** — often the first sign of something, and invisible
+  /// everywhere else. Squares are never interpolated for that reason.
+  function renderHrvGrid() {
+    const grid = document.getElementById("hrvGrid");
+    const withTests = athletes.filter(a => (a.hrv || []).length);
+    if (!withTests.length) {
+      grid.innerHTML = `<p class="empty-note">${t("Aucun test HRV synchronisé pour l'instant.")}</p>`;
+      return;
+    }
+
+    // A shared span of days, so the columns line up between athletes.
+    const days = [];
+    const today = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      days.push(isoDate(d));
+    }
+
+    // Each athlete is scaled against their own best: HRV is read against an
+    // athlete's own history, never across people.
+    const rows = withTests.map(a => {
+      const byDay = new Map((a.hrv || []).map(x => [x.date, x]));
+      const best = Math.max(...(a.hrv || []).map(x => x.supine.rmssd), 1);
+      const cells = days.map(iso => {
+        const test = byDay.get(iso);
+        if (!test) return `<span class="hrv-cell empty" data-tip="${esc(iso)} — ${t("pas de test")}"></span>`;
+        const share = Math.min(1, test.supine.rmssd / best);
+        const tip = `${iso} — rMSSD ${Math.round(test.supine.rmssd)} ms · ${Math.round(test.supine.hr)} bpm`
+          + (test.wellness != null ? ` · ${test.wellness} %` : "");
+        return `<span class="hrv-cell" style="opacity:${(0.25 + 0.75 * share).toFixed(2)}" data-tip="${esc(tip)}"></span>`;
+      }).join("");
+      return `<div class="hrv-row"><span class="hrv-name">${esc(a.name)}</span><span class="hrv-cells">${cells}</span></div>`;
+    }).join("");
+
+    grid.innerHTML = `<p class="chart-note">${t("Quatorze jours. Chaque carré est un matin ; l'intensité suit le rMSSD allongé, comparé au meilleur de l'athlète. Un carré vide est un test non fait.")}</p>${rows}`;
+  }
 
   // ── Session filter (toutes / entraînement / tests) ──────────────────────
   document.getElementById("sessionModeSeg").querySelectorAll("button").forEach(btn => {
@@ -1366,6 +1521,18 @@
       .map(a => ({ a, s: a.sessions.find(s => s.date === iso && matchesFilterMode(s)) }))
       .filter(x => x.s);
   }
+  /// Athletes who tested on a given day. The pill sits over the session
+  /// colours so one square can carry both, and the eye compares yesterday's
+  /// load with this morning's reading without changing screen.
+  function hrvOn(iso) {
+    return athletes.filter(a => (a.hrv || []).some(t => t.date === iso));
+  }
+  function hrvPill(iso) {
+    const who = hrvOn(iso);
+    if (!who.length) return "";
+    return `<span class="hrv-pill" data-tip="${esc(who.map(a => a.name).join(", "))}">♥ ${who.length}</span>`;
+  }
+
   function mechPctLabel(mech) {
     const total = mech.reduce((x,y) => x+y, 0) || 1;
     const pcts = mech.map(v => Math.round(v/total*100));
@@ -1428,7 +1595,7 @@
           const tipLabel = esc(a.name + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + loadBars(s).label);
           return `<span class="a-chip open-session" style="background:${a.color}" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-date="${esc(s.date)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">${a.initial}</span>`;
         }).join("");
-        inner = `<div class="day-num">${date.getDate()}</div><div class="day-chips">${chips}</div>`;
+        inner = `<div class="day-num">${date.getDate()}${hrvPill(iso)}</div><div class="day-chips">${chips}</div>`;
       } else {
         const rows = hits.map(({a,s}) => {
           const load = loadBars(s);
@@ -1440,7 +1607,7 @@
             <span class="mini-bar">${bar}</span>
           </div>`;
         }).join("");
-        inner = `<div class="day-num">${date.getDate()}</div><div class="day-chips">${rows || '<span class="empty-note">—</span>'}</div>`;
+        inner = `<div class="day-num">${date.getDate()}${hrvPill(iso)}</div><div class="day-chips">${rows || '<span class="empty-note">—</span>'}</div>`;
       }
       return `<div class="cal-day ${out?"out":""} ${isToday?"today":""}">${inner}</div>`;
     }).join("");
