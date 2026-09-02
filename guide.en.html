@@ -466,7 +466,7 @@
       <span class="role-chip athlete">Part 1</span>
       <h2>Athlete guide</h2>
     </div>
-    <p class="part-intro">Four tabs along the bottom of the app: <span class="ui">Sessions</span>, <span class="ui">Sensor</span>, <span class="ui">Trends</span>, <span class="ui">Settings</span>.</p>
+    <p class="part-intro">Five tabs along the bottom of the app: <span class="ui">Sessions</span>, <span class="ui">Sensor</span>, <span class="ui">Trends</span>, <span class="ui">HRV</span>, <span class="ui">Settings</span>.</p>
 
     <h3>A session, from sensor to app<span class="h3-hint">In this order — every outing</span></h3>
     <ol class="steps">
@@ -563,6 +563,56 @@
       </div>
     </div>
 
+    <h3>The morning HRV test<span class="h3-hint">HRV tab — on waking, before you get up</span></h3>
+    <p class="part-intro" style="font-size:0.92rem">Ten minutes exactly: five lying down, then five standing. What the test measures is how your nervous system reacts to the change of position, so the conditions matter as much as the measurement. Always do it <strong>the same way</strong>: on waking, before coffee, before your phone, before getting out of bed. A test taken under different conditions does not compare with the previous ones, and a series that does not compare is worth nothing.</p>
+    <ol class="steps">
+      <li class="step">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          <p class="step-title">Put the strap on without getting up</p>
+          <p>Keep it within reach the night before. Wet the electrodes — a dry strap picks up nothing, and it is the number one reason a test will not start. Stay lying on your back.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          <p class="step-title">Start the test</p>
+          <p><span class="ui">HRV</span> tab → <span class="ui">Start the test</span>. The app connects and waits for the first heartbeat: <strong>the clock starts then</strong>, not when you tap. Put the phone down and stop looking at it. The screen will not switch itself off during the test.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          <p class="step-title">Five minutes lying down</p>
+          <p>Still, on your back, without talking and without falling asleep. Breathe normally: do not try to slow your breathing down, it distorts the measurement. A chime and a vibration announce the end.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          <p class="step-title">Stand up, then five minutes standing</p>
+          <p>Get up <strong>briskly</strong> at the chime: it is the abruptness of the change that produces the response being measured. Then stand still, leaning on nothing, until the second chime.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">05</span>
+        <div class="step-body">
+          <p class="step-title">Answer the five questions</p>
+          <p>They come straight afterwards, on the same screen: fatigue, sleep, muscle soreness, stress, mood, each 1 to 5. Answer there and then — put off, they never get filled in. <strong>The coach sees only the total score, never your answers.</strong></p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout">
+      <span class="callout-mark">i</span>
+      <p><strong>Why five minutes and not four.</strong> The first half-minute of each position and the last are left out of the calculation: the first is the transition rather than the position, the last is you anticipating the end. That leaves four analysed minutes per position, which is what the spectrum needs to be usable. It is also why a test cut short at four minutes is flagged as unreliable rather than thrown away.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout-mark">!</span>
+      <p><strong>What the test does not tell you.</strong> The verdict describes a physiological state and the deltas behind it. It never says which session to do: that depends on the week's plan, the water and how you feel, none of which the app knows. Nor does a single day mean anything — it is the repetition that speaks, which is why it is worth not skipping mornings.</p>
+    </div>
+
     <h3>After each session<span class="h3-hint">On a session's detail page, Sessions tab</span></h3>
     <div class="spec">
       <div class="spec-row" style="border-top:none">
@@ -637,9 +687,39 @@
         <div class="spec-desc">Month or Week view — spot the sessions on a time grid.</div>
       </div>
       <div class="spec-row">
-        <div class="spec-field">All · Training · Tests</div>
-        <div class="spec-desc">Separates sessions marked “test” (standardised conditions, set by the athlete) from ordinary training — useful for comparing only what is genuinely comparable.</div>
+        <div class="spec-field">HRV tracking</div>
+        <div class="spec-desc">The morning tests, one athlete per row. The trends use a logarithmic scale: a single outlier would flatten everything else on a linear one.</div>
       </div>
+      <div class="spec-row">
+        <div class="spec-field">All · Training · Tests</div>
+        <div class="spec-desc">Separates sessions marked “test” (standardised conditions, set by the athlete) from ordinary training — useful for comparing only what is genuinely comparable. The filter also applies to the records, the trend and the radar, not only to the list.</div>
+      </div>
+    </div>
+
+    <h3>Reading an HRV test<span class="h3-hint">HRV tracking tab, morning banner, calendar pills</span></h3>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">The test measures how the nervous system responds to going from lying to standing. Deltas are percentage changes against a reference (the median of the previous six tests, by default), and a cascade of five rules names the pattern: the first match wins, otherwise “no fatigue”. The thresholds come from the work of Laurent Schmidt and are those of the original workbook.</p>
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">Morning banner</div>
+        <div class="spec-desc">At the top of the overview, it names the athletes whose test today triggered a pattern. Those not in it triggered nothing — or did not test.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Heart pill on the calendar</div>
+        <div class="spec-desc">Marks the days an athlete tested. The session's zone colours stay behind it, so yesterday's load and this morning's reading are on one screen.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Fatigue thresholds</div>
+        <div class="spec-desc">In the drawer under each athlete's radar. Adjustable per athlete: these are benchmarks calibrated on a population, and an athlete may need different ones. You own them — the phone reads them and never writes them.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Delta on a small base</div>
+        <div class="spec-desc">A huge percentage computed from a tiny value is flagged in amber. Going from 16 to 146 ms² is +800%, which does not mean the same thing as +800% from a normal base.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="callout-mark">!</span>
+      <p><strong>What you do not see, and why.</strong> The wellness questionnaire the athlete fills in after each test — fatigue, sleep, soreness, stress, mood — reaches you only as a total score. The five answers never leave their phone. That is the condition for answering it honestly, and an honest score beats five cautious answers. The verdict itself describes a physiological state: it never says which session to do.</p>
     </div>
 
     <div class="callout">

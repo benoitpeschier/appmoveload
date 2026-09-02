@@ -466,7 +466,7 @@
       <span class="role-chip athlete">Partie 1</span>
       <h2>Guide athlète</h2>
     </div>
-    <p class="part-intro">Quatre écrans en bas de l'app : <span class="ui">Séances</span>, <span class="ui">Capteur</span>, <span class="ui">Tendances</span>, <span class="ui">Réglages</span>.</p>
+    <p class="part-intro">Cinq écrans en bas de l'app : <span class="ui">Séances</span>, <span class="ui">Capteur</span>, <span class="ui">Tendances</span>, <span class="ui">HRV</span>, <span class="ui">Réglages</span>.</p>
 
     <h3>Une séance, du capteur à l'app<span class="h3-hint">Dans cet ordre — à chaque sortie</span></h3>
     <ol class="steps">
@@ -563,6 +563,56 @@
       </div>
     </div>
 
+    <h3>Le test HRV du matin<span class="h3-hint">Onglet HRV — au réveil, avant de te lever</span></h3>
+    <p class="part-intro" style="font-size:0.92rem">Dix minutes chrono, cinq couché puis cinq debout. Ce que le test mesure, c'est la réaction de ton système nerveux au changement de position — donc les conditions comptent autant que la mesure. Fais-le <strong>toujours de la même façon</strong> : au réveil, avant le café, avant le téléphone, avant de sortir du lit. Un test fait dans d'autres conditions ne se compare pas aux précédents, et une série qui ne se compare pas ne sert à rien.</p>
+    <ol class="steps">
+      <li class="step">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          <p class="step-title">Mettre la sangle sans te lever</p>
+          <p>Garde-la à portée de main la veille. Humidifie les électrodes — une sangle sèche ne capte rien, et c'est la cause numéro un d'un test qui ne démarre pas. Reste allongé sur le dos.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          <p class="step-title">Lancer le test</p>
+          <p>Onglet <span class="ui">HRV</span> → <span class="ui">Démarrer le test</span>. L'app se connecte et attend le premier battement : <strong>le chronomètre ne part qu'à ce moment-là</strong>, pas au moment où tu appuies. Pose le téléphone et ne le regarde plus. L'écran ne s'éteindra pas tout seul pendant le test.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          <p class="step-title">Cinq minutes couché</p>
+          <p>Immobile, sur le dos, sans parler et sans t'endormir. Respire normalement : ne cherche pas à ralentir ta respiration, ça fausse la mesure. Une sonnerie et une vibration annoncent la fin.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          <p class="step-title">Te lever, et cinq minutes debout</p>
+          <p>Lève-toi <strong>sans traîner</strong> à la sonnerie : c'est la brusquerie du passage qui provoque la réponse qu'on mesure. Puis reste debout immobile, appuyé à rien, jusqu'à la seconde sonnerie.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">05</span>
+        <div class="step-body">
+          <p class="step-title">Répondre aux cinq questions</p>
+          <p>Elles arrivent tout de suite après, dans le même écran : fatigue, sommeil, courbatures, stress, humeur, de 1 à 5. Réponds sur le moment — remises à plus tard, elles ne sont jamais remplies. <strong>Le coach ne voit que le score total, jamais tes réponses.</strong></p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout">
+      <span class="callout-mark">i</span>
+      <p><strong>Pourquoi cinq minutes et pas quatre.</strong> La première demi-minute de chaque position et la dernière sont écartées du calcul : la première, c'est la transition, pas la position ; la dernière, c'est toi qui anticipes la fin. Il reste quatre minutes analysées par position, ce qu'il faut pour que le spectre soit exploitable. C'est aussi pour ça qu'un test interrompu au bout de quatre minutes est signalé comme peu fiable plutôt que jeté.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout-mark">!</span>
+      <p><strong>Ce que le test ne dit pas.</strong> Le verdict décrit un état physiologique et les écarts qui l'ont produit. Il ne dit jamais quelle séance faire : ça dépend du plan de la semaine, de l'eau et de comment tu te sens, et l'app n'en sait rien. Un jour isolé ne veut rien dire non plus — c'est la répétition qui parle, d'où l'intérêt de ne pas sauter de matin.</p>
+    </div>
+
     <h3>Après chaque séance<span class="h3-hint">Sur la fiche de détail d'une séance, onglet Séances</span></h3>
     <div class="spec">
       <div class="spec-row" style="border-top:none">
@@ -637,9 +687,39 @@
         <div class="spec-desc">Vue Mois ou Semaine — repère les séances sur une grille temporelle.</div>
       </div>
       <div class="spec-row">
-        <div class="spec-field">Toutes · Entraînement · Tests</div>
-        <div class="spec-desc">Isole les séances marquées « test » (conditions standardisées côté athlète) de l'entraînement classique — utile pour ne comparer que des performances comparables entre elles.</div>
+        <div class="spec-field">Suivi HRV</div>
+        <div class="spec-desc">Les tests du matin, un athlète par ligne. Les tendances sont en échelle logarithmique : une valeur aberrante isolée écraserait tout le reste sur une échelle linéaire.</div>
       </div>
+      <div class="spec-row">
+        <div class="spec-field">Toutes · Entraînement · Tests</div>
+        <div class="spec-desc">Isole les séances marquées « test » (conditions standardisées côté athlète) de l'entraînement classique — utile pour ne comparer que des performances comparables entre elles. Le filtre agit aussi sur les records, la tendance et le radar, pas seulement sur la liste.</div>
+      </div>
+    </div>
+
+    <h3>Lire un test HRV<span class="h3-hint">Onglet Suivi HRV, bannière du matin, pastilles du calendrier</span></h3>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">Le test mesure la réponse du système nerveux au passage couché → debout. Les écarts sont exprimés en pourcentage de variation contre une référence (la médiane des six tests précédents, par défaut), et une cascade de cinq règles nomme le motif : le premier qui correspond gagne, sinon « pas de fatigue ». Les seuils viennent des travaux de Laurent Schmidt et sont ceux du classeur d'origine.</p>
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">Bannière du matin</div>
+        <div class="spec-desc">En tête de la vue d'ensemble, elle nomme les athlètes dont le test du jour a déclenché un motif. Ceux qui n'y sont pas n'ont rien déclenché — ou n'ont pas testé.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Pastille cœur au calendrier</div>
+        <div class="spec-desc">Marque les jours où l'athlète a testé. Les couleurs de zones de la séance restent en fond, pour lire la charge de la veille et la mesure du matin sans changer d'écran.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Seuils de fatigue</div>
+        <div class="spec-desc">Dans le tiroir sous le radar de chaque athlète. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. C'est toi qui les possèdes — le téléphone les lit et ne les écrit jamais.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Écart sur base faible</div>
+        <div class="spec-desc">Un pourcentage énorme calculé depuis une valeur minuscule est signalé en ambre. Passer de 16 à 146 ms² fait +800 %, ce qui n'a pas le même sens qu'un +800 % parti d'une base normale.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="callout-mark">!</span>
+      <p><strong>Ce que tu ne vois pas, et pourquoi.</strong> Le questionnaire de bien-être rempli par l'athlète après chaque test — fatigue, sommeil, courbatures, stress, humeur — ne t'arrive que sous forme d'un score total. Les cinq réponses ne quittent jamais son téléphone. C'est la condition pour qu'il y réponde honnêtement, et un score honnête vaut mieux que cinq réponses prudentes. Le verdict, lui, décrit un état physiologique : il ne dit jamais quelle séance faire.</p>
     </div>
 
     <div class="callout">
