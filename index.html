@@ -291,6 +291,14 @@
   #inviteCard dd { margin:.15rem 0 0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
     word-break:break-all; }
   .chart-note { font-size:11px; color:var(--ink-muted); margin:.35rem 0 0; }
+  .hrv-verdict { font-size:13px; margin:.5rem 0; }
+  .hrv-verdict.flagged { color:var(--warn-ink); }
+  .hrv-deltas { display:grid; grid-template-columns:repeat(4, 1fr); gap:.4rem; margin:.6rem 0; }
+  .hrv-delta { display:flex; flex-direction:column; gap:.15rem; }
+  .hrv-delta-label { font-size:10px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.03em; }
+  .hrv-delta-value { font-size:14px; font-variant-numeric:tabular-nums; }
+  .hrv-delta-value.neg { color:var(--i3); }
+  .hrv-delta-value.pos { color:var(--z1); }
   /* A drawer's summary reads as one of the section headings, so it sits in a
      card without announcing itself as a different kind of thing. */
   .drawer > summary { font-size:12.5px; font-weight:500; text-transform:uppercase;
@@ -546,6 +554,17 @@
     "— pas de comparaison possible.": "— no comparison possible.",
     "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
     "Se connecter": "Sign in",
+    "Écarts en % contre la médiane des six tests précédents. ": "Deltas in % against the median of the previous six tests. ",
+    "Une barre manquante est un matin sans test, jamais un zéro.": "A missing bar is a morning without a test, never a zero.",
+    "Test HRV du matin": "Morning HRV test",
+    "Aucun test HRV pour cet athlète.": "No HRV test for this athlete.",
+    "Pas encore de référence : il faut au moins un test antérieur pour calculer les écarts.": "No reference yet: at least one earlier test is needed to compute the deltas.",
+    "Pas de motif de fatigue.": "No fatigue pattern.",
+    "spectre peu fiable": "spectrum unreliable",
+    "couché": "lying",
+    "debout": "standing",
+    "Écarts en % contre la médiane des six tests précédents. Une barre manquante est un matin sans test, jamais un zéro.": "Deltas in % against the median of the previous six tests. A missing bar is a morning without a test, never a zero.",
+    "Le dernier test orthostatique de l'athlète et les quatre écarts sur lesquels la cascade de motifs se prononce. Les seuils qui les interprètent sont juste en dessous.": "The athlete's latest orthostatic test and the four deltas the pattern cascade rules on. The thresholds that interpret them are just below.",
     "Seuils illisibles — les valeurs affichées sont celles par défaut. ": "Thresholds unreadable — the values shown are the defaults. ",
     "Embarcation non renseignée sur cette séance — aucun record comparable. L'athlète peut la choisir dans le détail de la séance.": "No boat set on this session — no comparable record. The athlete can pick one on the session's detail page.",
     "Continuer avec Google": "Continue with Google",
@@ -1489,6 +1508,54 @@
     return { pattern: match, deltas: d, smallBase: smallest < t.smallBasePower, date: current.date };
   }
 
+  /// The morning reading, on the athlete's own page.
+  ///
+  /// It was missing entirely: HRV appeared on the overview card and in its own
+  /// tab, but an athlete's detail carried the threshold editor and never the
+  /// measurement those thresholds are applied to — settings with no sight of
+  /// what they decide.
+  function hrvDetailHTML(a) {
+    const tests = a.hrv || [];
+    if (!tests.length) {
+      return `<p class="empty-note">${t("Aucun test HRV pour cet athlète.")}</p>`;
+    }
+    const last = tests[tests.length - 1];
+    const verdict = hrvVerdict(a);
+
+    const pct = v => (v == null ? "—" : (v > 0 ? "+" : "") + Math.round(v) + " %");
+    const deltaCell = (label, value) => `
+      <div class="hrv-delta">
+        <span class="hrv-delta-label">${esc(label)}</span>
+        <span class="hrv-delta-value ${value > 0 ? "pos" : value < 0 ? "neg" : ""}">${pct(value)}</span>
+      </div>`;
+
+    let verdictHTML;
+    if (!verdict) {
+      // Two tests are the minimum, and the reference is the median of up to
+      // six before this one — so a new athlete simply waits.
+      verdictHTML = `<p class="chart-note">${t("Pas encore de référence : il faut au moins un test antérieur pour calculer les écarts.")}</p>`;
+    } else if (verdict.pattern) {
+      verdictHTML = `<p class="hrv-verdict flagged"><strong>${esc(verdict.pattern.reading)}</strong>
+        <span class="banner-code">${esc(verdict.pattern.id)}</span>
+        ${verdict.smallBase ? `<span class="banner-warn">${t("base faible")}</span>` : ""}</p>`;
+    } else {
+      verdictHTML = `<p class="hrv-verdict">${t("Pas de motif de fatigue.")}
+        ${verdict.smallBase ? `<span class="banner-warn">${t("base faible")}</span>` : ""}</p>`;
+    }
+
+    return `
+      <p class="athlete-meta">${esc(relDate(last.date))} · ${esc(hrvPillLabel(last))}${last.reliable ? "" : " · " + esc(t("spectre peu fiable"))}</p>
+      ${verdictHTML}
+      ${verdict ? `<div class="hrv-deltas">
+        ${deltaCell("HF " + t("couché"), verdict.deltas.hfSu)}
+        ${deltaCell("LF " + t("couché"), verdict.deltas.lfSu)}
+        ${deltaCell("HF " + t("debout"), verdict.deltas.hfSt)}
+        ${deltaCell("LF " + t("debout"), verdict.deltas.lfSt)}
+      </div>` : ""}
+      ${hrvSparkline(a.hrvRecent)}
+      <p class="chart-note">${verdict ? t("Écarts en % contre la médiane des six tests précédents. ") : ""}${t("Une barre manquante est un matin sans test, jamais un zéro.")}</p>`;
+  }
+
   function radarSVG(a) {
     const peers = peerGroup(a);
     const n = RADAR_WINDOWS.length;
@@ -1718,6 +1785,10 @@
           </div>
           ${radarNote}
           ${boatPickerHTML(a)}
+        </div>
+        <div class="detail-section">
+          <h3>${t("Test HRV du matin")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Le dernier test orthostatique de l'athlète et les quatre écarts sur lesquels la cascade de motifs se prononce. Les seuils qui les interprètent sont juste en dessous.")}</span></button></h3>
+          ${hrvDetailHTML(a)}
         </div>
         <!-- A drawer, and under the radar: eleven number fields for something
              set once per athlete was the largest block on the card. -->
