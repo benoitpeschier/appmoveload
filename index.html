@@ -310,10 +310,38 @@
   .hrv-legend { display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; font-size:12px;
     color:var(--ink-muted); margin-top:.9rem; }
   .hrv-key { display:inline-flex; align-items:center; gap:.35rem; }
+  .block-t { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:10px;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-muted); margin:.9rem 0 .4rem; }
+  .hrv-swatch { width:11px; height:11px; border-radius:2px; display:inline-block; }
+  .hrv-swatch.ref { height:2px; border-radius:0; background:var(--ink-soft); }
+  .hrv-swatch.band { background:var(--accent-soft); border:1px solid var(--accent); }
+  .hrv-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .hrv-table th { text-align:left; font-weight:500; font-size:10px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-muted); padding:.3rem .3rem .45rem; }
+  .hrv-table th.r, .hrv-table td.r { text-align:right; }
+  .hrv-table td { padding:.32rem .3rem; border-top:1px solid var(--border);
+    font-variant-numeric:tabular-nums; }
+  .hrv-table tr.posrow td { padding-top:.6rem; border-top:none; font-size:10px;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-muted); }
+  .hrv-chip { font-size:11px; font-weight:600; padding:.05rem .35rem; border-radius:3px;
+    font-variant-numeric:tabular-nums; }
+  /* Direction is carried by the text colour on a neutral ground; the amber
+     ground is reserved for "this number rests on nothing", which is a warning
+     about the measurement rather than a direction. Sharing a background
+     between the two made a +813 % off a base of 16 look like an ordinary rise. */
+  .hrv-chip.up { background:var(--card-bg-hover); color:var(--z1); }
+  .hrv-chip.down { background:var(--card-bg-hover); color:var(--i3); }
+  .hrv-chip.flat { background:var(--card-bg-hover); color:var(--ink-muted); }
+  .hrv-chip.warn { background:var(--warn-bg); color:var(--warn-ink);
+    border:1px solid var(--warn-border); }
   .hrv-verdict { font-size:13px; margin:.5rem 0; }
   .hrv-verdict.flagged { color:var(--warn-ink); }
   .hrv-deltas { display:grid; grid-template-columns:repeat(4, 1fr); gap:.4rem; margin:.6rem 0; }
-  .hrv-delta { display:flex; flex-direction:column; gap:.15rem; }
+  /* Value above label: a label that wraps to two lines — "HF debout" does in
+     English — otherwise pushes its own number down and the row stops being
+     comparable at a glance, which is the only thing four numbers side by side
+     are for. */
+  .hrv-delta { display:flex; flex-direction:column-reverse; justify-content:flex-end; gap:.15rem; }
   .hrv-delta-label { font-size:10px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.03em; }
   .hrv-delta-value { font-size:14px; font-variant-numeric:tabular-nums; }
   .hrv-delta-value.neg { color:var(--i3); }
@@ -573,6 +601,23 @@
     "— pas de comparaison possible.": "— no comparison possible.",
     "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
     "Se connecter": "Sign in",
+    "LF et HF · les deux positions": "LF and HF · both positions",
+    "référence · médiane des 6 précédents": "reference · median of the previous 6",
+    "Puissance totale couchée · 12 derniers tests": "Total power lying · last 12 tests",
+    "Puissance totale couchée sur les douze derniers tests, avec la zone habituelle.": "Total power lying over the last twelve tests, with the usual zone.",
+    "Deux tests au moins sont nécessaires pour tracer une tendance.": "At least two tests are needed to draw a trend.",
+    "zone habituelle · médiane ±20 %": "usual zone · median ±20%",
+    "échelle logarithmique": "logarithmic scale",
+    "Toutes les mesures · % contre la médiane des 6 précédents": "All measures · % against the median of the previous 6",
+    "Mesure": "Measure",
+    "Valeur": "Value",
+    "Réf.": "Ref.",
+    "Écart": "Delta",
+    "Couché": "Lying",
+    "Debout": "Standing",
+    "En ambre : un écart calculé sur une base trop faible pour vouloir dire grand-chose.": "In amber: a delta computed on a base too small to mean much.",
+    "LF et HF dans les deux positions, comparés à leur référence": "LF and HF in both positions, against their reference",
+    "réf.": "ref.",
     "Athlète": "Athlete",
     "auj.": "today",
     "aucun motif": "no pattern",
@@ -983,10 +1028,18 @@
               const when = t.date && t.date.toDate ? t.date.toDate() : new Date(t.date);
               return {
                 date: isoDate(when),
+                // LF and HF individually, not only their ratio: every one of
+                // Schmidt's five rules is expressed on LF and HF apart, and a
+                // ratio cannot be taken back apart. They were missing here
+                // while the app was sending them, so the cascade compared
+                // undefined against undefined and could never fire — the whole
+                // fatigue reading was dead on this side and said nothing.
                 supine: { hr: t.supineMeanHR || 0, rmssd: t.supineRMSSD || 0,
-                          tp: t.supineTotalPower || 0, lfhf: t.supineLFOverHF || 0 },
+                          tp: t.supineTotalPower || 0, lfhf: t.supineLFOverHF || 0,
+                          lf: t.supineLF || 0, hf: t.supineHF || 0 },
                 standing: { hr: t.standingMeanHR || 0, rmssd: t.standingRMSSD || 0,
-                            tp: t.standingTotalPower || 0, lfhf: t.standingLFOverHF || 0 },
+                            tp: t.standingTotalPower || 0, lfhf: t.standingLFOverHF || 0,
+                            lf: t.standingLF || 0, hf: t.standingHF || 0 },
                 // The five answers are never sent — only this. See
                 // HRVTestSyncPayload on the app side.
                 wellness: (t.wellnessScore === undefined || t.wellnessScore === null) ? null : t.wellnessScore,
@@ -1605,8 +1658,169 @@
         ${deltaCell("HF " + t("debout"), verdict.deltas.hfSt)}
         ${deltaCell("LF " + t("debout"), verdict.deltas.lfSt)}
       </div>` : ""}
+      ${verdict ? `
+        <p class="block-t">${t("LF et HF · les deux positions")}</p>
+        ${hrvBarsSVG(a, tests.length - 1)}
+        <div class="hrv-legend">
+          <span class="hrv-key"><i class="hrv-swatch" style="background:var(--i2)"></i>LF</span>
+          <span class="hrv-key"><i class="hrv-swatch" style="background:var(--accent)"></i>HF</span>
+          <span class="hrv-key"><i class="hrv-swatch ref"></i>${t("référence · médiane des 6 précédents")}</span>
+        </div>` : ""}
+
+      <p class="block-t">${t("Puissance totale couchée · 12 derniers tests")}</p>
+      ${hrvSeriesSVG(a, x => x.supine.tp, t("Puissance totale couchée sur les douze derniers tests, avec la zone habituelle."))
+        || `<p class="chart-note">${t("Deux tests au moins sont nécessaires pour tracer une tendance.")}</p>`}
+      <div class="hrv-legend">
+        <span class="hrv-key"><i class="hrv-swatch band"></i>${t("zone habituelle · médiane ±20 %")}</span>
+        <span class="hrv-key">${t("échelle logarithmique")}</span>
+      </div>
+
+      ${verdict ? hrvTableHTML(a, tests.length - 1) : ""}
+
       ${hrvSparkline(a.hrvRecent)}
       <p class="chart-note">${verdict ? t("Écarts en % contre la médiane des six tests précédents. ") : ""}${t("Une barre manquante est un matin sans test, jamais un zéro.")}</p>`;
+  }
+
+  /// Every measure, both positions, value against reference — in a drawer.
+  ///
+  /// The five that Schmidt does not use are here too: a coach who wants to
+  /// know *why* a verdict came out as it did needs the numbers around it, and
+  /// a screen that shows only the four deciding ones invites the belief that
+  /// nothing else was measured.
+  function hrvTableHTML(a, index) {
+    const tests = a.hrv || [];
+    const current = tests[index];
+    const earlier = tests.slice(Math.max(0, index - 6), index);
+    if (!earlier.length) return "";
+
+    const smallBase = 50;
+    const row = (name, position, get, decimals) => {
+      const v = get(current[position]);
+      const ref = median(earlier.map(x => get(x[position])));
+      const delta = pctChange(ref, v);
+      // Amber, not green or red: a huge percentage off a base of nothing is
+      // not a big change, it is an unusable one.
+      const cls = delta == null ? "flat"
+        : (ref < smallBase && Math.abs(delta) > 100) ? "warn"
+        : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+      const fmt = n => n.toFixed(decimals).replace(".", ",");
+      return `<tr><td>${esc(name)}</td><td class="r">${fmt(v)}</td><td class="r">${fmt(ref)}</td>
+        <td class="r"><span class="hrv-chip ${cls}">${delta == null ? "—" : (delta > 0 ? "+" : "") + Math.round(delta) + " %"}</span></td></tr>`;
+    };
+    const block = (position, label) => `
+      <tr class="posrow"><td colspan="4">${esc(label)}</td></tr>
+      ${row("FC", position, m => m.hr, 1)}
+      ${row("rMSSD", position, m => m.rmssd, 1)}
+      ${row("LF", position, m => m.lf, 0)}
+      ${row("HF", position, m => m.hf, 0)}
+      ${row("TP", position, m => m.tp, 0)}`;
+
+    return `<details class="drawer" style="margin-top:.9rem">
+      <summary>${t("Toutes les mesures · % contre la médiane des 6 précédents")}</summary>
+      <div class="drawer-body">
+        <table class="hrv-table">
+          <thead><tr><th>${t("Mesure")}</th><th class="r">${t("Valeur")}</th><th class="r">${t("Réf.")}</th><th class="r">${t("Écart")}</th></tr></thead>
+          <tbody>${block("supine", t("Couché"))}${block("standing", t("Debout"))}</tbody>
+        </table>
+        <p class="chart-note">${t("En ambre : un écart calculé sur une base trop faible pour vouloir dire grand-chose.")}</p>
+      </div>
+    </details>`;
+  }
+
+  /// LF and HF, both positions, each against its own reference.
+  ///
+  /// Four bars and four reference marks. The verdict is expressed on exactly
+  /// these four numbers, so this is the picture that makes it legible: a coach
+  /// who sees the bars can judge, one who sees only the conclusion has to take
+  /// it on trust. Bars share one linear scale because comparing LF with HF
+  /// within a position is the point; the reference tick is per bar.
+  function hrvBarsSVG(a, index) {
+    const tests = a.hrv || [];
+    if (index < 1) return "";
+    const current = tests[index];
+    const earlier = tests.slice(Math.max(0, index - 6), index);
+    if (!earlier.length) return "";
+
+    const bars = [
+      { label: "LF", pos: t("couché"), v: current.supine.lf,   ref: median(earlier.map(x => x.supine.lf)),   fill: "var(--i2)" },
+      { label: "HF", pos: t("couché"), v: current.supine.hf,   ref: median(earlier.map(x => x.supine.hf)),   fill: "var(--accent)" },
+      { label: "LF", pos: t("debout"), v: current.standing.lf, ref: median(earlier.map(x => x.standing.lf)), fill: "var(--i2)" },
+      { label: "HF", pos: t("debout"), v: current.standing.hf, ref: median(earlier.map(x => x.standing.hf)), fill: "var(--accent)" },
+    ];
+
+    const w = 280, h = 150, padL = 34, padR = 8, padT = 10, padB = 30;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const top = Math.max(...bars.flatMap(b => [b.v, b.ref]), 1) * 1.12;
+    const yFor = v => padT + plotH - (v / top) * plotH;
+
+    // Two groups of two, with a gap between the positions — the eye should
+    // compare LF against HF inside a position before comparing positions.
+    const slot = plotW / 4.6;
+    const bw = slot * 0.62;
+    const xs = [0, 1, 2.3, 3.3].map(k => padL + k * slot + (slot - bw) / 2);
+
+    const ticks = [0, top / 2, top].map(v => `
+      <line x1="${padL}" y1="${yFor(v).toFixed(1)}" x2="${w - padR}" y2="${yFor(v).toFixed(1)}"
+            stroke="var(--border)" stroke-width="1"/>
+      <text x="${padL - 5}" y="${yFor(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle"
+            font-size="9" fill="var(--ink-muted)">${Math.round(v)}</text>`).join("");
+
+    const rects = bars.map((b, i) => {
+      const yv = yFor(b.v), yr = yFor(b.ref);
+      const tip = `${b.label} ${b.pos} — ${Math.round(b.v)} ms² · ${t("réf.")} ${Math.round(b.ref)} ms²`;
+      return `
+        <rect x="${xs[i].toFixed(1)}" y="${yv.toFixed(1)}" width="${bw.toFixed(1)}"
+              height="${Math.max(0, padT + plotH - yv).toFixed(1)}" rx="2" fill="${b.fill}"><title>${esc(tip)}</title></rect>
+        <line x1="${(xs[i] - 2).toFixed(1)}" y1="${yr.toFixed(1)}" x2="${(xs[i] + bw + 2).toFixed(1)}" y2="${yr.toFixed(1)}"
+              stroke="var(--ink-soft)" stroke-width="2" stroke-linecap="round"/>
+        <text x="${(xs[i] + bw / 2).toFixed(1)}" y="${h - 16}" text-anchor="middle"
+              font-size="10" fill="var(--ink-soft)">${b.label}</text>`;
+    }).join("");
+
+    const groups = [[0, 1, t("couché")], [2, 3, t("debout")]].map(([i, j, label]) =>
+      `<text x="${((xs[i] + xs[j] + bw) / 2).toFixed(1)}" y="${h - 4}" text-anchor="middle"
+             font-size="9" fill="var(--ink-muted)">${esc(label)}</text>`).join("");
+
+    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("LF et HF dans les deux positions, comparés à leur référence")}">
+      ${ticks}${rects}${groups}</svg>`;
+  }
+
+  /// One measure across the tests, on a log scale, inside its usual zone.
+  ///
+  /// Logarithmic because a single 9452 against a usual 700–1500 flattens every
+  /// other point onto the axis, and the flattened points are the ones being
+  /// read. The band is the running median ±20 %: it turns "is this high" — a
+  /// question needing the athlete's whole history — into "is it outside the
+  /// band", which is a glance.
+  function hrvSeriesSVG(a, pick, label) {
+    const tests = (a.hrv || []).slice(-12);
+    const values = tests.map(pick).filter(v => v > 0);
+    if (values.length < 2) return "";
+
+    const w = 280, h = 130, padL = 36, padR = 8, padT = 10, padB = 18;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const lo = Math.log10(Math.min(...values) * 0.8);
+    const hi = Math.log10(Math.max(...values) * 1.25);
+    const xFor = i => padL + (tests.length > 1 ? (i / (tests.length - 1)) * plotW : plotW / 2);
+    const yFor = v => padT + plotH - ((Math.log10(v) - lo) / (hi - lo || 1)) * plotH;
+
+    const mid = median(values);
+    const band = `<rect x="${padL}" y="${yFor(mid * 1.2).toFixed(1)}" width="${plotW}"
+      height="${Math.abs(yFor(mid * 0.8) - yFor(mid * 1.2)).toFixed(1)}"
+      fill="var(--accent-soft)" stroke="var(--accent)" stroke-opacity=".35" stroke-width="1"/>`;
+
+    const pts = tests.map((test, i) => ({ i, v: pick(test), date: test.date })).filter(p => p.v > 0);
+    const path = pts.map((p, k) => (k === 0 ? "M" : "L") + xFor(p.i).toFixed(1) + " " + yFor(p.v).toFixed(1)).join(" ");
+    const dots = pts.map(p => `<circle cx="${xFor(p.i).toFixed(1)}" cy="${yFor(p.v).toFixed(1)}" r="2.6"
+      fill="var(--accent)"><title>${esc(shortDate(p.date) + " — " + Math.round(p.v))}</title></circle>`).join("");
+
+    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}">
+      ${band}
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>
+      ${dots}
+      <text x="${padL - 5}" y="${yFor(mid).toFixed(1)}" text-anchor="end" dominant-baseline="middle"
+            font-size="9" fill="var(--ink-muted)">${Math.round(mid)}</text>
+    </svg>`;
   }
 
   function radarSVG(a) {
