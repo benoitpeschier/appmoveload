@@ -291,6 +291,25 @@
   #inviteCard dd { margin:.15rem 0 0; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
     word-break:break-all; }
   .chart-note { font-size:11px; color:var(--ink-muted); margin:.35rem 0 0; }
+  /* The squad grid: a square per athlete per morning, colour by state. */
+  .hrv-squad { overflow-x:auto; }
+  .hrv-squad table { border-collapse:collapse; font-size:13px; min-width:620px; width:100%; }
+  .hrv-squad th { font-weight:500; font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-muted); padding:.3rem .25rem .5rem; text-align:center; font-variant-numeric:tabular-nums; }
+  .hrv-squad th.name { text-align:left; }
+  .hrv-squad td { padding:.28rem .25rem; text-align:center; }
+  .hrv-squad td.name { text-align:left; font-weight:500; white-space:nowrap; padding-right:.9rem; }
+  .hrv-squad tbody tr:hover td, .hrv-squad tr:hover td { background:var(--card-bg-hover); }
+  .hrv-d { width:15px; height:15px; border-radius:4px; display:inline-block; vertical-align:-2px; }
+  .hrv-d.ok { background:var(--z1); }
+  .hrv-d.watch { background:var(--i2); }
+  .hrv-d.alert { background:var(--i3); }
+  /* Dashed rather than pale: a morning without a test is an absence, and an
+     absence that looks like a faint value gets read as a faint value. */
+  .hrv-d.none { background:transparent; border:1px dashed var(--border-strong); }
+  .hrv-legend { display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; font-size:12px;
+    color:var(--ink-muted); margin-top:.9rem; }
+  .hrv-key { display:inline-flex; align-items:center; gap:.35rem; }
   .hrv-verdict { font-size:13px; margin:.5rem 0; }
   .hrv-verdict.flagged { color:var(--warn-ink); }
   .hrv-deltas { display:grid; grid-template-columns:repeat(4, 1fr); gap:.4rem; margin:.6rem 0; }
@@ -554,6 +573,11 @@
     "— pas de comparaison possible.": "— no comparison possible.",
     "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
     "Se connecter": "Sign in",
+    "Athlète": "Athlete",
+    "auj.": "today",
+    "aucun motif": "no pattern",
+    "à surveiller": "worth a look",
+    "Quatorze matins. « À surveiller » n'est pas un motif de Schmidt : c'est une lecture dont le calcul se méfie — spectre peu fiable, ou écart calculé sur une base trop faible pour qu'un pourcentage veuille dire grand-chose.": "Fourteen mornings. \u201cWorth a look\u201d is not one of Schmidt's patterns: it is a reading the calculation itself distrusts — an unreliable spectrum, or a delta resting on a base too small for a percentage to mean much.",
     "Écarts en % contre la médiane des six tests précédents. ": "Deltas in % against the median of the previous six tests. ",
     "Une barre manquante est un matin sans test, jamais un zéro.": "A missing bar is a morning without a test, never a zero.",
     "Test HRV du matin": "Morning HRV test",
@@ -1486,10 +1510,19 @@
   /// The median of up to the six tests before this one, so one bad night does
   /// not redefine the baseline everything is read against.
   function hrvVerdict(a) {
+    return hrvVerdictAt(a, (a.hrv || []).length - 1);
+  }
+
+  /// The verdict for one particular test, read against the six before it.
+  ///
+  /// Indexed rather than fixed on the latest, because the squad grid needs a
+  /// state per morning: a fortnight of verdicts is what shows a drift, and one
+  /// verdict for the last day shows nothing at all.
+  function hrvVerdictAt(a, index) {
     const tests = a.hrv || [];
-    if (tests.length < 2) return null;
-    const current = tests[tests.length - 1];
-    const earlier = tests.slice(Math.max(0, tests.length - 7), tests.length - 1);
+    if (index < 1 || index >= tests.length) return null;
+    const current = tests[index];
+    const earlier = tests.slice(Math.max(0, index - 6), index);
     if (!earlier.length) return null;
 
     const ref = {
@@ -1505,7 +1538,27 @@
     const t = Object.assign({}, HRV_DEFAULTS, a.hrvThresholds || {});
     const match = HRV_PATTERNS.find(p => p.test(d, t)) || null;
     const smallest = Math.min(ref.suLF, ref.suHF, ref.stLF, ref.stHF);
-    return { pattern: match, deltas: d, smallBase: smallest < t.smallBasePower, date: current.date };
+    return {
+      pattern: match, deltas: d, smallBase: smallest < t.smallBasePower,
+      date: current.date, reliable: current.reliable !== false,
+    };
+  }
+
+  /// One of "ok" · "watch" · "alert" · "none" for a given morning.
+  ///
+  /// Schmidt's cascade has no severity tiers — a motif matches or it does not.
+  /// "watch" is therefore not his: it is a reading the engine itself distrusts,
+  /// either because the spectrum was flagged unreliable or because a delta rests
+  /// on a base too small for a percentage to mean much. Worth a look before the
+  /// session, not worth a conclusion — which is exactly the gap between "rien à
+  /// signaler" and "motif de fatigue".
+  function hrvStateAt(a, index) {
+    const tests = a.hrv || [];
+    if (index < 0 || index >= tests.length) return "none";
+    const verdict = hrvVerdictAt(a, index);
+    if (!verdict) return tests[index].reliable === false ? "watch" : "ok";
+    if (verdict.pattern) return "alert";
+    return (verdict.smallBase || !verdict.reliable) ? "watch" : "ok";
   }
 
   /// The morning reading, on the athlete's own page.
@@ -2053,6 +2106,19 @@
     </div>`;
   }
 
+  const HRV_STATE_LABEL = {
+    ok: "aucun motif", watch: "à surveiller",
+    alert: "motif de fatigue", none: "pas de test",
+  };
+
+  /// The squad over a fortnight: one row per athlete, one square per morning.
+  ///
+  /// The square carries the *state*, not the rMSSD. An intensity ramp asked
+  /// the coach to read a value and decide; a colour answers the question they
+  /// actually arrive with at eight in the morning — who needs a word before
+  /// the session. A drift then reads as a band that darkens, and a run of
+  /// dashes says an athlete has stopped testing, which is often the first sign
+  /// of anything and is invisible on every other screen.
   function renderHrvGrid() {
     const grid = document.getElementById("hrvGrid");
     const withTests = athletes.filter(a => (a.hrv || []).length);
@@ -2069,23 +2135,34 @@
       days.push(isoDate(d));
     }
 
-    // Each athlete is scaled against their own best: HRV is read against an
-    // athlete's own history, never across people.
+    const head = `<tr><th class="name">${t("Athlète")}</th>` +
+      days.map((iso, i) => {
+        const back = days.length - 1 - i;
+        return `<th title="${esc(shortDate(iso))}">${back === 0 ? t("auj.") : "−" + back}</th>`;
+      }).join("") + "</tr>";
+
     const rows = withTests.map(a => {
-      const byDay = new Map((a.hrv || []).map(x => [x.date, x]));
-      const best = Math.max(...(a.hrv || []).map(x => x.supine.rmssd), 1);
+      const indexByDay = new Map((a.hrv || []).map((x, i) => [x.date, i]));
       const cells = days.map(iso => {
-        const test = byDay.get(iso);
-        if (!test) return `<span class="hrv-cell empty" data-tip="${esc(iso)} — ${t("pas de test")}"></span>`;
-        const share = Math.min(1, test.supine.rmssd / best);
-        const tip = `${iso} — rMSSD ${Math.round(test.supine.rmssd)} ms · ${Math.round(test.supine.hr)} bpm`
-          + (test.wellness != null ? ` · ${test.wellness} %` : "");
-        return `<span class="hrv-cell" style="opacity:${(0.25 + 0.75 * share).toFixed(2)}" data-tip="${esc(tip)}"></span>`;
+        const index = indexByDay.get(iso);
+        const state = index === undefined ? "none" : hrvStateAt(a, index);
+        const test = index === undefined ? null : a.hrv[index];
+        const tip = test
+          ? `${shortDate(iso)} — ${t(HRV_STATE_LABEL[state])} · ${hrvPillLabel(test)}`
+          : `${shortDate(iso)} — ${t(HRV_STATE_LABEL.none)}`;
+        return `<td><span class="hrv-d ${state}" title="${esc(tip)}"></span></td>`;
       }).join("");
-      return `<div class="hrv-row"><span class="hrv-name">${esc(a.name)}</span><span class="hrv-cells">${cells}</span></div>`;
+      return `<tr><td class="name">${esc(a.name)}</td>${cells}</tr>`;
     }).join("");
 
-    grid.innerHTML = `<p class="chart-note">${t("Quatorze jours. Chaque carré est un matin ; l'intensité suit le rMSSD allongé, comparé au meilleur de l'athlète. Un carré vide est un test non fait.")}</p>${rows}`;
+    const legend = ["ok", "watch", "alert", "none"].map(state =>
+      `<span class="hrv-key"><i class="hrv-d ${state}"></i>${t(HRV_STATE_LABEL[state])}</span>`
+    ).join("");
+
+    grid.innerHTML = `
+      <div class="hrv-squad"><table>${head}${rows}</table></div>
+      <div class="hrv-legend">${legend}</div>
+      <p class="chart-note">${t("Quatorze matins. « À surveiller » n'est pas un motif de Schmidt : c'est une lecture dont le calcul se méfie — spectre peu fiable, ou écart calculé sur une base trop faible pour qu'un pourcentage veuille dire grand-chose.")}</p>`;
   }
 
   // ── Session filter (toutes / entraînement / tests) ──────────────────────
