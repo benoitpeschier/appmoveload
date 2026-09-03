@@ -334,6 +334,68 @@
   .hrv-chip.flat { background:var(--card-bg-hover); color:var(--ink-muted); }
   .hrv-chip.warn { background:var(--warn-bg); color:var(--warn-ink);
     border:1px solid var(--warn-border); }
+  /* ---- coach panels, under an athlete's fortnight row ---- */
+  .hrv-squad td.toggle { text-align:right; padding-left:.6rem; }
+  .hrv-toggle { font: inherit; font-size:11px; color:var(--accent); background:none;
+    border:1px solid var(--border-strong); border-radius:6px; padding:.1rem .45rem; cursor:pointer; }
+  .hrv-toggle:hover { border-color:var(--accent); }
+  .hrv-athlete.open td { background:var(--card-bg-hover); }
+  /* The squad cells are centred so the day squares line up; the drawer is
+     prose and tables and must not inherit that. */
+  .hrv-drawer-row > td { padding:.9rem .25rem 1.2rem !important; background:var(--card-bg-hover);
+    text-align:left; }
+  .hrv-panel .hrv-table { min-width:230px; }
+  .hrv-panel .drawer-body { overflow-x:auto; }
+  .hrv-panels { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  .hrv-panel { background:var(--card-bg); border:1px solid var(--border); border-radius:10px;
+    padding:.8rem .9rem; }
+  .hrv-panel .block-t:first-child { margin-top:0; }
+  .hrv-verdict-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .hrv-head { font-size:14px; margin:0; padding:.6rem .7rem .1rem; color:var(--z1); }
+  .hrv-head.flagged { color:var(--warn-ink); }
+  .hrv-sub { font-size:12px; color:var(--ink-soft); padding:0 .7rem .6rem; margin:0; }
+  .hrv-why { border-top:1px solid var(--border); padding:.55rem .7rem; }
+  .why-line { display:flex; align-items:baseline; justify-content:space-between; gap:.5rem;
+    font-size:12px; color:var(--ink-muted); padding:.12rem 0; }
+  .hrv-outcome { font-size:13px; font-weight:600; border-radius:8px; padding:.5rem .65rem;
+    margin:0; background:var(--accent-soft); color:var(--z1); }
+  .hrv-outcome.flagged { background:var(--warn-bg); color:var(--warn-ink); }
+  .hrv-rules { display:flex; flex-direction:column; gap:.5rem; }
+  .hrv-rule { border:1px solid var(--border); border-radius:8px; padding:.5rem .6rem;
+    display:flex; flex-direction:column; gap:.25rem; }
+  .hrv-rule.fired { border-color:var(--i3); background:var(--warn-bg); }
+  .hrv-rule-h { display:flex; align-items:center; gap:.4rem; }
+  .hrv-dot { width:9px; height:9px; border-radius:50%; flex:none; }
+  .hrv-rule-n { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; font-weight:600; }
+  .hrv-rule-i { font-size:12px; color:var(--ink-soft); margin:0; line-height:1.45; }
+  .cond { display:flex; flex-wrap:wrap; gap:.28rem; align-items:center;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; }
+  /* Green marks the half that is true, so an unfired rule shows how close it
+     came — the difference between "nothing happened" and "nearly". */
+  .cond-test { padding:.05rem .3rem; border-radius:3px; background:var(--card-bg-hover); color:var(--ink-muted); }
+  .cond-test.holds { background:var(--accent-soft); color:var(--z1); font-weight:600; }
+  .cond-and { color:var(--ink-muted); }
+  .hrv-seg { display:inline-flex; border:1px solid var(--border); border-radius:7px;
+    overflow:hidden; margin-bottom:.5rem; flex-wrap:wrap; }
+  .hrv-seg-btn { font:inherit; font-size:11px; padding:.22rem .5rem; border:none;
+    background:var(--card-bg); color:var(--ink-muted); cursor:pointer; }
+  .hrv-seg-btn + .hrv-seg-btn { border-left:1px solid var(--border); }
+  .hrv-seg-btn.active { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .hrv-accord { border-top:1px solid var(--border); margin-top:.7rem; padding-top:.5rem; }
+  /* The card's HRV strip, sunk under the session bars so the two readings —
+     yesterday's load and this morning's state — sit together but apart. */
+  .hrv-strip { margin:.7rem -0.9rem -0.7rem; padding:.6rem .9rem .7rem;
+    border-top:1px solid var(--border); background:var(--card-bg-hover);
+    display:flex; flex-direction:column; gap:.4rem; }
+  .hrv-strip-row { display:flex; align-items:center; gap:.5rem; }
+  .hrv-strip-spark { flex:1; min-width:0; }
+  .hrv-strip-foot { font-size:11px; color:var(--ink-muted); margin:0; }
+  .hrv-pill { display:inline-flex; align-items:center; gap:.25rem; border-radius:20px;
+    padding:.1rem .45rem; font-size:11px; font-weight:600; white-space:nowrap; }
+  .hrv-pill.ok { background:var(--accent-soft); color:var(--z1); }
+  .hrv-pill.watch { background:var(--warn-bg); color:var(--warn-ink); }
+  .hrv-pill.alert { background:var(--warn-bg); color:var(--i3); }
+  .hrv-pill.none { background:transparent; color:var(--ink-muted); border:1px dashed var(--border-strong); }
   .hrv-verdict { font-size:13px; margin:.5rem 0; }
   .hrv-verdict.flagged { color:var(--warn-ink); }
   .hrv-deltas { display:grid; grid-template-columns:repeat(4, 1fr); gap:.4rem; margin:.6rem 0; }
@@ -601,6 +663,37 @@
     "— pas de comparaison possible.": "— no comparison possible.",
     "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
     "Se connecter": "Sign in",
+    "score Wellness": "Wellness score",
+    "pas de test depuis": "no test for",
+    "Bilan": "Summary",
+    "Motifs": "Patterns",
+    "Radar": "Radar",
+    "Suivi": "Trend",
+    "Ce qui l'a déterminé": "What determined it",
+    "Aucun motif de fatigue déclenché": "No fatigue pattern triggered",
+    "Aucun motif déclenché — pas de fatigue caractérisée": "Nothing triggered — no characterised fatigue",
+    "Motif déclenché : ": "Pattern triggered: ",
+    "5 règles · cascade": "5 rules · cascade",
+    "Les 5 règles en détail": "The 5 rules in detail",
+    "et": "and",
+    "Détail": "Detail",
+    "au-dessus de la référence": "above reference",
+    "en retrait": "down",
+    "Toutes les mesures dans leur zone habituelle.": "All measures within their usual range.",
+    "écart en %": "delta in %",
+    "Radar des écarts en pourcentage": "Radar of the percentage deltas",
+    "Vers l'extérieur c'est en hausse, vers le centre en baisse ; l'anneau en pointillés est la référence. Une position à la fois : les écarts debout sont d'un autre ordre de grandeur et écraseraient le couché.": "Outward is up, inward is down; the dashed ring is the reference. One position at a time: the standing deltas are an order of magnitude larger and would flatten the lying ones.",
+    "12 derniers tests": "last 12 tests",
+    "Ressenti déclaré": "Declared feeling",
+    "Lecture HRV": "HRV reading",
+    "Accord": "Agreement",
+    "favorable": "favourable",
+    "défavorable": "unfavourable",
+    "douteuse": "doubtful",
+    "les deux concordent": "the two agree",
+    "en désaccord": "they disagree",
+    "La bande est la zone habituelle de cet athlète, pas une norme de population. Le ressenti est comparé à sa propre médiane : c'est leur désaccord qui informe, pas chacun pris seul.": "The band is this athlete's usual range, not a population norm. The feeling is compared with their own median: it is their disagreement that informs, not either one alone.",
+    "Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir sous le radar.": "Thresholds after Laurent Schmidt et al., taken as they are and adjustable per athlete in the drawer under the radar.",
     "LF et HF · les deux positions": "LF and HF · both positions",
     "référence · médiane des 6 précédents": "reference · median of the previous 6",
     "Puissance totale couchée · 12 derniers tests": "Total power lying · last 12 tests",
@@ -1378,11 +1471,22 @@
           <div class="bar-label"><span>${t("Charge mécanique")}</span><span>${fmtMinSec(a.mech[2])} ${t("en zone 3")}</span></div>
           <div class="bar">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
         </div>`}
-        ${!a.hrvToday ? "" : `
-        <div class="bar-row">
-          <div class="bar-label"><span>${t("HRV")}</span><span>${hrvPillLabel(a.hrvToday)}</span></div>
-          ${hrvSparkline(a.hrvRecent)}
-        </div>`}
+        ${!(a.hrv || []).length ? "" : (() => {
+          const state = hrvStateAt(a, a.hrv.length - 1);
+          const fresh = a.hrvToday && a.hrvToday.date === isoDate(new Date());
+          const sinceLast = a.hrv.length
+            ? Math.round((new Date() - new Date(a.hrv[a.hrv.length - 1].date + "T12:00:00")) / 86400000) : null;
+          return `<div class="hrv-strip">
+            <div class="hrv-strip-row">
+              <span class="hrv-pill ${fresh ? state : "none"}">${fresh ? "\u2665" : "\u2661"} ${
+                t(HRV_STATE_LABEL[fresh ? state : "none"])}</span>
+              <span class="hrv-strip-spark">${hrvSparkline(a)}</span>
+            </div>
+            <p class="hrv-strip-foot">${a.hrvToday && a.hrvToday.wellness != null && fresh
+              ? t("score Wellness") + " " + a.hrvToday.wellness + " %"
+              : t("pas de test depuis") + " " + sinceLast + " j"}</p>
+          </div>`;
+        })()}
         <div class="card-foot">
           <div class="trend">
             ${sparkline(a.history, 64, 24)}
@@ -1493,28 +1597,37 @@
   /// run. **A missing test is a gap, not a zero and not an interpolation** — a
   /// run of blanks says the athlete stopped testing, which is often the first
   /// sign of something and is invisible anywhere else.
-  function hrvSparkline(tests) {
-    if (!tests || !tests.length) return "";
+  /// Fourteen mornings as one small bar each, height and colour by *state*.
+  ///
+  /// Height carries the state rather than a value, for the same reason as the
+  /// squad grid: on a card the size of a business card the coach reads "is it
+  /// drifting", not "what was the rMSSD". A morning with no test is a dot on
+  /// the floor — visibly missing, never interpolated over, because a run of
+  /// them is itself the signal.
+  function hrvSparkline(a) {
+    const tests = a && a.hrv ? a.hrv : [];
+    if (!tests.length) return "";
     const w = 220, h = 26;
-    const best = Math.max(...tests.map(x => x.supine.rmssd), 1);
-    const byDay = new Map(tests.map(x => [x.date, x]));
+    const indexByDay = new Map(tests.map((x, i) => [x.date, i]));
 
-    // Walk real calendar days so an absence takes up its own space.
     const last = new Date(tests[tests.length - 1].date + "T12:00:00");
     const cells = [];
     for (let i = 13; i >= 0; i--) {
       const d = new Date(last); d.setDate(d.getDate() - i);
-      cells.push(byDay.get(isoDate(d)) || null);
+      cells.push(indexByDay.has(isoDate(d)) ? hrvStateAt(a, indexByDay.get(isoDate(d))) : "none");
     }
+
+    const rank = { alert: 6, watch: 15, ok: 22, none: 0 };
+    const fill = { alert: "var(--i3)", watch: "var(--i2)", ok: "var(--z1)" };
     const bw = w / cells.length;
-    const bars = cells.map((test, i) => {
+    const bars = cells.map((state, i) => {
       const x = (i * bw + 1).toFixed(1);
-      if (!test) {
-        return `<rect x="${x}" y="${h - 3}" width="${(bw - 2).toFixed(1)}" height="2" fill="var(--border)"/>`;
+      if (state === "none") {
+        return `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="${h - 2}" r="1.4" fill="var(--border-strong)"/>`;
       }
-      const bh = Math.max(2, (test.supine.rmssd / best) * (h - 4));
-      const fill = test.reliable ? "var(--accent)" : "var(--ink-muted)";
-      return `<rect x="${x}" y="${(h - bh).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" rx="1"/>`;
+      const bh = rank[state];
+      return `<rect x="${x}" y="${(h - bh).toFixed(1)}" width="${(bw - 2).toFixed(1)}"
+        height="${bh}" fill="${fill[state]}" rx="1.2"/>`;
     }).join("");
     return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Quatorze derniers tests HRV")}">${bars}</svg>`;
   }
@@ -1534,18 +1647,44 @@
     smallBasePower: 50,
   };
 
+  /// Schmidt's five rules, conditions declared rather than coded.
+  ///
+  /// The coach screen shows each condition with the morning's value inside it,
+  /// so that "why did nothing fire" is answerable. Deriving the test from the
+  /// same declaration is what stops the displayed rule and the evaluated rule
+  /// from drifting apart — the mockup hard-coded its display, and a hard-coded
+  /// display of a threshold that is editable per athlete would start lying the
+  /// first time somebody changed one.
   const HRV_PATTERNS = [
-    { id: "F(HF-LF-)SU_ST",   reading: t("Effondrement de l'énergie — hypotonie para et orthosympathique couché"),
-      test: (d, t) => d.hfSu < t.energyCollapseHFSupine && d.lfSt < t.energyCollapseLFStanding },
-    { id: "F(LF+SU LF-ST)",   reading: t("Stress aigu — hypertonie orthosympathique couché"),
-      test: (d, t) => d.lfSu > t.acuteStressLFSupine && d.lfSt < t.acuteStressLFStanding },
-    { id: "F(HF-SU HF+ST)",   reading: t("Frein à l'activation — hypertonie parasympathique debout"),
-      test: (d, t) => d.hfSu < t.activationBrakeHFSupine && d.hfSt > t.activationBrakeHFStanding },
-    { id: "F(HF+SU)",         reading: t("Fatigue extrême — hypertonie parasympathique couché"),
-      test: (d, t) => d.hfSu > t.extremeFatigueHFSupine },
-    { id: "F(LF-st)",         reading: t("Régulation de la pression périphérique — hypotonie orthosympathique debout"),
-      test: (d, t) => d.lfSt < t.peripheralRegulationLFStanding },
+    { id: "F(HF-LF-)SU_ST", dot: "#C0392B",
+      reading: t("Effondrement de l'énergie — hypotonie para et orthosympathique couché"),
+      conds: [["hfSu", "HFsu", "<", "energyCollapseHFSupine"],
+              ["lfSt", "LFst", "<", "energyCollapseLFStanding"]] },
+    { id: "F(LF+SU LF-ST)", dot: "#D97D0D",
+      reading: t("Stress aigu — hypertonie orthosympathique couché"),
+      conds: [["lfSu", "LFsu", ">", "acuteStressLFSupine"],
+              ["lfSt", "LFst", "<", "acuteStressLFStanding"]] },
+    { id: "F(HF-SU HF+ST)", dot: "#7A5230",
+      reading: t("Frein à l'activation — hypertonie parasympathique debout"),
+      conds: [["hfSu", "HFsu", "<", "activationBrakeHFSupine"],
+              ["hfSt", "HFst", ">", "activationBrakeHFStanding"]] },
+    { id: "F(HF+SU)", dot: "var(--ink)",
+      reading: t("Fatigue extrême — hypertonie parasympathique couché"),
+      conds: [["hfSu", "HFsu", ">", "extremeFatigueHFSupine"]] },
+    { id: "F(LF-st)", dot: "#7B4EA8",
+      reading: t("Régulation de la pression périphérique — hypotonie orthosympathique debout"),
+      conds: [["lfSt", "LFst", "<", "peripheralRegulationLFStanding"]] },
   ];
+
+  function condHolds([key, , op, threshold], deltas, thresholds) {
+    const v = deltas[key], limit = thresholds[threshold];
+    return op === "<" ? v < limit : v > limit;
+  }
+
+  // Every rule is a conjunction; the cascade takes the first whose halves all hold.
+  HRV_PATTERNS.forEach(p => {
+    p.test = (d, th) => p.conds.every(c => condHolds(c, d, th));
+  });
 
   function pctChange(reference, current) {
     // A reference of zero has no percentage. A huge number here would fire the
@@ -1590,9 +1729,15 @@
 
     const t = Object.assign({}, HRV_DEFAULTS, a.hrvThresholds || {});
     const match = HRV_PATTERNS.find(p => p.test(d, t)) || null;
-    const smallest = Math.min(ref.suLF, ref.suHF, ref.stLF, ref.stHF);
+    // A small base only misleads when a big percentage comes off it. Flagging
+    // every small reference instead lit the warning permanently for an athlete
+    // whose standing HF simply sits around 16 ms² — a real case from the
+    // workbook — and a warning that is always on is read as decoration.
+    const bases = { hfSu: ref.suHF, lfSu: ref.suLF, hfSt: ref.stHF, lfSt: ref.stLF };
+    const smallBase = Object.keys(d).some(
+      k => bases[k] < t.smallBasePower && Math.abs(d[k]) > 100);
     return {
-      pattern: match, deltas: d, smallBase: smallest < t.smallBasePower,
+      pattern: match, deltas: d, bases, smallBase,
       date: current.date, reliable: current.reliable !== false,
     };
   }
@@ -1677,7 +1822,7 @@
 
       ${verdict ? hrvTableHTML(a, tests.length - 1) : ""}
 
-      ${hrvSparkline(a.hrvRecent)}
+      ${hrvSparkline(a)}
       <p class="chart-note">${verdict ? t("Écarts en % contre la médiane des six tests précédents. ") : ""}${t("Une barre manquante est un matin sans test, jamais un zéro.")}</p>`;
   }
 
@@ -1725,6 +1870,270 @@
         <p class="chart-note">${t("En ambre : un écart calculé sur une base trop faible pour vouloir dire grand-chose.")}</p>
       </div>
     </details>`;
+  }
+
+  // ── The four coach panels ────────────────────────────────────────────
+  // Numbers and charts belong to the coach, who reads them with an expertise
+  // the athlete's phone does not have and should not pretend to. The athlete's
+  // own screen stays deliberately thin.
+
+  // Per-athlete view choices, kept out of the data so a re-render from a
+  // Firestore snapshot does not throw them away.
+  const hrvSeriesChoice = new Map();
+  const hrvPositionChoice = new Map();
+  const hrvOpenAthletes = new Set();
+
+  const HRV_METRICS = [
+    ["FC", m => m.hr, 1], ["rMSSD", m => m.rmssd, 1],
+    ["LF", m => m.lf, 0], ["HF", m => m.hf, 0], ["TP", m => m.tp, 0],
+  ];
+
+  /// Value, reference and delta for every metric of one position.
+  function hrvRows(a, index, position) {
+    const tests = a.hrv || [];
+    const current = tests[index];
+    const earlier = tests.slice(Math.max(0, index - 6), index);
+    if (!current || !earlier.length) return null;
+    return HRV_METRICS.map(([name, get, decimals]) => {
+      const v = get(current[position]);
+      const ref = median(earlier.map(x => get(x[position])));
+      return { name, v, ref, decimals, delta: pctChange(ref, v), smallBase: ref < HRV_DEFAULTS.smallBasePower };
+    });
+  }
+
+  /// What the morning actually did, in words, from the deltas alone.
+  ///
+  /// Deliberately descriptive and not interpretive. Naming a physiological
+  /// picture — "parasympathetic recovery" — is a clinical reading, and the app
+  /// has no business inventing one; a coach who sees "HF and rMSSD above
+  /// reference, LF down, HR lower" makes that call themselves, which is the
+  /// whole point of giving them the numbers.
+  function hrvNarrative(rows) {
+    const up = rows.filter(r => r.delta != null && r.delta >= 10).map(r => r.name);
+    const down = rows.filter(r => r.delta != null && r.delta <= -10).map(r => r.name);
+    const parts = [];
+    if (up.length) parts.push(up.join(", ") + " " + t("au-dessus de la référence"));
+    if (down.length) parts.push(down.join(", ") + " " + t("en retrait"));
+    if (!parts.length) return t("Toutes les mesures dans leur zone habituelle.");
+    return parts.join(" · ") + ".";
+  }
+
+  function hrvChip(delta, smallBase) {
+    if (delta == null) return `<span class="hrv-chip flat">—</span>`;
+    const cls = (smallBase && Math.abs(delta) > 100) ? "warn" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+    return `<span class="hrv-chip ${cls}">${(delta > 0 ? "+" : "") + Math.round(delta)} %</span>`;
+  }
+
+  /// 1 · Bilan — the verdict, never alone: the deltas that produced it sit
+  /// under it. A coach who sees them can judge; one who sees only the
+  /// conclusion has to believe it.
+  function hrvBilanHTML(a, index) {
+    const verdict = hrvVerdictAt(a, index);
+    const supine = hrvRows(a, index, "supine");
+    if (!verdict || !supine) return "";
+    const standing = hrvRows(a, index, "standing");
+
+    const head = verdict.pattern
+      ? `<h4 class="hrv-head flagged">${esc(verdict.pattern.reading)}</h4>
+         <p class="hrv-sub">${esc(hrvNarrative(supine))} ${esc(verdict.pattern.id)}</p>`
+      : `<h4 class="hrv-head">${t("Aucun motif de fatigue déclenché")}</h4>
+         <p class="hrv-sub">${esc(hrvNarrative(supine))}</p>`;
+
+    const why = [["HF " + t("couché"), "hfSu"], ["LF " + t("couché"), "lfSu"],
+                 ["HF " + t("debout"), "hfSt"], ["LF " + t("debout"), "lfSt"]]
+      .map(([label, key]) => `<div class="why-line"><span>${esc(label)}</span>${
+        hrvChip(verdict.deltas[key], verdict.bases[key] < HRV_DEFAULTS.smallBasePower)}</div>`).join("");
+
+    const table = pos => pos.map(r =>
+      `<tr><td>${esc(r.name)}</td><td class="r">${r.v.toFixed(r.decimals).replace(".", ",")}</td>
+       <td class="r">${r.ref.toFixed(r.decimals).replace(".", ",")}</td>
+       <td class="r">${hrvChip(r.delta, r.smallBase)}</td></tr>`).join("");
+
+    return `<div class="hrv-panel">
+      <p class="block-t">${t("Bilan")}</p>
+      <div class="hrv-verdict-box">${head}
+        <div class="hrv-why"><p class="block-t">${t("Ce qui l'a déterminé")}</p>${why}</div>
+      </div>
+      <p class="block-t">${t("LF et HF · les deux positions")}</p>
+      ${hrvBarsSVG(a, index)}
+      <div class="hrv-legend">
+        <span class="hrv-key"><i class="hrv-swatch" style="background:var(--i2)"></i>LF</span>
+        <span class="hrv-key"><i class="hrv-swatch" style="background:var(--accent)"></i>HF</span>
+        <span class="hrv-key"><i class="hrv-swatch ref"></i>${t("référence · médiane des 6 précédents")}</span>
+      </div>
+      <details class="drawer" style="margin-top:.8rem">
+        <summary>${t("Toutes les mesures · % contre la médiane des 6 précédents")}</summary>
+        <div class="drawer-body"><table class="hrv-table">
+          <thead><tr><th>${t("Mesure")}</th><th class="r">${t("Valeur")}</th><th class="r">${t("Réf.")}</th><th class="r">${t("Écart")}</th></tr></thead>
+          <tbody>
+            <tr class="posrow"><td colspan="4">${t("Couché")}</td></tr>${table(supine)}
+            <tr class="posrow"><td colspan="4">${t("Debout")}</td></tr>${table(standing)}
+          </tbody></table>
+          <p class="chart-note">${t("En ambre : un écart calculé sur une base trop faible pour vouloir dire grand-chose.")}</p>
+        </div>
+      </details>
+    </div>`;
+  }
+
+  /// 2 · Motifs — every rule with the morning's value inside its condition,
+  /// each half that holds turned green. That is how "why did nothing fire"
+  /// gets an answer instead of a shrug.
+  function hrvMotifsHTML(a, index) {
+    const verdict = hrvVerdictAt(a, index);
+    if (!verdict) return "";
+    const thresholds = Object.assign({}, HRV_DEFAULTS, a.hrvThresholds || {});
+    const fired = verdict.pattern;
+
+    const rules = HRV_PATTERNS.map(rule => {
+      const conds = rule.conds.map(c => {
+        const [key, label, op, threshold] = c;
+        const holds = condHolds(c, verdict.deltas, thresholds);
+        const shown = `${label} ${(verdict.deltas[key] > 0 ? "+" : "") + Math.round(verdict.deltas[key])} % ${op === "<" ? "<" : ">"} ${thresholds[threshold] > 0 ? "+" : ""}${thresholds[threshold]} %`;
+        return `<span class="cond-test ${holds ? "holds" : ""}">${esc(shown)}</span>`;
+      }).join(`<span class="cond-and">${t("et")}</span>`);
+      return `<div class="hrv-rule ${fired === rule ? "fired" : ""}">
+        <div class="hrv-rule-h"><span class="hrv-dot" style="background:${rule.dot}"></span>
+          <span class="hrv-rule-n">${esc(rule.id)}</span></div>
+        <div class="cond">${conds}</div>
+        <p class="hrv-rule-i">${esc(rule.reading)}</p>
+      </div>`;
+    }).join("");
+
+    return `<div class="hrv-panel">
+      <p class="block-t">${t("Motifs")} · ${t("5 règles · cascade")}</p>
+      <p class="hrv-outcome ${fired ? "flagged" : ""}">${fired
+        ? esc(t("Motif déclenché : ") + fired.reading)
+        : t("Aucun motif déclenché — pas de fatigue caractérisée")}</p>
+      <details class="drawer" style="margin-top:.6rem">
+        <summary>${t("Les 5 règles en détail")}</summary>
+        <div class="drawer-body hrv-rules">${rules}</div>
+      </details>
+      <p class="chart-note">${t("Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir sous le radar.")}</p>
+    </div>`;
+  }
+
+  /// 3 · Radar — a shape rather than five numbers. Outward is up, inward is
+  /// down, the middle ring is the reference.
+  ///
+  /// One position at a time, as the mockup insisted: the standing deltas run
+  /// an order of magnitude larger than the lying ones, so drawing both on one
+  /// scale flattens lying into the middle ring and hides exactly what it is
+  /// there to show.
+  function hrvRadarSVG(a, index, position) {
+    const rows = hrvRows(a, index, position);
+    if (!rows) return "";
+
+    const w = 280, h = 250, cx = w / 2, cy = 122, R = 88;
+    const n = rows.length;
+    const angleFor = i => (Math.PI * 2 * i / n) - Math.PI / 2;
+    // −100 % at the centre, 0 % on the middle ring, +100 % and beyond at the
+    // rim. Clamped: a +813 % would otherwise be off the page, and the shape
+    // only has to say "far out", which the rim already does.
+    const radiusFor = pct => R * Math.max(0, Math.min(1, (Math.max(-100, Math.min(200, pct)) + 100) / 200));
+    const point = (i, pct) => [cx + Math.cos(angleFor(i)) * radiusFor(pct),
+                               cy + Math.sin(angleFor(i)) * radiusFor(pct)];
+
+    const rings = [0.25, 0.5, 0.75, 1].map(f => {
+      const pts = rows.map((_, i) => [cx + Math.cos(angleFor(i)) * R * f,
+                                      cy + Math.sin(angleFor(i)) * R * f]);
+      const mid = Math.abs(f - 0.5) < 0.01;
+      return `<polygon points="${pts.map(pt => pt.map(v => v.toFixed(1)).join(",")).join(" ")}"
+        fill="none" stroke="var(--border${mid ? "-strong" : ""})" stroke-width="1"
+        ${mid ? 'stroke-dasharray="4 3"' : ""}/>`;
+    }).join("");
+
+    const axes = rows.map((_, i) => {
+      const [x, y] = [cx + Math.cos(angleFor(i)) * R, cy + Math.sin(angleFor(i)) * R];
+      return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
+    }).join("");
+
+    const shape = rows.map((r, i) => point(i, r.delta == null ? 0 : r.delta).map(v => v.toFixed(1)).join(",")).join(" ");
+    const dots = rows.map((r, i) => {
+      const [x, y] = point(i, r.delta == null ? 0 : r.delta);
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--accent)"><title>${
+        esc(`${r.name} ${r.delta == null ? "—" : (r.delta > 0 ? "+" : "") + Math.round(r.delta) + " %"}`)}</title></circle>`;
+    }).join("");
+
+    const labels = rows.map((r, i) => {
+      const [x, y] = [cx + Math.cos(angleFor(i)) * (R + 20), cy + Math.sin(angleFor(i)) * (R + 16)];
+      return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle"
+        font-size="11" fill="var(--ink-soft)">${esc(r.name)}</text>`;
+    }).join("");
+
+    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Radar des écarts en pourcentage")}">
+      ${rings}${axes}
+      <polygon points="${shape}" fill="var(--accent-soft)" fill-opacity=".75" stroke="var(--accent)" stroke-width="2"/>
+      ${dots}${labels}</svg>`;
+  }
+
+  function hrvRadarPanelHTML(a, index) {
+    const position = hrvPositionChoice.get(a.id) || "supine";
+    const svg = hrvRadarSVG(a, index, position);
+    if (!svg) return "";
+    const tab = (key, label) =>
+      `<button class="hrv-seg-btn ${key === position ? "active" : ""}" data-hrv-position="${key}" data-athlete="${esc(a.id)}">${esc(label)}</button>`;
+    return `<div class="hrv-panel">
+      <p class="block-t">${t("Radar")} · ${t("écart en %")}</p>
+      <div class="hrv-seg">${tab("supine", t("Couché"))}${tab("standing", t("Debout"))}</div>
+      ${svg}
+      <p class="chart-note">${t("Vers l'extérieur c'est en hausse, vers le centre en baisse ; l'anneau en pointillés est la référence. Une position à la fois : les écarts debout sont d'un autre ordre de grandeur et écraseraient le couché.")}</p>
+    </div>`;
+  }
+
+  /// 4 · Suivi — one measure across the tests, against the athlete's own usual
+  /// zone, with the declared feeling beside it.
+  ///
+  /// The band is this athlete's habit, never a population norm. And the
+  /// wellness score sits next to the reading because it is their *disagreement*
+  /// that informs: a good measurement under a bad feeling, or the reverse, is
+  /// the morning worth a conversation.
+  const HRV_SERIES = [
+    ["tpSupine", "TP " + t("couché"), x => x.supine.tp],
+    ["hrSupine", "FC " + t("couché"), x => x.supine.hr],
+    ["rmssd", "rMSSD", x => x.supine.rmssd],
+    ["lfStanding", "LF " + t("debout"), x => x.standing.lf],
+  ];
+
+  function hrvSuiviHTML(a, index) {
+    const chosen = hrvSeriesChoice.get(a.id) || HRV_SERIES[0][0];
+    const series = HRV_SERIES.find(x => x[0] === chosen) || HRV_SERIES[0];
+    const tabs = HRV_SERIES.map(([key, label]) =>
+      `<button class="hrv-seg-btn ${key === chosen ? "active" : ""}" data-hrv-series="${key}" data-athlete="${esc(a.id)}">${esc(label)}</button>`
+    ).join("");
+
+    const verdict = hrvVerdictAt(a, index);
+    const test = (a.hrv || [])[index];
+    const wellnessValues = (a.hrv || []).map(x => x.wellness).filter(v => v != null);
+    const wellnessRef = wellnessValues.length ? median(wellnessValues) : null;
+
+    // Both sides read against this athlete's own habit — the same principle as
+    // every other number here, and it avoids inventing a population threshold
+    // for "feels fine".
+    const reading = !verdict ? null : verdict.pattern ? "bad" : (verdict.smallBase || !verdict.reliable) ? "doubtful" : "good";
+    const feeling = (test && test.wellness != null && wellnessRef != null)
+      ? (test.wellness >= wellnessRef ? "good" : "bad") : null;
+    const agreementHTML = (reading && feeling)
+      ? `<div class="hrv-accord">
+          <div class="why-line"><span>${t("Ressenti déclaré")}</span><span class="hrv-chip ${feeling === "good" ? "up" : "down"}">${test.wellness} %</span></div>
+          <div class="why-line"><span>${t("Lecture HRV")}</span><span class="hrv-chip ${reading === "good" ? "up" : reading === "bad" ? "down" : "warn"}">${
+            t(reading === "good" ? "favorable" : reading === "bad" ? "défavorable" : "douteuse")}</span></div>
+          <div class="why-line"><span>${t("Accord")}</span><span class="hrv-chip ${
+            (reading === "good") === (feeling === "good") ? "flat" : "warn"}">${
+            t((reading === "good") === (feeling === "good") ? "les deux concordent" : "en désaccord")}</span></div>
+        </div>` : "";
+
+    return `<div class="hrv-panel">
+      <p class="block-t">${t("Suivi")} · ${t("12 derniers tests")}</p>
+      <div class="hrv-seg">${tabs}</div>
+      ${hrvSeriesSVG(a, series[2], series[1])
+        || `<p class="chart-note">${t("Deux tests au moins sont nécessaires pour tracer une tendance.")}</p>`}
+      <div class="hrv-legend">
+        <span class="hrv-key"><i class="hrv-swatch band"></i>${t("zone habituelle · médiane ±20 %")}</span>
+        <span class="hrv-key">${t("échelle logarithmique")}</span>
+      </div>
+      ${agreementHTML}
+      <p class="chart-note">${t("La bande est la zone habituelle de cet athlète, pas une norme de population. Le ressenti est comparé à sa propre médiane : c'est leur désaccord qui informe, pas chacun pris seul.")}</p>
+    </div>`;
   }
 
   /// LF and HF, both positions, each against its own reference.
@@ -2325,7 +2734,8 @@
     alert: "motif de fatigue", none: "pas de test",
   };
 
-  /// The squad over a fortnight: one row per athlete, one square per morning.
+  /// The squad over a fortnight: one row per athlete, one square per morning,
+  /// and under each row a drawer holding that athlete's four coach panels.
   ///
   /// The square carries the *state*, not the rMSSD. An intensity ramp asked
   /// the coach to read a value and decide; a colour answers the question they
@@ -2333,6 +2743,11 @@
   /// the session. A drift then reads as a band that darkens, and a run of
   /// dashes says an athlete has stopped testing, which is often the first sign
   /// of anything and is invisible on every other screen.
+  ///
+  /// The drawer is where the numbers live. Everything in it is for the coach:
+  /// the athlete's own screen stays thin on purpose, because reading a
+  /// spectrum against thresholds is an expertise, and half-read it is worse
+  /// than not shown.
   function renderHrvGrid() {
     const grid = document.getElementById("hrvGrid");
     const withTests = athletes.filter(a => (a.hrv || []).length);
@@ -2353,7 +2768,7 @@
       days.map((iso, i) => {
         const back = days.length - 1 - i;
         return `<th title="${esc(shortDate(iso))}">${back === 0 ? t("auj.") : "−" + back}</th>`;
-      }).join("") + "</tr>";
+      }).join("") + `<th></th></tr>`;
 
     const rows = withTests.map(a => {
       const indexByDay = new Map((a.hrv || []).map((x, i) => [x.date, i]));
@@ -2366,7 +2781,24 @@
           : `${shortDate(iso)} — ${t(HRV_STATE_LABEL.none)}`;
         return `<td><span class="hrv-d ${state}" title="${esc(tip)}"></span></td>`;
       }).join("");
-      return `<tr><td class="name">${esc(a.name)}</td>${cells}</tr>`;
+
+      const open = hrvOpenAthletes.has(a.id);
+      const last = (a.hrv || []).length - 1;
+      const panels = !open ? "" : `
+        <tr class="hrv-drawer-row"><td colspan="${days.length + 2}">
+          <div class="hrv-panels">
+            ${hrvBilanHTML(a, last) || `<p class="chart-note">${t("Pas encore de référence : il faut au moins un test antérieur pour calculer les écarts.")}</p>`}
+            ${hrvMotifsHTML(a, last)}
+            ${hrvRadarPanelHTML(a, last)}
+            ${hrvSuiviHTML(a, last)}
+          </div>
+        </td></tr>`;
+
+      return `<tr class="hrv-athlete ${open ? "open" : ""}">
+          <td class="name">${esc(a.name)}</td>${cells}
+          <td class="toggle"><button class="hrv-toggle" data-hrv-toggle="${esc(a.id)}"
+            aria-expanded="${open}">${open ? t("Fermer") : t("Détail")}</button></td>
+        </tr>${panels}`;
     }).join("");
 
     const legend = ["ok", "watch", "alert", "none"].map(state =>
@@ -2377,6 +2809,20 @@
       <div class="hrv-squad"><table>${head}${rows}</table></div>
       <div class="hrv-legend">${legend}</div>
       <p class="chart-note">${t("Quatorze matins. « À surveiller » n'est pas un motif de Schmidt : c'est une lecture dont le calcul se méfie — spectre peu fiable, ou écart calculé sur une base trop faible pour qu'un pourcentage veuille dire grand-chose.")}</p>`;
+
+    grid.querySelectorAll("[data-hrv-toggle]").forEach(btn => btn.addEventListener("click", () => {
+      const id = btn.dataset.hrvToggle;
+      hrvOpenAthletes.has(id) ? hrvOpenAthletes.delete(id) : hrvOpenAthletes.add(id);
+      renderHrvGrid();
+    }));
+    grid.querySelectorAll("[data-hrv-position]").forEach(btn => btn.addEventListener("click", () => {
+      hrvPositionChoice.set(btn.dataset.athlete, btn.dataset.hrvPosition);
+      renderHrvGrid();
+    }));
+    grid.querySelectorAll("[data-hrv-series]").forEach(btn => btn.addEventListener("click", () => {
+      hrvSeriesChoice.set(btn.dataset.athlete, btn.dataset.hrvSeries);
+      renderHrvGrid();
+    }));
   }
 
   // ── Session filter (toutes / entraînement / tests) ──────────────────────
