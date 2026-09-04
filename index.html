@@ -483,8 +483,8 @@
     <div class="filters" id="calFilters"></div>
     <div class="cal-controls">
       <div class="seg" id="calModeSeg">
-        <button class="active" data-mode="month" data-i18n="Mois">Mois</button>
-        <button data-mode="week" data-i18n="Semaine">Semaine</button>
+        <button class="active" data-mode="week" data-i18n="Semaine">Semaine</button>
+        <button data-mode="month" data-i18n="Mois">Mois</button>
       </div>
       <div class="cal-nav">
         <button class="nav-btn" id="calPrev" aria-label="Précédent" data-i18n-aria="Précédent">‹</button>
@@ -2796,7 +2796,10 @@
   });
 
   // ── Calendar state ────────────────────────────────────────────────────
-  let calMode = "month";
+  // The week first, and by default: it is the unit a coach plans and reads a
+  // squad in, and it is the only span where a session shows its load bar
+  // rather than a coloured initial.
+  let calMode = "week";
   let calCursor = new Date();
 
   const calFilters = document.getElementById("calFilters");
