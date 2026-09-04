@@ -663,6 +663,16 @@
     "— pas de comparaison possible.": "— no comparison possible.",
     "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
     "Se connecter": "Sign in",
+    "le test précédent": "the previous test",
+    "la médiane des ": "the median of the previous ",
+    "contre": "against",
+    "contre le test précédent": "against the previous test",
+    "contre la médiane des ": "against the median of the previous ",
+    " précédents": "",
+    "référence": "reference",
+    "Toutes les mesures": "All measures",
+    "Écarts en % ": "Deltas in % ",
+    "Les graphiques, les cinq règles et toutes les mesures sont dans l'onglet Suivi HRV, sous le nom de l'athlète.": "The charts, the five rules and every measure are in the HRV tracking tab, under the athlete's name.",
     "score Wellness": "Wellness score",
     "pas de test depuis": "no test for",
     "Bilan": "Summary",
@@ -1803,73 +1813,9 @@
         ${deltaCell("HF " + t("debout"), verdict.deltas.hfSt)}
         ${deltaCell("LF " + t("debout"), verdict.deltas.lfSt)}
       </div>` : ""}
-      ${verdict ? `
-        <p class="block-t">${t("LF et HF · les deux positions")}</p>
-        ${hrvBarsSVG(a, tests.length - 1)}
-        <div class="hrv-legend">
-          <span class="hrv-key"><i class="hrv-swatch" style="background:var(--i2)"></i>LF</span>
-          <span class="hrv-key"><i class="hrv-swatch" style="background:var(--accent)"></i>HF</span>
-          <span class="hrv-key"><i class="hrv-swatch ref"></i>${t("référence · médiane des 6 précédents")}</span>
-        </div>` : ""}
-
-      <p class="block-t">${t("Puissance totale couchée · 12 derniers tests")}</p>
-      ${hrvSeriesSVG(a, x => x.supine.tp, t("Puissance totale couchée sur les douze derniers tests, avec la zone habituelle."))
-        || `<p class="chart-note">${t("Deux tests au moins sont nécessaires pour tracer une tendance.")}</p>`}
-      <div class="hrv-legend">
-        <span class="hrv-key"><i class="hrv-swatch band"></i>${t("zone habituelle · médiane ±20 %")}</span>
-        <span class="hrv-key">${t("échelle logarithmique")}</span>
-      </div>
-
-      ${verdict ? hrvTableHTML(a, tests.length - 1) : ""}
-
       ${hrvSparkline(a)}
-      <p class="chart-note">${verdict ? t("Écarts en % contre la médiane des six tests précédents. ") : ""}${t("Une barre manquante est un matin sans test, jamais un zéro.")}</p>`;
-  }
-
-  /// Every measure, both positions, value against reference — in a drawer.
-  ///
-  /// The five that Schmidt does not use are here too: a coach who wants to
-  /// know *why* a verdict came out as it did needs the numbers around it, and
-  /// a screen that shows only the four deciding ones invites the belief that
-  /// nothing else was measured.
-  function hrvTableHTML(a, index) {
-    const tests = a.hrv || [];
-    const current = tests[index];
-    const earlier = tests.slice(Math.max(0, index - 6), index);
-    if (!earlier.length) return "";
-
-    const smallBase = 50;
-    const row = (name, position, get, decimals) => {
-      const v = get(current[position]);
-      const ref = median(earlier.map(x => get(x[position])));
-      const delta = pctChange(ref, v);
-      // Amber, not green or red: a huge percentage off a base of nothing is
-      // not a big change, it is an unusable one.
-      const cls = delta == null ? "flat"
-        : (ref < smallBase && Math.abs(delta) > 100) ? "warn"
-        : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-      const fmt = n => n.toFixed(decimals).replace(".", ",");
-      return `<tr><td>${esc(name)}</td><td class="r">${fmt(v)}</td><td class="r">${fmt(ref)}</td>
-        <td class="r"><span class="hrv-chip ${cls}">${delta == null ? "—" : (delta > 0 ? "+" : "") + Math.round(delta) + " %"}</span></td></tr>`;
-    };
-    const block = (position, label) => `
-      <tr class="posrow"><td colspan="4">${esc(label)}</td></tr>
-      ${row("FC", position, m => m.hr, 1)}
-      ${row("rMSSD", position, m => m.rmssd, 1)}
-      ${row("LF", position, m => m.lf, 0)}
-      ${row("HF", position, m => m.hf, 0)}
-      ${row("TP", position, m => m.tp, 0)}`;
-
-    return `<details class="drawer" style="margin-top:.9rem">
-      <summary>${t("Toutes les mesures · % contre la médiane des 6 précédents")}</summary>
-      <div class="drawer-body">
-        <table class="hrv-table">
-          <thead><tr><th>${t("Mesure")}</th><th class="r">${t("Valeur")}</th><th class="r">${t("Réf.")}</th><th class="r">${t("Écart")}</th></tr></thead>
-          <tbody>${block("supine", t("Couché"))}${block("standing", t("Debout"))}</tbody>
-        </table>
-        <p class="chart-note">${t("En ambre : un écart calculé sur une base trop faible pour vouloir dire grand-chose.")}</p>
-      </div>
-    </details>`;
+      <p class="chart-note">${verdict ? t("Écarts en % ") + t("contre") + " " + hrvRefLabel(a, tests.length - 1) + ". " : ""}${t("Une barre manquante est un matin sans test, jamais un zéro.")}</p>
+      <p class="chart-note">${t("Les graphiques, les cinq règles et toutes les mesures sont dans l'onglet Suivi HRV, sous le nom de l'athlète.")}</p>`;
   }
 
   // ── The four coach panels ────────────────────────────────────────────
@@ -1918,6 +1864,17 @@
     return parts.join(" · ") + ".";
   }
 
+  /// How the reference was actually formed, in words.
+  ///
+  /// It is the median of up to six earlier tests — but on the second morning
+  /// of an athlete's life it is one test, and calling that "the median of the
+  /// six previous" is simply false. The count is read from the data.
+  function hrvRefLabel(a, index) {
+    const n = Math.min(6, Math.max(0, index));
+    return n <= 1 ? t("le test précédent")
+                  : t("la médiane des ") + n + t(" précédents");
+  }
+
   function hrvChip(delta, smallBase) {
     if (delta == null) return `<span class="hrv-chip flat">—</span>`;
     const cls = (smallBase && Math.abs(delta) > 100) ? "warn" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
@@ -1959,10 +1916,10 @@
       <div class="hrv-legend">
         <span class="hrv-key"><i class="hrv-swatch" style="background:var(--i2)"></i>LF</span>
         <span class="hrv-key"><i class="hrv-swatch" style="background:var(--accent)"></i>HF</span>
-        <span class="hrv-key"><i class="hrv-swatch ref"></i>${t("référence · médiane des 6 précédents")}</span>
+        <span class="hrv-key"><i class="hrv-swatch ref"></i>${t("référence")} · ${hrvRefLabel(a, index)}</span>
       </div>
       <details class="drawer" style="margin-top:.8rem">
-        <summary>${t("Toutes les mesures · % contre la médiane des 6 précédents")}</summary>
+        <summary>${t("Toutes les mesures")} · % ${t("contre")} ${hrvRefLabel(a, index)}</summary>
         <div class="drawer-body"><table class="hrv-table">
           <thead><tr><th>${t("Mesure")}</th><th class="r">${t("Valeur")}</th><th class="r">${t("Réf.")}</th><th class="r">${t("Écart")}</th></tr></thead>
           <tbody>
