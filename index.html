@@ -663,6 +663,11 @@
     "— pas de comparaison possible.": "— no comparison possible.",
     "‹ Retour à la vue d'ensemble": "‹ Back to the overview",
     "Se connecter": "Sign in",
+    "Équilibre physiologique": "Physiological balance",
+    "Aucun motif de fatigue déclenché.": "No fatigue pattern triggered.",
+    "Équilibre physiologique — aucun motif déclenché": "Physiological balance — nothing triggered",
+    "Questionnaire Wellness": "Wellness questionnaire",
+    "Les seuils de Schmidt, en pourcentage de variation contre la référence. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.": "Schmidt's thresholds, as a percentage change against the reference. Adjustable per athlete: they are markers calibrated on a population, and one athlete may need different ones. The defaults are the original workbook's values.",
     "le test précédent": "the previous test",
     "la médiane des ": "the median of the previous ",
     "contre": "against",
@@ -703,7 +708,7 @@
     "les deux concordent": "the two agree",
     "en désaccord": "they disagree",
     "La bande est la zone habituelle de cet athlète, pas une norme de population. Le ressenti est comparé à sa propre médiane : c'est leur désaccord qui informe, pas chacun pris seul.": "The band is this athlete's usual range, not a population norm. The feeling is compared with their own median: it is their disagreement that informs, not either one alone.",
-    "Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir sous le radar.": "Thresholds after Laurent Schmidt et al., taken as they are and adjustable per athlete in the drawer under the radar.",
+    "Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir « Seuils de fatigue », en bas de ce panneau.": "Thresholds after Laurent Schmidt et al., taken as they are and adjustable per athlete in the \u201cFatigue thresholds\u201d drawer at the foot of this panel.",
     "LF et HF · les deux positions": "LF and HF · both positions",
     "référence · médiane des 6 précédents": "reference · median of the previous 6",
     "Puissance totale couchée · 12 derniers tests": "Total power lying · last 12 tests",
@@ -1598,7 +1603,7 @@
   /// score, or the reverse, is what a coach wants to see.
   function hrvPillLabel(test) {
     const parts = [`${Math.round(test.supine.hr)} bpm`, `rMSSD ${Math.round(test.supine.rmssd)}`];
-    if (test.wellness != null) parts.push(`${test.wellness} %`);
+    if (test.wellness != null) parts.push(`${t("Questionnaire Wellness")} ${test.wellness} %`);
     if (!test.reliable) parts.push("?");
     return parts.join(" · ");
   }
@@ -1800,7 +1805,7 @@
         <span class="banner-code">${esc(verdict.pattern.id)}</span>
         ${verdict.smallBase ? `<span class="banner-warn">${t("base faible")}</span>` : ""}</p>`;
     } else {
-      verdictHTML = `<p class="hrv-verdict">${t("Pas de motif de fatigue.")}
+      verdictHTML = `<p class="hrv-verdict"><strong>${t("Équilibre physiologique")}</strong>
         ${verdict.smallBase ? `<span class="banner-warn">${t("base faible")}</span>` : ""}</p>`;
     }
 
@@ -1893,8 +1898,8 @@
     const head = verdict.pattern
       ? `<h4 class="hrv-head flagged">${esc(verdict.pattern.reading)}</h4>
          <p class="hrv-sub">${esc(hrvNarrative(supine))} ${esc(verdict.pattern.id)}</p>`
-      : `<h4 class="hrv-head">${t("Aucun motif de fatigue déclenché")}</h4>
-         <p class="hrv-sub">${esc(hrvNarrative(supine))}</p>`;
+      : `<h4 class="hrv-head">${t("Équilibre physiologique")}</h4>
+         <p class="hrv-sub">${esc(hrvNarrative(supine))} ${t("Aucun motif de fatigue déclenché.")}</p>`;
 
     const why = [["HF " + t("couché"), "hfSu"], ["LF " + t("couché"), "lfSu"],
                  ["HF " + t("debout"), "hfSt"], ["LF " + t("debout"), "lfSt"]]
@@ -1960,12 +1965,12 @@
       <p class="block-t">${t("Motifs")} · ${t("5 règles · cascade")}</p>
       <p class="hrv-outcome ${fired ? "flagged" : ""}">${fired
         ? esc(t("Motif déclenché : ") + fired.reading)
-        : t("Aucun motif déclenché — pas de fatigue caractérisée")}</p>
+        : t("Équilibre physiologique — aucun motif déclenché")}</p>
       <details class="drawer" style="margin-top:.6rem">
         <summary>${t("Les 5 règles en détail")}</summary>
         <div class="drawer-body hrv-rules">${rules}</div>
       </details>
-      <p class="chart-note">${t("Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir sous le radar.")}</p>
+      <p class="chart-note">${t("Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir « Seuils de fatigue », en bas de ce panneau.")}</p>
     </div>`;
   }
 
@@ -2423,17 +2428,6 @@
           <h3>${t("Test HRV du matin")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Le dernier test orthostatique de l'athlète et les quatre écarts sur lesquels la cascade de motifs se prononce. Les seuils qui les interprètent sont juste en dessous.")}</span></button></h3>
           ${hrvDetailHTML(a)}
         </div>
-        <!-- A drawer, and under the radar: eleven number fields for something
-             set once per athlete was the largest block on the card. -->
-        <div class="detail-section" style="grid-column:1/-1">
-          <details class="drawer">
-            <summary>${t("Seuils de fatigue")}</summary>
-            <div class="drawer-body">
-              <p class="chart-note" style="margin:0 0 0.8rem">${t("Les seuils de Schmidt, en pourcentage de variation contre la médiane des six tests précédents. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.")}</p>
-              ${thresholdEditor(a)}
-            </div>
-          </details>
-        </div>
       </div>`;
   }
 
@@ -2540,28 +2534,6 @@
     detail.querySelectorAll("#boatSeg button").forEach(btn => {
       btn.addEventListener("click", () => rerenderWithBoat(btn.dataset.boat));
     });
-    // Threshold editor
-    const thrSave = document.getElementById("thrSave");
-    if (thrSave) {
-      thrSave.addEventListener("click", () => {
-        const grid = detail.querySelector(".thr-grid");
-        const values = {};
-        grid.querySelectorAll(".thr-input").forEach(input => {
-          const n = parseFloat(input.value);
-          if (!Number.isNaN(n)) values[input.dataset.key] = n;
-        });
-        saveThresholds(grid.dataset.athlete, values);
-      });
-    }
-    const thrReset = document.getElementById("thrReset");
-    if (thrReset) {
-      thrReset.addEventListener("click", () => {
-        detail.querySelectorAll(".thr-input").forEach(input => {
-          input.value = HRV_DEFAULTS[input.dataset.key];
-        });
-      });
-    }
-
     const boatReset = document.getElementById("boatReset");
     if (boatReset) boatReset.addEventListener("click", () => rerenderWithBoat(null));
 
@@ -2646,17 +2618,16 @@
       </div>`).join("");
     return `<div class="thr-grid" data-athlete="${esc(a.id)}">${rows}</div>
       <div class="thr-actions">
-        <button class="nav-btn" id="thrSave" style="width:auto">${t("Enregistrer les seuils")}</button>
-        <button class="link-btn" id="thrReset">${t("Revenir aux valeurs par défaut")}</button>
-        <span id="thrStatus" class="chart-note${a.hrvThresholdsError ? " invite-warn" : ""}">${
+        <button class="nav-btn thr-save" style="width:auto">${t("Enregistrer les seuils")}</button>
+        <button class="link-btn thr-reset">${t("Revenir aux valeurs par défaut")}</button>
+        <span class="thr-status chart-note${a.hrvThresholdsError ? " invite-warn" : ""}">${
           a.hrvThresholdsError
             ? esc(t("Seuils illisibles — les valeurs affichées sont celles par défaut. ") + a.hrvThresholdsError)
             : ""}</span>
       </div>`;
   }
 
-  async function saveThresholds(athleteId, values) {
-    const status = document.getElementById("thrStatus");
+  async function saveThresholds(athleteId, values, status) {
     try {
       await setDoc(doc(firestore, "athletes", athleteId, "config", "hrvThresholds"), values);
       if (status) status.textContent = t("Seuils enregistrés.");
@@ -2749,6 +2720,16 @@
             ${hrvRadarPanelHTML(a, last)}
             ${hrvSuiviHTML(a, last)}
           </div>
+          <!-- Last, and under the panels it governs: these eleven numbers
+               decide what the Motifs panel says, so they belong beneath it
+               rather than on a screen that never shows the cascade at all. -->
+          <details class="drawer" style="margin-top:1rem">
+            <summary>${t("Seuils de fatigue")}</summary>
+            <div class="drawer-body">
+              <p class="chart-note" style="margin:0 0 .8rem">${t("Les seuils de Schmidt, en pourcentage de variation contre la référence. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.")}</p>
+              ${thresholdEditor(a)}
+            </div>
+          </details>
         </td></tr>`;
 
       return `<tr class="hrv-athlete ${open ? "open" : ""}">
@@ -2780,6 +2761,26 @@
       hrvSeriesChoice.set(btn.dataset.athlete, btn.dataset.hrvSeries);
       renderHrvGrid();
     }));
+
+    // Scoped to their own editor rather than to the page: several athletes'
+    // drawers can be open at once, and a lone getElementById would have every
+    // Save button write the first athlete's numbers.
+    grid.querySelectorAll(".thr-grid").forEach(editor => {
+      const card = editor.closest(".drawer-body");
+      card.querySelector(".thr-save")?.addEventListener("click", () => {
+        const values = {};
+        editor.querySelectorAll(".thr-input").forEach(input => {
+          const n = parseFloat(input.value);
+          if (!Number.isNaN(n)) values[input.dataset.key] = n;
+        });
+        saveThresholds(editor.dataset.athlete, values, card.querySelector(".thr-status"));
+      });
+      card.querySelector(".thr-reset")?.addEventListener("click", () => {
+        editor.querySelectorAll(".thr-input").forEach(input => {
+          input.value = HRV_DEFAULTS[input.dataset.key];
+        });
+      });
+    });
   }
 
   // ── Session filter (toutes / entraînement / tests) ──────────────────────
