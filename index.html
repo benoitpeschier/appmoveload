@@ -745,6 +745,11 @@
     "Ouvrir le test du": "Open the test of",
     "le plus récent": "the most recent",
     "rien": "nothing",
+    "incomplet": "incomplete",
+    "Test incomplet": "Incomplete test",
+    "Capté": "Captured",
+    "Sans les deux positions il n'y a ni écart ni motif : la méthode lit le changement de l'une à l'autre, pas chacune prise seule.": "Without both positions there is no delta and no pattern: the method reads the change from one to the other, not either on its own.",
+    "Pas de données exploitables pour cette position.": "No usable data for this position.",
     "revenir au dernier": "back to the latest",
     "Fréquence cardiaque": "Heart rate",
     "le test entier": "the whole test",
@@ -2175,8 +2180,7 @@
     return pts.length >= 2 ? { pts, change, end: t } : null;
   }
 
-  function hrvRateHTML(a, index) {
-    const test = (a.hrv || [])[index];
+  function hrvRateHTML(a, test) {
     const data = hrvBeatPoints(test);
     if (!data) {
       return `<div class="hrv-panel">
@@ -2189,7 +2193,7 @@
     const t0 = zoom ? zoom[0] : 0;
     const t1 = zoom ? zoom[1] : data.end;
     const shown = data.pts.filter(p => p.t >= t0 && p.t <= t1);
-    if (shown.length < 2) { hrvZoom.delete(a.id); return hrvRateHTML(a, index); }
+    if (shown.length < 2) { hrvZoom.delete(a.id); return hrvRateHTML(a, test); }
 
     const w = 280, h = 150, padL = 30, padR = 8, padT = 10, padB = 20;
     const plotW = w - padL - padR, plotH = h - padT - padB;
@@ -2248,9 +2252,44 @@
       </div>
       <div class="hrv-legend">
         <span class="hrv-key"><i class="hrv-swatch" style="background:var(--accent)"></i>${t("couché")}</span>
-        <span class="hrv-key"><i class="hrv-swatch" style="background:var(--z3)"></i>${t("debout")}</span>
+        ${/* Not on a test that never got there: a key for a colour the chart
+              does not contain reads as a trace one has failed to find. Judged
+              on the whole test rather than the zoomed window, so it does not
+              flicker as the coach zooms past the change of position. */
+          data.pts.some(p => p.standing)
+            ? `<span class="hrv-key"><i class="hrv-swatch" style="background:var(--z3)"></i>${t("debout")}</span>`
+            : ""}
         ${zoom ? `<button class="link-btn hr-reset" data-hr-reset="${esc(a.id)}">${t("vue entière")}</button>` : ""}
       </div>
+    </div>`;
+  }
+
+  /// What is left of a morning that failed.
+  ///
+  /// No reading — the method is the *change* from lying to standing, so one
+  /// position is not a weaker verdict, it is none. But the position that did
+  /// work has its figures, and they are worth seeing: a resting heart rate and
+  /// an rMSSD are still an athlete's morning, and the curve beside this one is
+  /// the whole record of how the measurement stopped.
+  function hrvPartialHTML(test) {
+    const secs = arr => (arr || []).reduce((n, v) => n + v, 0) / 1000;
+    const span = s => s < 1 ? t("rien") : Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
+    const num = (v, digits) => v.toLocaleString(LOCALE, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    const line = (label, value) => `<div class="why-line"><span>${label}</span><span>${value}</span></div>`;
+    const block = (name, m) => `<p class="block-t">${name}</p>` + (m.hr > 0
+      ? line(t("FC moyenne"), num(m.hr, 0) + " bpm")
+        + line("rMSSD", num(m.rmssd, 0) + " ms")
+        + line(t("Puissance totale"), num(m.tp, 0) + " ms²")
+        + line("LF / HF", num(m.lfhf, 2))
+        + line("LF · HF", num(m.lf, 0) + " · " + num(m.hf, 0) + " ms²")
+      : `<p class="chart-note">${t("Pas de données exploitables pour cette position.")}</p>`);
+
+    return `<div class="hrv-panel">
+      <p class="block-t">${t("Test incomplet")}</p>
+      <p class="chart-note">${t("Capté")}${t(" : ")}${t("couché")} ${span(secs(test.supineRR))} · ${t("debout")} ${span(secs(test.standingRR))}.
+        ${t("Sans les deux positions il n'y a ni écart ni motif : la méthode lit le changement de l'une à l'autre, pas chacune prise seule.")}</p>
+      ${block(t("Couché"), test.supine)}
+      ${block(t("Debout"), test.standing)}
     </div>`;
   }
 
@@ -2348,8 +2387,7 @@
   /// It lands at the bottom of that test's page in the athlete's app. One
   /// document per athlete with a field per test — the phone only reads it, so
   /// there is a single owner and nothing to merge.
-  function hrvRemarksHTML(a, index) {
-    const test = (a.hrv || [])[index];
+  function hrvRemarksHTML(a, test) {
     if (!test) return "";
     const existing = (a.coachNotes || {})[test.id] || "";
     return `<div class="hrv-panel">
@@ -2976,13 +3014,27 @@
   /// redraws on every snapshot — does not throw the coach back to today.
   const hrvSelectedTest = new Map();   // athlete id -> test id
 
-  function hrvShownIndex(a) {
+  /// Which morning the drawer is showing, and from which of the two lists.
+  ///
+  /// By id, not by index: a test deleted from the phone shifts every index
+  /// after it, and a stale index would silently open a different morning.
+  function hrvShown(a) {
     const tests = a.hrv || [];
     const wanted = hrvSelectedTest.get(a.id);
-    const found = wanted ? tests.findIndex(x => x.id === wanted) : -1;
-    // By id, not by index: a test deleted from the phone shifts every index
-    // after it, and a stale one would silently open a different morning.
-    return found >= 0 ? found : tests.length - 1;
+    if (wanted) {
+      const i = tests.findIndex(x => x.id === wanted);
+      if (i >= 0) return { kind: "full", index: i, test: tests[i] };
+      const partial = (a.hrvPartial || []).find(x => x.id === wanted);
+      if (partial) return { kind: "partial", index: -1, test: partial };
+    }
+    const last = tests.length - 1;
+    if (last >= 0) return { kind: "full", index: last, test: tests[last] };
+    // Only failed mornings so far: show the most recent of those rather than
+    // an empty drawer.
+    const fallback = (a.hrvPartial || []).slice(-1)[0];
+    return fallback
+      ? { kind: "partial", index: -1, test: fallback }
+      : { kind: "none", index: -1, test: null };
   }
 
   /// The squad over a fortnight: one row per athlete, one square per morning,
@@ -3001,7 +3053,10 @@
   /// than not shown.
   function renderHrvGrid() {
     const grid = document.getElementById("hrvGrid");
-    const withTests = athletes.filter(a => (a.hrv || []).length);
+    // Partial tests count as tests here. An athlete whose only mornings failed
+    // would otherwise be missing from the table entirely, which is the same
+    // silence the hatched square exists to break.
+    const withTests = athletes.filter(a => (a.hrv || []).length || (a.hrvPartial || []).length);
     if (!withTests.length) {
       grid.innerHTML = `<p class="empty-note">${t("Aucun test HRV synchronisé pour l'instant.")}</p>`;
       return;
@@ -3032,48 +3087,55 @@
         const span = s => s < 1 ? t("rien") : Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
         return [x.date, `${t("couché")} ${span(secs(x.supineRR))} · ${t("debout")} ${span(secs(x.standingRR))}`];
       }));
-      const shownIndex = hrvShownIndex(a);
+      const partialById = new Map((a.hrvPartial || []).map(x => [x.date, x]));
+      const shown = hrvShown(a);
       const cells = days.map(iso => {
         const index = indexByDay.get(iso);
-        const partial = index === undefined && partialByDay.has(iso);
+        const partial = index === undefined ? partialById.get(iso) : null;
         const state = partial ? "partial" : index === undefined ? "none" : hrvStateAt(a, index);
-        const test = index === undefined ? null : a.hrv[index];
-        const tip = test
+        const test = index === undefined ? partial : a.hrv[index];
+        const tip = index !== undefined
           ? `${shortDate(iso)} — ${t(HRV_STATE_LABEL[state])} · ${hrvPillLabel(test)}`
           : `${shortDate(iso)} — ${t(HRV_STATE_LABEL[partial ? "partial" : "none"])}${
               partial ? " · " + partialByDay.get(iso) : ""}`;
-        // Only a readable test opens: the panels below are made of medians,
-        // deltas and a cascade, and a morning that produced one position has
-        // none of them to show.
-        const opens = index !== undefined;
-        const sel = opens && index === shownIndex && hrvOpenAthletes.has(a.id);
+        // A failed morning opens too. There is no reading to show — no
+        // median, no delta, no cascade — but there are the figures of the
+        // position that did work and the curve of what was captured, and
+        // that curve is the whole record of the failure.
+        const sel = test && shown.test && test.id === shown.test.id && hrvOpenAthletes.has(a.id);
         return `<td><span class="hrv-d ${state}${sel ? " sel" : ""}" title="${esc(tip)}"
-          ${opens ? `data-hrv-open="${esc(a.id)}" data-hrv-index="${index}" role="button" tabindex="0"
+          ${test ? `data-hrv-open="${esc(a.id)}" data-hrv-test="${esc(test.id)}" role="button" tabindex="0"
             aria-label="${esc(t("Ouvrir le test du") + " " + shortDate(iso))}"` : ""}></span></td>`;
       }).join("");
 
       const open = hrvOpenAthletes.has(a.id);
-      const last = shownIndex;
+      const last = shown.index;
       const panels = !open ? "" : `
         <tr class="hrv-drawer-row"><td colspan="${days.length + 2}">
           ${(() => {
-            const shown = (a.hrv || [])[last];
-            if (!shown) return "";
-            const latest = last === (a.hrv || []).length - 1;
+            if (!shown.test) return "";
+            const latest = shown.kind === "full" && last === (a.hrv || []).length - 1;
             // Named, because every panel below is about one morning and the
             // squad strip above shows fourteen. Without this the drawer looks
             // the same whichever square was clicked.
-            return `<p class="hrv-shown">${t("Test du")} <strong>${esc(shortDate(shown.date))}</strong>${
+            return `<p class="hrv-shown">${t("Test du")} <strong>${esc(shortDate(shown.test.date))}</strong>${
+              shown.kind === "partial" ? ` · ${t("incomplet")}` : ""}${
               latest ? ` · ${t("le plus récent")}` : `
               <button class="link-btn" data-hrv-latest="${esc(a.id)}">${t("revenir au dernier")}</button>`}</p>`;
           })()}
           <div class="hrv-panels">
-            ${hrvBilanHTML(a, last) || `<p class="chart-note">${t("Pas encore de référence : il faut au moins un test antérieur pour calculer les écarts.")}</p>`}
-            ${hrvMotifsHTML(a, last)}
-            ${hrvRadarPanelHTML(a, last)}
-            ${hrvRateHTML(a, last)}
-            ${hrvSuiviHTML(a, last)}
-            ${hrvRemarksHTML(a, last)}
+            ${shown.kind === "partial" ? `
+              ${hrvPartialHTML(shown.test)}
+              ${hrvRateHTML(a, shown.test)}
+              ${hrvRemarksHTML(a, shown.test)}
+            ` : `
+              ${hrvBilanHTML(a, last) || `<p class="chart-note">${t("Pas encore de référence : il faut au moins un test antérieur pour calculer les écarts.")}</p>`}
+              ${hrvMotifsHTML(a, last)}
+              ${hrvRadarPanelHTML(a, last)}
+              ${hrvRateHTML(a, shown.test)}
+              ${hrvSuiviHTML(a, last)}
+              ${hrvRemarksHTML(a, shown.test)}
+            `}
           </div>
           <!-- Last, and under the panels it governs: these eleven numbers
                decide what the Motifs panel says, so they belong beneath it
@@ -3128,10 +3190,7 @@
     grid.querySelectorAll("[data-hrv-open]").forEach(cell => {
       const open = () => {
         const id = cell.dataset.hrvOpen;
-        const athlete = athletes.find(x => x.id === id);
-        const test = athlete && (athlete.hrv || [])[+cell.dataset.hrvIndex];
-        if (!test) return;
-        hrvSelectedTest.set(id, test.id);
+        hrvSelectedTest.set(id, cell.dataset.hrvTest);
         hrvOpenAthletes.add(id);
         // A zoom belongs to the curve it was drawn on; carried over it lands
         // on a stretch of another morning that means nothing.
