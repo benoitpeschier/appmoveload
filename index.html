@@ -350,6 +350,14 @@
   .hrv-panel { background:var(--card-bg); border:1px solid var(--border); border-radius:10px;
     padding:.8rem .9rem; }
   .hrv-panel .block-t:first-child { margin-top:0; }
+  .hr-chart { position:relative; }
+  .hr-chart .hr-hit { cursor:crosshair; }
+  .hr-readout { min-height:1.1em; margin:.2rem 0 0; font-variant-numeric:tabular-nums; }
+  .note-input { width:100%; box-sizing:border-box; font:inherit; color:var(--ink);
+    background:var(--card-bg); border:1px solid var(--border); border-radius:8px;
+    padding:.5rem .6rem; resize:vertical; }
+  .note-actions { display:flex; align-items:center; gap:.6rem; margin-top:.5rem; flex-wrap:wrap; }
+  .note-status { margin:0; }
   .hrv-verdict-box { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
   .hrv-head { font-size:14px; margin:0; padding:.6rem .7rem .1rem; color:var(--z1); }
   .hrv-head.flagged { color:var(--warn-ink); }
@@ -721,6 +729,18 @@
     "Valeur": "Value",
     "Réf.": "Ref.",
     "Écart": "Delta",
+    "Fréquence cardiaque": "Heart rate",
+    "le test entier": "the whole test",
+    "Fréquence cardiaque pendant le test": "Heart rate during the test",
+    "Ce test a été synchronisé avant que l'app n'envoie les battements. La courbe apparaîtra pour les tests suivants — ou après un « Synchroniser maintenant » depuis les réglages de l'athlète.": "This test was synced before the app started sending the beats. The curve will appear for later tests \u2014 or after a \u201cSync now\u201d from the athlete's settings.",
+    "Survole la courbe pour lire une valeur ; glisse pour zoomer.": "Hover the curve to read a value; drag to zoom.",
+    "vue entière": "whole view",
+    "Remarques": "Remarks",
+    "Test du": "Test of",
+    "visible par l'athlète dans son app, au bas de la page de ce test.": "visible to the athlete in their app, at the bottom of this test's page.",
+    "Ce que tu veux qu'il ou elle en retienne.": "What you want them to take from it.",
+    "Enregistré.": "Saved.",
+    "Enregistrer": "Save",
     "Couché": "Lying",
     "Debout": "Standing",
     "En ambre : un écart calculé sur une base trop faible pour vouloir dire grand-chose.": "In amber: a delta computed on a base too small to mean much.",
@@ -878,6 +898,7 @@
   const sessionUnsubByAthlete = new Map();
   const hrvUnsubByAthlete = new Map();
   const hrvConfigUnsubByAthlete = new Map();
+  const hrvNotesUnsubByAthlete = new Map();
   let sessionFilterMode = "all"; // "all" | "training" | "test"
 
   function matchesFilterMode(s) {
@@ -1128,6 +1149,18 @@
           hrvConfigUnsubByAthlete.set(id, unsubCfg);
         }
 
+        // The coach's remarks, in a document only the coach writes — same
+        // ownership as the thresholds, so there is never a write to reconcile
+        // with the phone, which only reads.
+        if (!hrvNotesUnsubByAthlete.has(id)) {
+          const notesDoc = doc(db, "athletes", id, "config", "coachNotes");
+          const unsubNotes = onSnapshot(notesDoc, snap => {
+            a.coachNotes = snap.exists() ? snap.data() : {};
+            onDataChanged();
+          }, err => listenerFailed(t("Remarques"), err));
+          hrvNotesUnsubByAthlete.set(id, unsubNotes);
+        }
+
         if (!hrvUnsubByAthlete.has(id)) {
           const hrvCol = collection(db, "athletes", id, "hrv");
           const unsubHrv = onSnapshot(hrvCol, hrvSnap => {
@@ -1135,6 +1168,10 @@
               const t = d.data();
               const when = t.date && t.date.toDate ? t.date.toDate() : new Date(t.date);
               return {
+                // The document id: a note the coach writes is filed against
+                // the test it is about, and a date is not an identity — four
+                // tests in one day is an ordinary morning of trials.
+                id: d.id,
                 date: isoDate(when),
                 // LF and HF individually, not only their ratio: every one of
                 // Schmidt's five rules is expressed on LF and HF apart, and a
@@ -1151,7 +1188,13 @@
                 // The five answers are never sent — only this. See
                 // HRVTestSyncPayload on the app side.
                 wellness: (t.wellnessScore === undefined || t.wellnessScore === null) ? null : t.wellnessScore,
-                reliable: t.isReliable !== false
+                reliable: t.isReliable !== false,
+                // The beats themselves, when the phone that sent this test was
+                // new enough to include them. Null — not an empty array — for
+                // everything synced before, so the card can say "no curve for
+                // this one" rather than draw a flat line through nothing.
+                supineRR: Array.isArray(t.supineRR) ? t.supineRR : null,
+                standingRR: Array.isArray(t.standingRR) ? t.standingRR : null
               };
             }).sort((x, y) => x.date.localeCompare(y.date));
             deriveAthlete(a);
@@ -2056,6 +2099,231 @@
     ["lfStanding", "LF " + t("debout"), x => x.standing.lf],
   ];
 
+  // ── Heart rate over the ten minutes ───────────────────────────────────
+  //
+  // The orthostatic response is a *shape*: two mean values say the rate rose,
+  // and nothing about whether it rose at once and settled, drifted upward for
+  // five minutes, or never came back down. That is the reading a coach can
+  // make and no summary can carry, which is why the beats are synced at all.
+  //
+  // Zoom is a drag across the plot, reset is a double-click or the button:
+  // ten minutes at one beat a second is six hundred points on 280 units of
+  // width, so the interesting second is two pixels wide until you can open it.
+  const hrvZoom = new Map();   // athlete id -> [t0, t1] in seconds
+  // Screen geometry of the last render, so the pointer handlers do not have to
+  // recompute — and cannot disagree with what was drawn. Filled by
+  // hrvRateHTML, read by wireRateChart immediately afterwards.
+  const hrvRateGeom = new Map();
+
+  const hrMMSS = sec => Math.floor(sec / 60) + ":" + String(Math.round(sec % 60)).padStart(2, "0");
+
+  /// Beats to points: cumulative time in seconds, instantaneous rate in bpm.
+  function hrvBeatPoints(test) {
+    if (!test || !test.supineRR) return null;
+    const pts = [];
+    let t = 0;
+    const push = (arr, standing) => {
+      (arr || []).forEach(rr => {
+        if (!rr || rr < 250 || rr > 2500) { t += (rr || 0) / 1000; return; }
+        t += rr / 1000;
+        pts.push({ t, hr: 60000 / rr, standing });
+      });
+    };
+    push(test.supineRR, false);
+    const change = t;
+    push(test.standingRR, true);
+    return pts.length >= 2 ? { pts, change, end: t } : null;
+  }
+
+  function hrvRateHTML(a, index) {
+    const test = (a.hrv || [])[index];
+    const data = hrvBeatPoints(test);
+    if (!data) {
+      return `<div class="hrv-panel">
+        <p class="block-t">${t("Fréquence cardiaque")} · ${t("le test entier")}</p>
+        <p class="chart-note">${t("Ce test a été synchronisé avant que l'app n'envoie les battements. La courbe apparaîtra pour les tests suivants — ou après un « Synchroniser maintenant » depuis les réglages de l'athlète.")}</p>
+      </div>`;
+    }
+
+    const zoom = hrvZoom.get(a.id);
+    const t0 = zoom ? zoom[0] : 0;
+    const t1 = zoom ? zoom[1] : data.end;
+    const shown = data.pts.filter(p => p.t >= t0 && p.t <= t1);
+    if (shown.length < 2) { hrvZoom.delete(a.id); return hrvRateHTML(a, index); }
+
+    const w = 280, h = 150, padL = 30, padR = 8, padT = 10, padB = 20;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const rates = shown.map(p => p.hr);
+    const lo = Math.min(...rates), hi = Math.max(...rates);
+    const yLo = Math.floor((lo - 3) / 5) * 5, yHi = Math.ceil((hi + 3) / 5) * 5;
+    const xFor = tt => padL + ((tt - t0) / ((t1 - t0) || 1)) * plotW;
+    const yFor = v => padT + plotH - ((v - yLo) / ((yHi - yLo) || 1)) * plotH;
+
+    // Two paths rather than one: the change of position is a discontinuity,
+    // and a line drawn across it invents a transition that was a person
+    // standing up.
+    const segment = standing => {
+      const part = shown.filter(p => p.standing === standing);
+      if (part.length < 2) return "";
+      const d = part.map((p, i) => (i ? "L" : "M") + xFor(p.t).toFixed(1) + " " + yFor(p.hr).toFixed(1)).join(" ");
+      return `<path d="${d}" fill="none" stroke="${standing ? "var(--z3)" : "var(--accent)"}"
+        stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>`;
+    };
+
+    const marker = (data.change > t0 && data.change < t1)
+      ? `<line x1="${xFor(data.change).toFixed(1)}" y1="${padT}" x2="${xFor(data.change).toFixed(1)}" y2="${padT + plotH}"
+           stroke="var(--ink-muted)" stroke-width="1" stroke-dasharray="3 3"/>
+         <text x="${(xFor(data.change) + 3).toFixed(1)}" y="${padT + 9}" font-size="9" fill="var(--ink-muted)">${t("debout")}</text>`
+      : "";
+
+    const ticks = [yLo, Math.round((yLo + yHi) / 2), yHi].map(v =>
+      `<line x1="${padL}" y1="${yFor(v).toFixed(1)}" x2="${w - padR}" y2="${yFor(v).toFixed(1)}"
+             stroke="var(--border)" stroke-width="1"/>
+       <text x="${padL - 4}" y="${(yFor(v) + 3).toFixed(1)}" text-anchor="end" font-size="9"
+             fill="var(--ink-muted)">${v}</text>`).join("");
+
+    // Anchored inward at the ends: a centred label on the last tick hangs off
+    // the viewBox and comes back clipped mid-digit.
+    const xLabels = [[t0, "start"], [(t0 + t1) / 2, "middle"], [t1, "end"]].map(([tt, anchor]) =>
+      `<text x="${xFor(tt).toFixed(1)}" y="${h - 6}" text-anchor="${anchor}" font-size="9"
+             fill="var(--ink-muted)">${hrMMSS(tt)}</text>`).join("");
+
+    hrvRateGeom.set(a.id, { shown, xFor, yFor, t0, t1, w, padL, plotW, padT, plotH });
+
+    return `<div class="hrv-panel">
+      <p class="block-t">${t("Fréquence cardiaque")} · ${t("le test entier")}</p>
+      <div class="hr-chart" data-hr-athlete="${esc(a.id)}"
+           data-hr-t0="${t0}" data-hr-t1="${t1}"
+           data-hr-padl="${padL}" data-hr-padr="${padR}" data-hr-w="${w}">
+        <svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(t("Fréquence cardiaque pendant le test"))}">
+          ${ticks}${xLabels}${marker}${segment(false)}${segment(true)}
+          <line class="hr-cursor" x1="0" y1="${padT}" x2="0" y2="${padT + plotH}"
+                stroke="var(--accent)" stroke-width="1" opacity="0"/>
+          <circle class="hr-dot" r="2.8" fill="var(--accent)" opacity="0"/>
+          <rect class="hr-brush" y="${padT}" height="${plotH}" width="0" x="0"
+                fill="var(--accent-soft)" opacity="0"/>
+          <rect class="hr-hit" x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="transparent"/>
+        </svg>
+        <p class="hr-readout chart-note">${t("Survole la courbe pour lire une valeur ; glisse pour zoomer.")}</p>
+      </div>
+      <div class="hrv-legend">
+        <span class="hrv-key"><i class="hrv-swatch" style="background:var(--accent)"></i>${t("couché")}</span>
+        <span class="hrv-key"><i class="hrv-swatch" style="background:var(--z3)"></i>${t("debout")}</span>
+        ${zoom ? `<button class="link-btn hr-reset" data-hr-reset="${esc(a.id)}">${t("vue entière")}</button>` : ""}
+      </div>
+    </div>`;
+  }
+
+  /// Hover to read a beat, drag across the plot to zoom, double-click to come
+  /// back out.
+  ///
+  /// The pointer is captured on press so a drag that leaves the plot — which
+  /// is most of them, the plot being 130 units tall — still ends where the
+  /// finger lifts rather than staying stuck open.
+  function wireRateChart(el) {
+    const geom = hrvRateGeom.get(el.dataset.hrAthlete);
+    if (!geom || !geom.shown.length) return;
+
+    const svg = el.querySelector("svg");
+    const cursor = el.querySelector(".hr-cursor");
+    const dot = el.querySelector(".hr-dot");
+    const brush = el.querySelector(".hr-brush");
+    const readout = el.querySelector(".hr-readout");
+    const hit = el.querySelector(".hr-hit");
+    const resting = readout.textContent;
+    let dragFrom = null;
+
+    const clampX = x => Math.max(geom.padL, Math.min(geom.padL + geom.plotW, x));
+    const svgX = clientX => {
+      const box = svg.getBoundingClientRect();
+      return box.width ? (clientX - box.left) / box.width * geom.w : geom.padL;
+    };
+    const timeAt = x => geom.t0 + ((x - geom.padL) / geom.plotW) * (geom.t1 - geom.t0);
+
+    const nearest = tt => {
+      let best = geom.shown[0], bestGap = Infinity;
+      for (const p of geom.shown) {
+        const gap = Math.abs(p.t - tt);
+        if (gap < bestGap) { best = p; bestGap = gap; }
+        else if (p.t > tt) break;   // sorted by time: once past, it only grows
+      }
+      return best;
+    };
+
+    const clear = () => {
+      cursor.setAttribute("opacity", "0");
+      dot.setAttribute("opacity", "0");
+      readout.textContent = resting;
+    };
+
+    hit.addEventListener("pointermove", e => {
+      const x = clampX(svgX(e.clientX));
+      const p = nearest(timeAt(x));
+      cursor.setAttribute("x1", x.toFixed(1));
+      cursor.setAttribute("x2", x.toFixed(1));
+      cursor.setAttribute("opacity", "1");
+      dot.setAttribute("cx", geom.xFor(p.t).toFixed(1));
+      dot.setAttribute("cy", geom.yFor(p.hr).toFixed(1));
+      dot.setAttribute("opacity", "1");
+      readout.textContent = `${hrMMSS(p.t)} · ${Math.round(p.hr)} bpm · ${p.standing ? t("debout") : t("couché")}`;
+      if (dragFrom !== null) {
+        brush.setAttribute("x", Math.min(dragFrom, x).toFixed(1));
+        brush.setAttribute("width", Math.abs(x - dragFrom).toFixed(1));
+        brush.setAttribute("opacity", "1");
+      }
+    });
+
+    hit.addEventListener("pointerleave", () => { if (dragFrom === null) clear(); });
+
+    hit.addEventListener("pointerdown", e => {
+      dragFrom = clampX(svgX(e.clientX));
+      hit.setPointerCapture(e.pointerId);
+    });
+
+    const endDrag = e => {
+      if (dragFrom === null) return;
+      const to = clampX(svgX(e.clientX));
+      const from = dragFrom;
+      dragFrom = null;
+      brush.setAttribute("opacity", "0");
+      brush.setAttribute("width", "0");
+      // A click is a drag of nothing. Below a couple of seconds the zoom would
+      // land on a handful of beats and read as a bug rather than as a choice.
+      const a = timeAt(Math.min(from, to)), b = timeAt(Math.max(from, to));
+      if (b - a < 2) return;
+      hrvZoom.set(el.dataset.hrAthlete, [a, b]);
+      renderHrvGrid();
+    };
+    hit.addEventListener("pointerup", endDrag);
+    hit.addEventListener("pointercancel", () => { dragFrom = null; brush.setAttribute("opacity", "0"); });
+
+    el.addEventListener("dblclick", () => {
+      hrvZoom.delete(el.dataset.hrAthlete);
+      renderHrvGrid();
+    });
+  }
+
+  /// What the coach writes for the athlete, on the test it is about.
+  ///
+  /// It lands at the bottom of that test's page in the athlete's app. One
+  /// document per athlete with a field per test — the phone only reads it, so
+  /// there is a single owner and nothing to merge.
+  function hrvRemarksHTML(a, index) {
+    const test = (a.hrv || [])[index];
+    if (!test) return "";
+    const existing = (a.coachNotes || {})[test.id] || "";
+    return `<div class="hrv-panel">
+      <p class="block-t">${t("Remarques")}</p>
+      <p class="chart-note" style="margin:0 0 .6rem">${t("Test du")} ${esc(shortDate(test.date))} — ${t("visible par l'athlète dans son app, au bas de la page de ce test.")}</p>
+      <textarea class="note-input" rows="4" data-note-athlete="${esc(a.id)}" data-note-test="${esc(test.id)}"
+        placeholder="${esc(t("Ce que tu veux qu'il ou elle en retienne."))}">${esc(existing)}</textarea>
+      <div class="note-actions">
+        <button class="nav-btn note-save" style="width:auto">${t("Enregistrer")}</button>
+        <span class="note-status chart-note"></span>
+      </div>
+    </div>`;
+  }
+
   function hrvSuiviHTML(a, index) {
     const chosen = hrvSeriesChoice.get(a.id) || HRV_SERIES[0][0];
     const series = HRV_SERIES.find(x => x[0] === chosen) || HRV_SERIES[0];
@@ -2718,7 +2986,9 @@
             ${hrvBilanHTML(a, last) || `<p class="chart-note">${t("Pas encore de référence : il faut au moins un test antérieur pour calculer les écarts.")}</p>`}
             ${hrvMotifsHTML(a, last)}
             ${hrvRadarPanelHTML(a, last)}
+            ${hrvRateHTML(a, last)}
             ${hrvSuiviHTML(a, last)}
+            ${hrvRemarksHTML(a, last)}
           </div>
           <!-- Last, and under the panels it governs: these eleven numbers
                decide what the Motifs panel says, so they belong beneath it
@@ -2761,6 +3031,31 @@
       hrvSeriesChoice.set(btn.dataset.athlete, btn.dataset.hrvSeries);
       renderHrvGrid();
     }));
+
+    grid.querySelectorAll(".hr-chart").forEach(wireRateChart);
+
+    grid.querySelectorAll("[data-hr-reset]").forEach(btn => btn.addEventListener("click", () => {
+      hrvZoom.delete(btn.dataset.hrReset);
+      renderHrvGrid();
+    }));
+
+    // Same scoping lesson as the thresholds below: one textarea per athlete,
+    // and a page-wide selector would file every remark against the first one.
+    grid.querySelectorAll(".note-input").forEach(input => {
+      const panel = input.closest(".hrv-panel");
+      const status = panel.querySelector(".note-status");
+      panel.querySelector(".note-save")?.addEventListener("click", async () => {
+        try {
+          await setDoc(
+            doc(firestore, "athletes", input.dataset.noteAthlete, "config", "coachNotes"),
+            { [input.dataset.noteTest]: input.value.trim() },
+            { merge: true });
+          status.textContent = t("Enregistré.");
+        } catch (e) {
+          status.textContent = t("Échec de l'enregistrement : ") + e.message;
+        }
+      });
+    });
 
     // Scoped to their own editor rather than to the page: several athletes'
     // drawers can be open at once, and a lone getElementById would have every
