@@ -307,6 +307,12 @@
   /* Dashed rather than pale: a morning without a test is an absence, and an
      absence that looks like a faint value gets read as a faint value. */
   .hrv-d.none { background:transparent; border:1px dashed var(--border-strong); }
+  .hrv-d.partial { background:repeating-linear-gradient(45deg, var(--border-strong) 0 3px, transparent 3px 6px);
+    border:1px solid var(--border-strong); }
+  .hrv-d[data-hrv-open] { cursor:pointer; }
+  .hrv-d.sel { outline:2px solid var(--ink); outline-offset:2px; }
+  .hrv-shown { margin:0 .25rem .7rem; font-size:12px; color:var(--ink-muted); }
+  .hrv-shown strong { color:var(--ink); }
   .hrv-legend { display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; font-size:12px;
     color:var(--ink-muted); margin-top:.9rem; }
   .hrv-key { display:inline-flex; align-items:center; gap:.35rem; }
@@ -729,6 +735,10 @@
     "Valeur": "Value",
     "Réf.": "Ref.",
     "Écart": "Delta",
+    "test incomplet — une position manque": "incomplete test \u2014 one position missing",
+    "Ouvrir le test du": "Open the test of",
+    "le plus récent": "the most recent",
+    "revenir au dernier": "back to the latest",
     "Fréquence cardiaque": "Heart rate",
     "le test entier": "the whole test",
     "Fréquence cardiaque pendant le test": "Heart rate during the test",
@@ -1164,7 +1174,7 @@
         if (!hrvUnsubByAthlete.has(id)) {
           const hrvCol = collection(db, "athletes", id, "hrv");
           const unsubHrv = onSnapshot(hrvCol, hrvSnap => {
-            a.hrv = hrvSnap.docs.map(d => {
+            const mapped = hrvSnap.docs.map(d => {
               const t = d.data();
               const when = t.date && t.date.toDate ? t.date.toDate() : new Date(t.date);
               return {
@@ -1179,6 +1189,9 @@
                 // while the app was sending them, so the cascade compared
                 // undefined against undefined and could never fire — the whole
                 // fatigue reading was dead on this side and said nothing.
+                // Absent, not zero, when the position could not be analysed —
+                // the app omits the fields entirely. See HRVTestSyncPayload.
+                complete: t.supineMeanHR !== undefined && t.standingMeanHR !== undefined,
                 supine: { hr: t.supineMeanHR || 0, rmssd: t.supineRMSSD || 0,
                           tp: t.supineTotalPower || 0, lfhf: t.supineLFOverHF || 0,
                           lf: t.supineLF || 0, hf: t.supineHF || 0 },
@@ -1197,6 +1210,15 @@
                 standingRR: Array.isArray(t.standingRR) ? t.standingRR : null
               };
             }).sort((x, y) => x.date.localeCompare(y.date));
+
+            // A test whose stream failed halfway carries one position or
+            // neither. It is kept apart rather than mixed in: every panel here
+            // reads `a.hrv` for medians, deltas and the cascade, and a missing
+            // position read as zero would quietly move all of them. It still
+            // has to be *visible* — a morning that failed is not a morning
+            // without a test, and the difference is the coach's to see.
+            a.hrv = mapped.filter(x => x.complete);
+            a.hrvPartial = mapped.filter(x => !x.complete);
             deriveAthlete(a);
             onDataChanged();
           }, err => listenerFailed("HRV", err));
@@ -2928,7 +2950,22 @@
   const HRV_STATE_LABEL = {
     ok: "aucun motif", watch: "à surveiller",
     alert: "motif de fatigue", none: "pas de test",
+    partial: "test incomplet — une position manque",
   };
+
+  /// Which test the drawer is showing: whichever square was clicked, and the
+  /// most recent until one is. Held per athlete so a re-render — the dashboard
+  /// redraws on every snapshot — does not throw the coach back to today.
+  const hrvSelectedTest = new Map();   // athlete id -> test id
+
+  function hrvShownIndex(a) {
+    const tests = a.hrv || [];
+    const wanted = hrvSelectedTest.get(a.id);
+    const found = wanted ? tests.findIndex(x => x.id === wanted) : -1;
+    // By id, not by index: a test deleted from the phone shifts every index
+    // after it, and a stale one would silently open a different morning.
+    return found >= 0 ? found : tests.length - 1;
+  }
 
   /// The squad over a fortnight: one row per athlete, one square per morning,
   /// and under each row a drawer holding that athlete's four coach panels.
@@ -2968,20 +3005,41 @@
 
     const rows = withTests.map(a => {
       const indexByDay = new Map((a.hrv || []).map((x, i) => [x.date, i]));
+      const partialDays = new Set((a.hrvPartial || []).map(x => x.date));
+      const shownIndex = hrvShownIndex(a);
       const cells = days.map(iso => {
         const index = indexByDay.get(iso);
-        const state = index === undefined ? "none" : hrvStateAt(a, index);
+        const partial = index === undefined && partialDays.has(iso);
+        const state = partial ? "partial" : index === undefined ? "none" : hrvStateAt(a, index);
         const test = index === undefined ? null : a.hrv[index];
         const tip = test
           ? `${shortDate(iso)} — ${t(HRV_STATE_LABEL[state])} · ${hrvPillLabel(test)}`
-          : `${shortDate(iso)} — ${t(HRV_STATE_LABEL.none)}`;
-        return `<td><span class="hrv-d ${state}" title="${esc(tip)}"></span></td>`;
+          : `${shortDate(iso)} — ${t(HRV_STATE_LABEL[partial ? "partial" : "none"])}`;
+        // Only a readable test opens: the panels below are made of medians,
+        // deltas and a cascade, and a morning that produced one position has
+        // none of them to show.
+        const opens = index !== undefined;
+        const sel = opens && index === shownIndex && hrvOpenAthletes.has(a.id);
+        return `<td><span class="hrv-d ${state}${sel ? " sel" : ""}" title="${esc(tip)}"
+          ${opens ? `data-hrv-open="${esc(a.id)}" data-hrv-index="${index}" role="button" tabindex="0"
+            aria-label="${esc(t("Ouvrir le test du") + " " + shortDate(iso))}"` : ""}></span></td>`;
       }).join("");
 
       const open = hrvOpenAthletes.has(a.id);
-      const last = (a.hrv || []).length - 1;
+      const last = shownIndex;
       const panels = !open ? "" : `
         <tr class="hrv-drawer-row"><td colspan="${days.length + 2}">
+          ${(() => {
+            const shown = (a.hrv || [])[last];
+            if (!shown) return "";
+            const latest = last === (a.hrv || []).length - 1;
+            // Named, because every panel below is about one morning and the
+            // squad strip above shows fourteen. Without this the drawer looks
+            // the same whichever square was clicked.
+            return `<p class="hrv-shown">${t("Test du")} <strong>${esc(shortDate(shown.date))}</strong>${
+              latest ? ` · ${t("le plus récent")}` : `
+              <button class="link-btn" data-hrv-latest="${esc(a.id)}">${t("revenir au dernier")}</button>`}</p>`;
+          })()}
           <div class="hrv-panels">
             ${hrvBilanHTML(a, last) || `<p class="chart-note">${t("Pas encore de référence : il faut au moins un test antérieur pour calculer les écarts.")}</p>`}
             ${hrvMotifsHTML(a, last)}
@@ -3020,7 +3078,15 @@
 
     grid.querySelectorAll("[data-hrv-toggle]").forEach(btn => btn.addEventListener("click", () => {
       const id = btn.dataset.hrvToggle;
-      hrvOpenAthletes.has(id) ? hrvOpenAthletes.delete(id) : hrvOpenAthletes.add(id);
+      if (hrvOpenAthletes.has(id)) {
+        hrvOpenAthletes.delete(id);
+        // Closed means closed: re-opening from the button shows today, not
+        // whichever old morning was last looked at.
+        hrvSelectedTest.delete(id);
+        hrvZoom.delete(id);
+      } else {
+        hrvOpenAthletes.add(id);
+      }
       renderHrvGrid();
     }));
     grid.querySelectorAll("[data-hrv-position]").forEach(btn => btn.addEventListener("click", () => {
@@ -3029,6 +3095,31 @@
     }));
     grid.querySelectorAll("[data-hrv-series]").forEach(btn => btn.addEventListener("click", () => {
       hrvSeriesChoice.set(btn.dataset.athlete, btn.dataset.hrvSeries);
+      renderHrvGrid();
+    }));
+
+    grid.querySelectorAll("[data-hrv-open]").forEach(cell => {
+      const open = () => {
+        const id = cell.dataset.hrvOpen;
+        const athlete = athletes.find(x => x.id === id);
+        const test = athlete && (athlete.hrv || [])[+cell.dataset.hrvIndex];
+        if (!test) return;
+        hrvSelectedTest.set(id, test.id);
+        hrvOpenAthletes.add(id);
+        // A zoom belongs to the curve it was drawn on; carried over it lands
+        // on a stretch of another morning that means nothing.
+        hrvZoom.delete(id);
+        renderHrvGrid();
+      };
+      cell.addEventListener("click", open);
+      cell.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      });
+    });
+
+    grid.querySelectorAll("[data-hrv-latest]").forEach(btn => btn.addEventListener("click", () => {
+      hrvSelectedTest.delete(btn.dataset.hrvLatest);
+      hrvZoom.delete(btn.dataset.hrvLatest);
       renderHrvGrid();
     }));
 
