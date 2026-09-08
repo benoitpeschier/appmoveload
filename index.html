@@ -165,6 +165,8 @@
   .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
   .detail-section h3 { font-size: 12.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); margin: 0 0 0.6rem; }
   .legend { display: flex; gap: 0.9rem; flex-wrap: wrap; margin-top: 0.5rem; font-size: 12px; color: var(--ink-soft); }
+  .load-trend-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .load-trend-unit { text-transform: none; letter-spacing: 0; color: var(--ink-muted); font-weight: 400; }
   .legend-item { display: flex; align-items: center; gap: 5px; }
   .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
@@ -571,6 +573,21 @@
   // stays legible. Editing a French string orphans its translation — rename
   // the key here at the same time.
   const EN = {
+    "3 mois": "3 months",
+    "30 jours": "30 days",
+    "6 mois": "6 months",
+    "Aires empilées : la hauteur totale est le volume du jour. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance vaut zéro.": "Stacked areas: the total height is the day's volume. Several sessions on the same day are added together; a day without a session counts as zero.",
+    "Aucune séance sur cette période.": "No session in this period.",
+    "Compte": "Account",
+    "Évolution — charge cardio": "Load over time — cardio",
+    "Évolution — charge mécanique": "Load over time — mechanical",
+    "Évolution du temps passé dans chaque zone, jour par jour": "Time spent in each zone, day by day",
+    "FC moyenne": "Mean HR",
+    "minutes par jour": "minutes per day",
+    "Puissance totale": "Total power",
+    "séances": "sessions",
+    "total": "total",
+    "Tout": "All",
     "Trouble de régulation de la pression périphérique — hypotonie orthosympathique debout": "Peripheral pressure regulation disorder — orthosympathetic hypotonia standing",
     "Fatigue extrême — hypertonie parasympathique couché": "Extreme fatigue — parasympathetic hypertonia lying",
     "Frein à l'activation — hypertonie parasympathique debout": "Brake on activation — parasympathetic hypertonia standing",
@@ -922,6 +939,11 @@
   const hrvConfigUnsubByAthlete = new Map();
   const hrvNotesUnsubByAthlete = new Map();
   let sessionFilterMode = "all"; // "all" | "training" | "test"
+
+  // Fenêtre des deux courbes d'évolution de la charge. 0 = tout l'historique.
+  const LOAD_TREND_PERIODS = [30, 90, 180, 0];
+  const LOAD_TREND_LABEL = { 30: "30 jours", 90: "3 mois", 180: "6 mois", 0: "Tout" };
+  let loadTrendDays = 30;
 
   function matchesFilterMode(s) {
     return sessionFilterMode === "all" || (sessionFilterMode === "test" ? s.isTest : !s.isTest);
@@ -2592,6 +2614,131 @@
   /// Session vs. own-record curve — same 6 windows as the radar, evenly spaced
   /// by index (not by actual seconds) so a short 5s-45s gap doesn't visually
   /// dwarf the 45s-3min gap, matching the app's own categorical-axis chart.
+  // ── Évolution de la charge dans le temps ──────────────────────────────
+  //
+  // L'app trace les mêmes zones en barres empilées, une barre par séance.
+  // Ici ce sont des aires empilées, un point par *jour* : l'entraîneur lit
+  // des semaines d'un coup d'œil, et deux sorties le mardi font la charge
+  // d'un mardi, pas deux objets à distinguer. Les jours sans séance valent
+  // zéro et ne sont pas sautés — un creux dans l'entraînement est
+  // précisément ce qu'on vient lire.
+  function loadTrendSeries(a, days) {
+    const sessions = a.sessions.filter(matchesFilterMode);
+    if (!sessions.length) return null;
+    const byDay = new Map();
+    sessions.forEach(s => {
+      const cur = byDay.get(s.date) || { hr: [0, 0, 0], mech: [0, 0, 0], count: 0 };
+      for (let i = 0; i < 3; i++) { cur.hr[i] += s.hr[i]; cur.mech[i] += s.mech[i]; }
+      cur.count += 1;
+      byDay.set(s.date, cur);
+    });
+
+    const today = new Date(); today.setHours(12, 0, 0, 0);
+    let start;
+    if (days > 0) {
+      start = new Date(today); start.setDate(start.getDate() - days + 1);
+    } else {
+      start = new Date([...byDay.keys()].sort()[0] + "T12:00:00");
+    }
+    const out = [];
+    for (const d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+      const iso = isoDate(d);
+      const v = byDay.get(iso);
+      out.push({ iso, hr: v ? v.hr : [0, 0, 0], mech: v ? v.mech : [0, 0, 0], count: v ? v.count : 0 });
+    }
+    return out;
+  }
+
+  function loadTrendSVG(points, kind) {
+    const w = 900, h = 210, padL = 38, padR = 12, padT = 12, padB = 24;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const key = kind === "hr" ? "hr" : "mech";
+    const colors = kind === "hr"
+      ? ["var(--i1)", "var(--i2)", "var(--i3)"]
+      : ["var(--z1)", "var(--z2)", "var(--z3)"];
+    const names = kind === "hr"
+      ? ["I1", "I2", "I3"]
+      : [t("Zone 1"), t("Zone 2"), t("Zone 3")];
+
+    const n = points.length;
+    const xFor = i => padL + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
+    // Cumuls en minutes : c'est l'unité que l'entraîneur manipule, pas la seconde.
+    const cum = points.map(p => {
+      const m = [p[key][0] / 60, p[key][1] / 60, p[key][2] / 60];
+      return [m[0], m[0] + m[1], m[0] + m[1] + m[2]];
+    });
+    const maxV = Math.max(1, ...cum.map(c => c[2]));
+    const yFor = v => padT + plotH - (v / maxV) * plotH;
+
+    const bands = [0, 1, 2].map(j => {
+      const top = points.map((_, i) => xFor(i).toFixed(1) + " " + yFor(cum[i][j]).toFixed(1));
+      const bottom = points.map((_, i) =>
+        xFor(i).toFixed(1) + " " + yFor(j === 0 ? 0 : cum[i][j - 1]).toFixed(1)).reverse();
+      return `<path d="M${top.join(" L")} L${bottom.join(" L")} Z" fill="${colors[j]}" fill-opacity="0.8"/>`;
+    }).join("");
+
+    const totalLine = `<path d="M${points.map((_, i) =>
+      xFor(i).toFixed(1) + " " + yFor(cum[i][2]).toFixed(1)).join(" L")}" fill="none" stroke="var(--ink-soft)" stroke-width="1.2" stroke-linejoin="round"/>`;
+
+    // Un point survolable seulement les jours où il s'est passé quelque chose :
+    // un jour de repos n'a pas de valeur à lire, et 180 cibles superposées
+    // rendraient les vraies inatteignables.
+    const dots = points.map((p, i) => {
+      if (!p.count) return "";
+      const z = p[key];
+      const total = z[0] + z[1] + z[2];
+      if (!total) return "";
+      const value = names.map((nm, j) => nm + " " + fmtMinSec(z[j])).join(" · ")
+        + " · " + t("total") + " " + fmtMinSec(total)
+        + (p.count > 1 ? " · " + p.count + " " + t("séances") : "");
+      return `<circle class="hoverpt" cx="${xFor(i).toFixed(1)}" cy="${yFor(cum[i][2]).toFixed(1)}" r="6" fill="transparent" data-label="${shortDate(p.iso)}" data-value="${esc(value)}"/>`
+        + `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(cum[i][2]).toFixed(1)}" r="2.2" fill="var(--ink-soft)"/>`;
+    }).join("");
+
+    const yTicks = [0, 0.5, 1].map(fr => {
+      const y = yFor(maxV * fr);
+      return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`
+        + `<text x="${padL - 6}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--ink-muted)">${Math.round(maxV * fr)}</text>`;
+    }).join("");
+
+    const step = Math.max(1, Math.round((n - 1) / 6));
+    const xLabels = points.map((p, i) =>
+      (i % step === 0 || i === n - 1)
+        ? `<text x="${xFor(i).toFixed(1)}" y="${h - 7}" text-anchor="middle" font-size="9" fill="var(--ink-muted)">${shortDate(p.iso)}</text>`
+        : "").join("");
+
+    return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Évolution du temps passé dans chaque zone, jour par jour")}" style="height:auto">
+      ${yTicks}${bands}${totalLine}${xLabels}${dots}
+    </svg>`;
+  }
+
+  function loadTrendCard(a, kind) {
+    const points = loadTrendSeries(a, loadTrendDays);
+    const title = kind === "hr" ? t("Évolution — charge cardio") : t("Évolution — charge mécanique");
+    const names = kind === "hr"
+      ? [["I1", "var(--i1)"], ["I2", "var(--i2)"], ["I3", "var(--i3)"]]
+      : [[t("Zone 1"), "var(--z1)"], [t("Zone 2"), "var(--z2)"], [t("Zone 3"), "var(--z3)"]];
+    const legend = names.map(([nm, c]) =>
+      `<span class="legend-item"><span class="legend-dot" style="background:${c}"></span>${nm}</span>`).join("");
+    const hasData = points && points.some(p => p.count);
+    const seg = kind === "hr" ? `<span class="seg" id="loadTrendSeg">${LOAD_TREND_PERIODS.map(d =>
+      `<button data-days="${d}" class="${d === loadTrendDays ? "active" : ""}">${t(LOAD_TREND_LABEL[d])}</button>`).join("")}</span>` : "";
+
+    return `<div class="detail-section" style="grid-column:1/-1">
+      <div class="load-trend-head">
+        <h3 style="margin:0">${title} <span class="load-trend-unit">${t("minutes par jour")}</span></h3>
+        ${seg}
+      </div>
+      ${hasData
+        ? `<div class="chart-wrap">${loadTrendSVG(points, kind)}<div class="tooltip"></div></div>
+           <div class="legend" style="margin-top:0.5rem">${legend}</div>`
+        : `<p class="empty-note">${t("Aucune séance sur cette période.")}</p>`}
+      ${kind === "hr" && hasData
+        ? `<p class="chart-note">${t("Aires empilées : la hauteur totale est le volume du jour. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance vaut zéro.")}</p>`
+        : ""}
+    </div>`;
+  }
+
   function mechCurveSVG(a) {
     const w = 280, h = 200, padL = 34, padR = 14, padT = 14, padB = 26;
     const plotW = w - padL - padR, plotH = h - padT - padB;
@@ -2761,6 +2908,8 @@
           <h3>${t("Test HRV du matin")}<button class="help" aria-label="${t("Explication")}">?<span>${t("Le dernier test orthostatique de l'athlète et les quatre écarts sur lesquels la cascade de motifs se prononce. Les seuils qui les interprètent sont juste en dessous.")}</span></button></h3>
           ${hrvDetailHTML(a)}
         </div>
+        ${loadTrendCard(a, "hr")}
+        ${loadTrendCard(a, "mech")}
       </div>`;
   }
 
@@ -2869,6 +3018,13 @@
     });
     const boatReset = document.getElementById("boatReset");
     if (boatReset) boatReset.addEventListener("click", () => rerenderWithBoat(null));
+
+    detail.querySelectorAll("#loadTrendSeg button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        loadTrendDays = Number(btn.dataset.days);
+        renderDetail(id, sessionId);
+      });
+    });
 
     detail.querySelectorAll(".hoverpt").forEach(pt => {
       const wrapEl = pt.closest(".chart-wrap");
