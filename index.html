@@ -342,6 +342,8 @@
     font-variant-numeric:tabular-nums; }
   .hrv-table tr.posrow td { padding-top:.6rem; border-top:none; font-size:10px;
     letter-spacing:.1em; text-transform:uppercase; color:var(--ink-muted); }
+  .hrv-remedy { margin:.55rem 0 0; padding-left:.7rem; border-left:2px solid var(--accent);
+                 font-size:12.5px; line-height:1.5; color:var(--ink); }
   .hrv-chip { font-size:11px; font-weight:600; padding:.05rem .35rem; border-radius:3px;
     font-variant-numeric:tabular-nums; }
   /* Direction is carried by the text colour on a neutral ground; the amber
@@ -587,10 +589,15 @@
     "Évolution — charge cardio": "Load over time — cardio",
     "Évolution — charge mécanique": "Load over time — mechanical",
     "Évolution du temps passé dans chaque zone, jour par jour": "Time spent in each zone, day by day",
+    "Fatigue importante, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique).": "Marked fatigue. Reduce training volume and keep a strongly polarised distribution: low intensity below VT1, and very high intensity (alactic anaerobic).",
     "FC moyenne": "Mean HR",
     "minutes par jour": "minutes per day",
+    "Nuit difficile, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique). Compenser les dépenses énergétiques par des apports de glucides lents réguliers. La récupération peut être réalisée en 2 à 3 jours.": "A hard night. Reduce training volume and keep a strongly polarised distribution: low intensity below VT1, and very high intensity (alactic anaerobic). Offset the energy cost with regular slow-carbohydrate intake. Recovery can be achieved in two to three days.",
     "Puissance totale": "Total power",
+    "Réduire fortement le volume d'entraînement et conserver uniquement des stimulations importantes à très haute intensité entrecoupées de périodes de récupération longues (jours de repos). La récupération peut être longue (semaines) à très longue (mois).": "Sharply reduce training volume and keep only substantial very-high-intensity stimuli, separated by long recovery periods (rest days). Recovery can be long — weeks — to very long — months.",
     "séances": "sessions",
+    "Sensation d'être bridé dans l'effort et de ne pas pouvoir faire monter la FC. Diminuer le volume d'entraînement et augmenter la part de très haute intensité (anaérobie lactique et alactique). La récupération peut être rapide, 2 à 3 jours.": "A feeling of being held back in effort, unable to drive the heart rate up. Reduce training volume and increase the share of very high intensity (lactic and alactic anaerobic). Recovery can be quick, two to three days.",
+    "Sensation de vertiges possibles lors du test debout. La FC ne monte pas à l'effort. Réduire fortement le volume d'entraînement et conserver uniquement des stimulations à très haute intensité entrecoupées de périodes de récupération longues. La récupération peut être réalisée en 2 à 3 jours, mais sans remédiation cela peut durer quelques semaines.": "Possible dizziness during the standing test. Heart rate does not rise on effort. Sharply reduce training volume and keep only very-high-intensity stimuli separated by long recovery periods. Recovery can be achieved in two to three days, but without remediation it can last several weeks.",
     "total": "total",
     "Tous": "All",
     "Tout": "All",
@@ -613,7 +620,7 @@
     "Seuils enregistrés.": "Thresholds saved.",
     "Revenir aux valeurs par défaut": "Back to the defaults",
     "Enregistrer les seuils": "Save thresholds",
-    "Les seuils de Schmidt, en pourcentage de variation contre la médiane des six tests précédents. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.": "Schmidt's thresholds, as a percentage change against the median of the six previous tests. Adjustable per athlete: they are markers calibrated on a population, and one athlete may need different ones. The defaults are the original workbook's values.",
+    "Les seuils de Schmitt, en pourcentage de variation contre la médiane des six tests précédents. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.": "Schmitt's thresholds, as a percentage change against the median of the six previous tests. Adjustable per athlete: they are markers calibrated on a population, and one athlete may need different ones. The defaults are the original workbook's values.",
     "Seuils de fatigue": "Fatigue thresholds",
     "Ces lectures décrivent un état physiologique. Elles ne disent pas quelle séance faire — ça dépend du plan de la semaine, de l'eau et de ce que ressent l'athlète.": "These readings describe a physiological picture. They do not say what session to do — that depends on the week's plan, the water, and how the athlete feels.",
     "base faible": "small base",
@@ -713,7 +720,7 @@
     "Aucun motif de fatigue déclenché.": "No fatigue pattern triggered.",
     "Équilibre physiologique — aucun motif déclenché": "Physiological balance — nothing triggered",
     "Questionnaire Wellness": "Wellness questionnaire",
-    "Les seuils de Schmidt, en pourcentage de variation contre la référence. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.": "Schmidt's thresholds, as a percentage change against the reference. Adjustable per athlete: they are markers calibrated on a population, and one athlete may need different ones. The defaults are the original workbook's values.",
+    "Les seuils de Schmitt, en pourcentage de variation contre la référence. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.": "Schmitt's thresholds, as a percentage change against the reference. Adjustable per athlete: they are markers calibrated on a population, and one athlete may need different ones. The defaults are the original workbook's values.",
     "le test précédent": "the previous test",
     "la médiane des ": "the median of the previous ",
     "contre": "against",
@@ -754,7 +761,7 @@
     "les deux concordent": "the two agree",
     "en désaccord": "they disagree",
     "La bande est la zone habituelle de cet athlète, pas une norme de population. Le ressenti est comparé à sa propre médiane : c'est leur désaccord qui informe, pas chacun pris seul.": "The band is this athlete's usual range, not a population norm. The feeling is compared with their own median: it is their disagreement that informs, not either one alone.",
-    "Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir « Seuils de fatigue », en bas de ce panneau.": "Thresholds after Laurent Schmidt et al., taken as they are and adjustable per athlete in the \u201cFatigue thresholds\u201d drawer at the foot of this panel.",
+    "Seuils d'après Laurent Schmitt et al., repris tels quels et modifiables par athlète dans le tiroir « Seuils de fatigue », en bas de ce panneau.": "Thresholds after Laurent Schmitt et al., taken as they are and adjustable per athlete in the \u201cFatigue thresholds\u201d drawer at the foot of this panel.",
     "LF et HF · les deux positions": "LF and HF · both positions",
     "référence · médiane des 6 précédents": "reference · median of the previous 6",
     "Puissance totale couchée · 12 derniers tests": "Total power lying · last 12 tests",
@@ -798,7 +805,7 @@
     "auj.": "today",
     "aucun motif": "no pattern",
     "à surveiller": "worth a look",
-    "Quatorze matins. « À surveiller » n'est pas un motif de Schmidt : c'est une lecture dont le calcul se méfie — spectre peu fiable, ou écart calculé sur une base trop faible pour qu'un pourcentage veuille dire grand-chose.": "Fourteen mornings. \u201cWorth a look\u201d is not one of Schmidt's patterns: it is a reading the calculation itself distrusts — an unreliable spectrum, or a delta resting on a base too small for a percentage to mean much.",
+    "Quatorze matins. « À surveiller » n'est pas un motif de Schmitt : c'est une lecture dont le calcul se méfie — spectre peu fiable, ou écart calculé sur une base trop faible pour qu'un pourcentage veuille dire grand-chose.": "Fourteen mornings. \u201cWorth a look\u201d is not one of Schmitt's patterns: it is a reading the calculation itself distrusts — an unreliable spectrum, or a delta resting on a base too small for a percentage to mean much.",
     "Écarts en % contre la médiane des six tests précédents. ": "Deltas in % against the median of the previous six tests. ",
     "Une barre manquante est un matin sans test, jamais un zéro.": "A missing bar is a morning without a test, never a zero.",
     "Test HRV du matin": "Morning HRV test",
@@ -1226,7 +1233,7 @@
                 id: d.id,
                 date: isoDate(when),
                 // LF and HF individually, not only their ratio: every one of
-                // Schmidt's five rules is expressed on LF and HF apart, and a
+                // Schmitt's five rules is expressed on LF and HF apart, and a
                 // ratio cannot be taken back apart. They were missing here
                 // while the app was sending them, so the cascade compared
                 // undefined against undefined and could never fire — the whole
@@ -1753,7 +1760,7 @@
     return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Quatorze derniers tests HRV")}">${bars}</svg>`;
   }
 
-  // ── Motifs de fatigue (Schmidt) ─────────────────────────────────────────
+  // ── Motifs de fatigue (Schmitt) ─────────────────────────────────────────
   //
   // The same five rules as the app, in the same cascade order — first match
   // wins, and the order encodes which reading takes precedence when two would
@@ -1768,7 +1775,7 @@
     smallBasePower: 50,
   };
 
-  /// Schmidt's five rules, conditions declared rather than coded.
+  /// Schmitt's five rules, conditions declared rather than coded.
   ///
   /// The coach screen shows each condition with the morning's value inside it,
   /// so that "why did nothing fire" is answerable. Deriving the test from the
@@ -1780,21 +1787,26 @@
     { id: "F(HF-LF-)SU_ST", dot: "#C0392B",
       reading: t("Effondrement de l'énergie — hypotonie para et orthosympathique couché"),
       conds: [["hfSu", "HFsu", "<", "energyCollapseHFSupine"],
-              ["lfSt", "LFst", "<", "energyCollapseLFStanding"]] },
+              ["lfSt", "LFst", "<", "energyCollapseLFStanding"]],
+      remedy: t("Fatigue importante, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique).") },
     { id: "F(LF+SU LF-ST)", dot: "#D97D0D",
       reading: t("Stress aigu — hypertonie orthosympathique couché"),
       conds: [["lfSu", "LFsu", ">", "acuteStressLFSupine"],
-              ["lfSt", "LFst", "<", "acuteStressLFStanding"]] },
+              ["lfSt", "LFst", "<", "acuteStressLFStanding"]],
+      remedy: t("Nuit difficile, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique). Compenser les dépenses énergétiques par des apports de glucides lents réguliers. La récupération peut être réalisée en 2 à 3 jours.") },
     { id: "F(HF-SU HF+ST)", dot: "#7A5230",
       reading: t("Frein à l'activation — hypertonie parasympathique debout"),
       conds: [["hfSu", "HFsu", "<", "activationBrakeHFSupine"],
-              ["hfSt", "HFst", ">", "activationBrakeHFStanding"]] },
+              ["hfSt", "HFst", ">", "activationBrakeHFStanding"]],
+      remedy: t("Sensation d'être bridé dans l'effort et de ne pas pouvoir faire monter la FC. Diminuer le volume d'entraînement et augmenter la part de très haute intensité (anaérobie lactique et alactique). La récupération peut être rapide, 2 à 3 jours.") },
     { id: "F(HF+SU)", dot: "var(--ink)",
       reading: t("Fatigue extrême — hypertonie parasympathique couché"),
-      conds: [["hfSu", "HFsu", ">", "extremeFatigueHFSupine"]] },
+      conds: [["hfSu", "HFsu", ">", "extremeFatigueHFSupine"]],
+      remedy: t("Réduire fortement le volume d'entraînement et conserver uniquement des stimulations importantes à très haute intensité entrecoupées de périodes de récupération longues (jours de repos). La récupération peut être longue (semaines) à très longue (mois).") },
     { id: "F(LF-st)", dot: "#7B4EA8",
       reading: t("Trouble de régulation de la pression périphérique — hypotonie orthosympathique debout"),
-      conds: [["lfSt", "LFst", "<", "peripheralRegulationLFStanding"]] },
+      conds: [["lfSt", "LFst", "<", "peripheralRegulationLFStanding"]],
+      remedy: t("Sensation de vertiges possibles lors du test debout. La FC ne monte pas à l'effort. Réduire fortement le volume d'entraînement et conserver uniquement des stimulations à très haute intensité entrecoupées de périodes de récupération longues. La récupération peut être réalisée en 2 à 3 jours, mais sans remédiation cela peut durer quelques semaines.") },
   ];
 
   function condHolds([key, , op, threshold], deltas, thresholds) {
@@ -1865,7 +1877,7 @@
 
   /// One of "ok" · "watch" · "alert" · "none" for a given morning.
   ///
-  /// Schmidt's cascade has no severity tiers — a motif matches or it does not.
+  /// Schmitt's cascade has no severity tiers — a motif matches or it does not.
   /// "watch" is therefore not his: it is a reading the engine itself distrusts,
   /// either because the spectrum was flagged unreliable or because a delta rests
   /// on a base too small for a percentage to mean much. Worth a look before the
@@ -2003,7 +2015,8 @@
 
     const head = verdict.pattern
       ? `<h4 class="hrv-head flagged">${esc(verdict.pattern.reading)}</h4>
-         <p class="hrv-sub">${esc(hrvNarrative(supine))} ${esc(verdict.pattern.id)}</p>`
+         <p class="hrv-sub">${esc(hrvNarrative(supine))} ${esc(verdict.pattern.id)}</p>
+         <p class="hrv-remedy">${esc(verdict.pattern.remedy)}</p>`
       : `<h4 class="hrv-head">${t("Équilibre physiologique")}</h4>
          <p class="hrv-sub">${esc(hrvNarrative(supine))} ${t("Aucun motif de fatigue déclenché.")}</p>`;
 
@@ -2076,7 +2089,7 @@
         <summary>${t("Les 5 règles en détail")}</summary>
         <div class="drawer-body hrv-rules">${rules}</div>
       </details>
-      <p class="chart-note">${t("Seuils d'après Laurent Schmidt et al., repris tels quels et modifiables par athlète dans le tiroir « Seuils de fatigue », en bas de ce panneau.")}</p>
+      <p class="chart-note">${t("Seuils d'après Laurent Schmitt et al., repris tels quels et modifiables par athlète dans le tiroir « Seuils de fatigue », en bas de ce panneau.")}</p>
     </div>`;
   }
 
@@ -3348,7 +3361,7 @@
           <details class="drawer" style="margin-top:1rem">
             <summary>${t("Seuils de fatigue")}</summary>
             <div class="drawer-body">
-              <p class="chart-note" style="margin:0 0 .8rem">${t("Les seuils de Schmidt, en pourcentage de variation contre la référence. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.")}</p>
+              <p class="chart-note" style="margin:0 0 .8rem">${t("Les seuils de Schmitt, en pourcentage de variation contre la référence. Réglables par athlète : ce sont des repères calibrés sur une population, et un athlète peut en avoir besoin d'autres. Les valeurs par défaut sont celles du classeur d'origine.")}</p>
               ${thresholdEditor(a)}
             </div>
           </details>
@@ -3368,7 +3381,7 @@
     grid.innerHTML = `
       <div class="hrv-squad"><table>${head}${rows}</table></div>
       <div class="hrv-legend">${legend}</div>
-      <p class="chart-note">${t("Quatorze matins. « À surveiller » n'est pas un motif de Schmidt : c'est une lecture dont le calcul se méfie — spectre peu fiable, ou écart calculé sur une base trop faible pour qu'un pourcentage veuille dire grand-chose.")}</p>`;
+      <p class="chart-note">${t("Quatorze matins. « À surveiller » n'est pas un motif de Schmitt : c'est une lecture dont le calcul se méfie — spectre peu fiable, ou écart calculé sur une base trop faible pour qu'un pourcentage veuille dire grand-chose.")}</p>`;
 
     grid.querySelectorAll("[data-hrv-toggle]").forEach(btn => btn.addEventListener("click", () => {
       const id = btn.dataset.hrvToggle;
