@@ -624,7 +624,7 @@
     "Le signal d'accélération sur les neuf meilleures secondes de la séance. Chaque bosse est un coup : on y lit la montée en charge, le placement du pic et la propreté du retour. Sous la ligne pointillée, l'accélération est négative — c'est la décélération entre deux coups. La courbe est légèrement lissée (5 échantillons, moins d'un dixième de seconde) ; survole-la pour lire les valeurs. Uniquement sur les séances de test, où les conditions sont comparables.": "The acceleration signal over the session's best nine seconds. Each hump is one stroke: it shows how the pull builds, where it peaks, and how clean the recovery is. Below the dashed line acceleration is negative — that is the deceleration between strokes. The curve is lightly smoothed (5 samples, under a tenth of a second); hover it to read the values. Test sessions only, where conditions are comparable.",
     "Accélération sur les neuf meilleures secondes": "Acceleration over the best nine seconds",
     "Coup de pagaie — 9 meilleures secondes": "Stroke — best nine seconds",
-    "Une marche par jour : sa hauteur est le volume de la journée. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance vaut zéro. Clique une pastille pour masquer une zone.": "One step per day: its height is that day's volume. Several sessions on the same day are added together; a day without a session counts as zero. Click a pill to hide a zone.",
+    "Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une pastille pour masquer une zone.": "One column per day: its height is that day's volume, stacked by zone. Several sessions on the same day are added together; a day without a session has no column. Click a pill to hide a zone.",
     "Voir la séance de": "View the session of",
     "Femme": "Female",
     "Homme": "Male",
@@ -2670,13 +2670,18 @@
     const shown = [0, 1, 2].filter(j => !hidden.has(j));
 
     const n = points.length;
-    // Un jour occupe une bande, pas un point : en marches, la valeur du mardi
-    // vaut du mardi au mercredi et pas une pente vers le mercredi. Relier deux
-    // jours par une droite inventait une montée et une descente là où il n'y
-    // avait qu'une séance — visible dès que l'entraînement est espacé.
-    const xa = i => padL + (i * plotW) / n;
-    const xb = i => padL + ((i + 1) * plotW) / n;
-    const xm = i => (xa(i) + xb(i)) / 2;
+    // Un jour est une colonne, pas un point d'une courbe : relier deux jours
+    // par une droite inventait une montée et une descente là où il n'y avait
+    // qu'une séance. Les colonnes sont séparées par un jour de blanc — ça
+    // ressemble à un histogramme, et c'en est un : chaque jour est un objet
+    // distinct, pas un échantillon d'un signal continu.
+    const bw = plotW / n;
+    // L'écart suit la largeur de bande et se plafonne : sur « Tout », une
+    // bande peut faire deux unités, et un écart fixe mangerait la colonne.
+    const gap = Math.min(bw * 0.3, 7);
+    const colW = Math.max(bw - gap, 0.8);
+    const xa = i => padL + i * bw + gap / 2;
+    const xm = i => padL + i * bw + bw / 2;
 
     // Masquer une zone la retire de l'empilement et redescend les autres :
     // c'est ce qui rend le geste utile plutôt que décoratif.
@@ -2691,27 +2696,15 @@
       return below.length ? cum[i][below[below.length - 1]] : 0;
     };
 
-    const bands = shown.map(j => {
-      const top = [], bottom = [];
-      for (let i = 0; i < n; i++) {
-        const y = yFor(cum[i][j]);
-        top.push(xa(i).toFixed(1) + " " + y.toFixed(1), xb(i).toFixed(1) + " " + y.toFixed(1));
-      }
-      for (let i = n - 1; i >= 0; i--) {
-        const y = yFor(floorFor(i, j));
-        bottom.push(xb(i).toFixed(1) + " " + y.toFixed(1), xa(i).toFixed(1) + " " + y.toFixed(1));
-      }
-      return `<path d="M${top.join(" L")} L${bottom.join(" L")} Z" fill="${colors[j]}" fill-opacity="0.8"/>`;
-    }).join("");
-
-    const topLine = [];
-    for (let i = 0; i < n; i++) {
-      const y = yFor(cum[i][2]);
-      topLine.push(xa(i).toFixed(1) + " " + y.toFixed(1), xb(i).toFixed(1) + " " + y.toFixed(1));
-    }
-    const totalLine = shown.length
-      ? `<path d="M${topLine.join(" L")}" fill="none" stroke="var(--ink-soft)" stroke-width="1.2" stroke-linejoin="round"/>`
-      : "";
+    // Un rectangle par zone et par jour. Pas de hauteur minimale : une journée
+    // presque vide doit paraître presque vide, l'infobulle donne le chiffre.
+    const bands = shown.map(j => points.map((p, i) => {
+      const top = yFor(cum[i][j]), bottom = yFor(floorFor(i, j));
+      const hgt = bottom - top;
+      if (!(hgt > 0.05)) return "";
+      return `<rect x="${xa(i).toFixed(1)}" y="${top.toFixed(1)}" width="${colW.toFixed(1)}" height="${hgt.toFixed(1)}" fill="${colors[j]}" fill-opacity="0.8"/>`;
+    }).join("")).join("");
+    const totalLine = "";
 
     const dots = points.map((p, i) => {
       if (!p.count || !shown.length) return "";
@@ -2720,9 +2713,7 @@
       const value = shown.map(j => names[j] + " " + fmtMinSec(z[j])).join(" · ")
         + " · " + t("total") + " " + fmtMinSec(shown.reduce((acc, j) => acc + z[j], 0))
         + (p.count > 1 ? " · " + p.count + " " + t("séances") : "");
-      const cx = xm(i).toFixed(1), cy = yFor(cum[i][2]).toFixed(1);
-      return `<circle class="hoverpt" cx="${cx}" cy="${cy}" r="7" fill="transparent" data-label="${shortDate(p.iso)}" data-value="${esc(value)}"/>`
-        + `<circle cx="${cx}" cy="${cy}" r="2.2" fill="var(--ink-soft)"/>`;
+      return `<circle class="hoverpt" cx="${xm(i).toFixed(1)}" cy="${yFor(cum[i][2]).toFixed(1)}" r="9" fill="transparent" data-label="${shortDate(p.iso)}" data-value="${esc(value)}"/>`;
     }).join("");
 
     const yTicks = [0, 0.5, 1].map(fr => {
@@ -2773,7 +2764,7 @@
            ${allHidden ? `<p class="chart-note">${t("Toutes les zones sont masquées — reclique une pastille pour la réafficher.")}</p>` : ""}`
         : `<p class="empty-note">${t("Aucune séance sur cette période.")}</p>`}
       ${kind === "hr" && hasData
-        ? `<p class="chart-note">${t("Une marche par jour : sa hauteur est le volume de la journée. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance vaut zéro. Clique une pastille pour masquer une zone.")}</p>`
+        ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une pastille pour masquer une zone.")}</p>`
         : ""}
     </div>`;
   }
