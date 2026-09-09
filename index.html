@@ -591,6 +591,7 @@
     "Évolution du temps passé dans chaque zone, jour par jour": "Time spent in each zone, day by day",
     "Fatigue importante, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique).": "Marked fatigue. Reduce training volume and keep a strongly polarised distribution: low intensity below VT1, and very high intensity (alactic anaerobic).",
     "FC moyenne": "Mean HR",
+    "La charge d'entraînement est adaptée aux capacités de l'athlète, poursuite de l'entraînement comme planifié.": "Training load matches the athlete's capacities; carry on with the training as planned.",
     "minutes par jour": "minutes per day",
     "Nuit difficile, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique). Compenser les dépenses énergétiques par des apports de glucides lents réguliers. La récupération peut être réalisée en 2 à 3 jours.": "A hard night. Reduce training volume and keep a strongly polarised distribution: low intensity below VT1, and very high intensity (alactic anaerobic). Offset the energy cost with regular slow-carbohydrate intake. Recovery can be achieved in two to three days.",
     "Puissance totale": "Total power",
@@ -2018,7 +2019,8 @@
          <p class="hrv-sub">${esc(hrvNarrative(supine))} ${esc(verdict.pattern.id)}</p>
          <p class="hrv-remedy">${esc(verdict.pattern.remedy)}</p>`
       : `<h4 class="hrv-head">${t("Équilibre physiologique")}</h4>
-         <p class="hrv-sub">${esc(hrvNarrative(supine))} ${t("Aucun motif de fatigue déclenché.")}</p>`;
+         <p class="hrv-sub">${esc(hrvNarrative(supine))} ${t("Aucun motif de fatigue déclenché.")}</p>
+         <p class="hrv-remedy">${t("La charge d'entraînement est adaptée aux capacités de l'athlète, poursuite de l'entraînement comme planifié.")}</p>`;
 
     const why = [["HF " + t("couché"), "hfSu"], ["LF " + t("couché"), "lfSu"],
                  ["HF " + t("debout"), "hfSt"], ["LF " + t("debout"), "lfSt"]]
