@@ -251,6 +251,9 @@
   }
   .cal-day.out { background: transparent; border-color: transparent; }
   .cal-day.today { border-color: var(--accent); }
+  .cal-day.focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .load-trend-day { cursor: pointer; }
+  .load-trend-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .day-num { font-size: 11px; color: var(--ink-muted); }
   .day-chips { display: flex; flex-wrap: wrap; gap: 3px; }
   .a-chip {
@@ -624,7 +627,8 @@
     "Le signal d'accélération sur les neuf meilleures secondes de la séance. Chaque bosse est un coup : on y lit la montée en charge, le placement du pic et la propreté du retour. Sous la ligne pointillée, l'accélération est négative — c'est la décélération entre deux coups. La courbe est légèrement lissée (5 échantillons, moins d'un dixième de seconde) ; survole-la pour lire les valeurs. Uniquement sur les séances de test, où les conditions sont comparables.": "The acceleration signal over the session's best nine seconds. Each hump is one stroke: it shows how the pull builds, where it peaks, and how clean the recovery is. Below the dashed line acceleration is negative — that is the deceleration between strokes. The curve is lightly smoothed (5 samples, under a tenth of a second); hover it to read the values. Test sessions only, where conditions are comparable.",
     "Accélération sur les neuf meilleures secondes": "Acceleration over the best nine seconds",
     "Coup de pagaie — 9 meilleures secondes": "Stroke — best nine seconds",
-    "Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une pastille pour masquer une zone.": "One column per day: its height is that day's volume, stacked by zone. Several sessions on the same day are added together; a day without a session has no column. Click a pill to hide a zone.",
+    "Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir sa journée dans le calendrier, ou une pastille pour masquer une zone.": "One column per day: its height is that day's volume, stacked by zone. Several sessions on the same day are added together; a day without a session has no column. Click a column to open that day in the calendar, or a pill to hide a zone.",
+    "Voir cette journée dans le calendrier": "See this day in the calendar",
     "Voir la séance de": "View the session of",
     "Femme": "Female",
     "Homme": "Male",
@@ -2706,6 +2710,10 @@
     }).join("")).join("");
     const totalLine = "";
 
+    // La cible est la colonne elle-même : on survole et on clique la barre
+    // qu'on regarde. Une hauteur de préhension minimale de 16 unités garde
+    // une journée presque vide atteignable — c'est une zone sensible, pas une
+    // valeur dessinée, donc la hauteur affichée ne ment pas pour autant.
     const dots = points.map((p, i) => {
       if (!p.count || !shown.length) return "";
       const z = p[key];
@@ -2713,7 +2721,8 @@
       const value = shown.map(j => names[j] + " " + fmtMinSec(z[j])).join(" · ")
         + " · " + t("total") + " " + fmtMinSec(shown.reduce((acc, j) => acc + z[j], 0))
         + (p.count > 1 ? " · " + p.count + " " + t("séances") : "");
-      return `<circle class="hoverpt" cx="${xm(i).toFixed(1)}" cy="${yFor(cum[i][2]).toFixed(1)}" r="9" fill="transparent" data-label="${shortDate(p.iso)}" data-value="${esc(value)}"/>`;
+      const base = yFor(0), top = Math.min(yFor(cum[i][2]), base - 16);
+      return `<rect class="hoverpt load-trend-day" x="${xa(i).toFixed(1)}" y="${top.toFixed(1)}" width="${colW.toFixed(1)}" height="${(base - top).toFixed(1)}" fill="transparent" data-day="${p.iso}" data-label="${shortDate(p.iso)}" data-value="${esc(value)}" role="button" tabindex="0" aria-label="${t("Voir cette journée dans le calendrier")} — ${shortDate(p.iso)}"/>`;
     }).join("");
 
     const yTicks = [0, 0.5, 1].map(fr => {
@@ -2764,7 +2773,7 @@
            ${allHidden ? `<p class="chart-note">${t("Toutes les zones sont masquées — reclique une pastille pour la réafficher.")}</p>` : ""}`
         : `<p class="empty-note">${t("Aucune séance sur cette période.")}</p>`}
       ${kind === "hr" && hasData
-        ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une pastille pour masquer une zone.")}</p>`
+        ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir sa journée dans le calendrier, ou une pastille pour masquer une zone.")}</p>`
         : ""}
     </div>`;
   }
@@ -3053,6 +3062,14 @@
       btn.addEventListener("click", () => {
         loadTrendDays = Number(btn.dataset.days);
         renderDetail(id, sessionId);
+      });
+    });
+
+    detail.querySelectorAll(".load-trend-day").forEach(col => {
+      const open = () => openCalendarOn(col.dataset.day);
+      col.addEventListener("click", open);
+      col.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
       });
     });
 
@@ -3458,6 +3475,10 @@
   // squad in, and it is the only span where a session shows its load bar
   // rather than a coloured initial.
   let calMode = "week";
+  // Jour mis en avant à l'arrivée depuis un graphique de charge. Effacé dès
+  // que l'entraîneur navigue : la surbrillance répond à un clic précis, elle
+  // ne suit pas la promenade qui vient après.
+  let calFocusIso = null;
   let calCursor = new Date();
 
   const calFilters = document.getElementById("calFilters");
@@ -3486,16 +3507,37 @@
     });
   }
 
+  /// Ouvre le calendrier sur la semaine d'un jour précis, depuis une colonne
+  /// d'un graphique de charge. La semaine plutôt que le mois : c'est là que
+  /// chaque séance de la journée se lit en détail, et c'est ce qu'on vient
+  /// chercher après avoir cliqué une barre.
+  ///
+  /// Le filtre d'athlètes n'est **pas** touché. On arrive depuis la fiche d'un
+  /// athlète, donc le restreindre à lui serait tentant — mais ce filtre est un
+  /// réglage que l'entraîneur a posé, et le changer sous ses pieds sans qu'il
+  /// l'ait demandé est plus déroutant qu'utile.
+  function openCalendarOn(iso) {
+    calFocusIso = iso;
+    calMode = "week";
+    calCursor = new Date(iso + "T12:00:00");
+    document.getElementById("calModeSeg").querySelectorAll("button")
+      .forEach(b => b.classList.toggle("active", b.dataset.mode === "week"));
+    activateTab("calendar");
+    document.getElementById("viewCalendar")
+      .scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   document.getElementById("calModeSeg").querySelectorAll("button").forEach(btn => {
     btn.addEventListener("click", () => {
       document.getElementById("calModeSeg").querySelectorAll("button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       calMode = btn.dataset.mode;
+      calFocusIso = null;
       renderCalendar();
     });
   });
-  document.getElementById("calPrev").addEventListener("click", () => { shiftCursor(-1); renderCalendar(); });
-  document.getElementById("calNext").addEventListener("click", () => { shiftCursor(1); renderCalendar(); });
+  document.getElementById("calPrev").addEventListener("click", () => { shiftCursor(-1); calFocusIso = null; renderCalendar(); });
+  document.getElementById("calNext").addEventListener("click", () => { shiftCursor(1); calFocusIso = null; renderCalendar(); });
 
   function shiftCursor(dir) {
     if (calMode === "month") calCursor.setMonth(calCursor.getMonth() + dir);
@@ -3626,7 +3668,7 @@
         }).join("");
         inner = `<div class="day-num">${date.getDate()}${hrvPill(iso)}</div><div class="day-chips">${rows || '<span class="empty-note">—</span>'}</div>`;
       }
-      return `<div class="cal-day ${out?"out":""} ${isToday?"today":""}">${inner}</div>`;
+      return `<div class="cal-day ${out?"out":""} ${isToday?"today":""} ${iso===calFocusIso?"focus":""}">${inner}</div>`;
     }).join("");
 
     grid.innerHTML = dow + cells;
