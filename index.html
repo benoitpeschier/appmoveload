@@ -241,6 +241,7 @@
   }
   .chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
   .chip.off { opacity: 0.4; }
+  .chip.chip-all { font-weight: 600; color: var(--accent); border-color: var(--accent); }
   .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
@@ -591,6 +592,7 @@
     "Puissance totale": "Total power",
     "séances": "sessions",
     "total": "total",
+    "Tous": "All",
     "Tout": "All",
     "Toutes les zones sont masquées — reclique une pastille pour la réafficher.": "All zones are hidden — click a pill again to bring one back.",
     "Trouble de régulation de la pression périphérique — hypotonie orthosympathique debout": "Peripheral pressure regulation disorder — orthosympathetic hypotonia standing",
@@ -627,7 +629,7 @@
     "Le signal d'accélération sur les neuf meilleures secondes de la séance. Chaque bosse est un coup : on y lit la montée en charge, le placement du pic et la propreté du retour. Sous la ligne pointillée, l'accélération est négative — c'est la décélération entre deux coups. La courbe est légèrement lissée (5 échantillons, moins d'un dixième de seconde) ; survole-la pour lire les valeurs. Uniquement sur les séances de test, où les conditions sont comparables.": "The acceleration signal over the session's best nine seconds. Each hump is one stroke: it shows how the pull builds, where it peaks, and how clean the recovery is. Below the dashed line acceleration is negative — that is the deceleration between strokes. The curve is lightly smoothed (5 samples, under a tenth of a second); hover it to read the values. Test sessions only, where conditions are comparable.",
     "Accélération sur les neuf meilleures secondes": "Acceleration over the best nine seconds",
     "Coup de pagaie — 9 meilleures secondes": "Stroke — best nine seconds",
-    "Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir sa journée dans le calendrier, ou une pastille pour masquer une zone.": "One column per day: its height is that day's volume, stacked by zone. Several sessions on the same day are added together; a day without a session has no column. Click a column to open that day in the calendar, or a pill to hide a zone.",
+    "Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir la journée de cet athlète dans le calendrier, ou une pastille pour masquer une zone.": "One column per day: its height is that day's volume, stacked by zone. Several sessions on the same day are added together; a day without a session has no column. Click a column to open that athlete's day in the calendar, or a pill to hide a zone.",
     "Voir cette journée dans le calendrier": "See this day in the calendar",
     "Voir la séance de": "View the session of",
     "Femme": "Female",
@@ -2773,7 +2775,7 @@
            ${allHidden ? `<p class="chart-note">${t("Toutes les zones sont masquées — reclique une pastille pour la réafficher.")}</p>` : ""}`
         : `<p class="empty-note">${t("Aucune séance sur cette période.")}</p>`}
       ${kind === "hr" && hasData
-        ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir sa journée dans le calendrier, ou une pastille pour masquer une zone.")}</p>`
+        ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir la journée de cet athlète dans le calendrier, ou une pastille pour masquer une zone.")}</p>`
         : ""}
     </div>`;
   }
@@ -3066,7 +3068,7 @@
     });
 
     detail.querySelectorAll(".load-trend-day").forEach(col => {
-      const open = () => openCalendarOn(col.dataset.day);
+      const open = () => openCalendarOn(col.dataset.day, id);
       col.addEventListener("click", open);
       col.addEventListener("keydown", e => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
@@ -3491,15 +3493,33 @@
         activeAthletes.add(a.id); // new athletes default to visible, matching the original behavior
       }
     });
+    const someHidden = renderable.some(a => !activeAthletes.has(a.id));
     calFilters.innerHTML = renderable.map(a => `
       <span class="chip ${activeAthletes.has(a.id) ? "" : "off"}" data-id="${a.id}" tabindex="0" role="button" aria-pressed="${activeAthletes.has(a.id)}">
         <span class="dot" style="background:${a.color}"></span>${a.name.split(" ")[0]}
-      </span>`).join("");
-    calFilters.querySelectorAll(".chip").forEach(chip => {
+      </span>`).join("")
+      + (someHidden ? `<span class="chip chip-all" tabindex="0" role="button">${t("Tous")}</span>` : "");
+
+    const allChip = calFilters.querySelector(".chip-all");
+    if (allChip) {
+      const showAll = () => {
+        renderable.forEach(a => activeAthletes.add(a.id));
+        renderCalFilters();
+        renderCalendar();
+      };
+      allChip.addEventListener("click", showAll);
+      allChip.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showAll(); }
+      });
+    }
+
+    calFilters.querySelectorAll(".chip:not(.chip-all)").forEach(chip => {
       const toggle = () => {
         const id = chip.dataset.id;
-        if (activeAthletes.has(id)) { activeAthletes.delete(id); chip.classList.add("off"); chip.setAttribute("aria-pressed","false"); }
-        else { activeAthletes.add(id); chip.classList.remove("off"); chip.setAttribute("aria-pressed","true"); }
+        if (activeAthletes.has(id)) activeAthletes.delete(id); else activeAthletes.add(id);
+        // Redessiner la rangée entière, et pas seulement la pastille cliquée :
+        // c'est ce qui fait apparaître et disparaître « Tous » au bon moment.
+        renderCalFilters();
         renderCalendar();
       };
       chip.addEventListener("click", toggle);
@@ -3516,7 +3536,27 @@
   /// athlète, donc le restreindre à lui serait tentant — mais ce filtre est un
   /// réglage que l'entraîneur a posé, et le changer sous ses pieds sans qu'il
   /// l'ait demandé est plus déroutant qu'utile.
-  function openCalendarOn(iso) {
+  function openCalendarOn(iso, athleteId) {
+    // Filtrer sur l'athlète d'origine : à dix athlètes dans l'équipe, une
+    // semaine non filtrée est illisible, et on arrive justement de la fiche
+    // d'un seul. Le retour tient en un clic grâce à la pastille « Tous »,
+    // qui n'apparaît que lorsque quelqu'un est masqué — sans elle, revenir
+    // coûterait autant de clics que d'athlètes.
+    if (athleteId) {
+      // Les marquer connus d'abord : renderCalFilters ajoute tout athlète
+      // qu'il n'a jamais vu, et il n'en connaît aucun tant qu'il n'a pas
+      // tourné une fois — sans quoi il rendrait le filtre aussitôt défait.
+      renderableAthletes().forEach(a => knownAthleteIds.add(a.id));
+      activeAthletes.clear();
+      activeAthletes.add(athleteId);
+      // Et redessiner les pastilles : renderCalendar ne les touche pas, elles
+      // ne sont refaites que sur arrivée de données. Sans cet appel la grille
+      // se filtrait pendant que les pastilles continuaient d'afficher toute
+      // l'équipe cochée — un état faux, et aucun moyen de revenir puisque
+      // « Tous » n'apparaissait pas non plus. Trouvé en testant, pas en
+      // relisant.
+      renderCalFilters();
+    }
     calFocusIso = iso;
     calMode = "week";
     calCursor = new Date(iso + "T12:00:00");
