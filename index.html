@@ -555,7 +555,7 @@
            signInWithEmailAndPassword, createUserWithEmailAndPassword,
            GoogleAuthProvider, signInWithPopup
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc
+  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, deleteDoc
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
   // These aren't secret — Firebase's own security model puts real protection
@@ -607,7 +607,7 @@
     "Fatigue extrême — hypertonie parasympathique couché": "Extreme fatigue — parasympathetic hypertonia lying",
     "Frein à l'activation — hypertonie parasympathique debout": "Brake on activation — parasympathetic hypertonia standing",
     "Stress aigu — hypertonie orthosympathique couché": "Acute stress — orthosympathetic hypertonia lying",
-    "Effondrement de l'énergie — hypotonie para et orthosympathique couché": "Collapse of energy — para- and orthosympathetic hypotonia lying",
+    "Effondrement de l'énergie — hypotonie para et orthosympathique debout et couché, « over reaching »": "Energy collapse — para- and orthosympathetic hypotonia standing and lying, “overreaching”",
     "Base faible en dessous de (ms²)": "Small base below (ms²)",
     "Régulation périph. · LF debout <": "Peripheral regulation · standing LF <",
     "Fatigue extrême · HF couché >": "Extreme fatigue · supine HF >",
@@ -638,6 +638,7 @@
     "Accélération sur les neuf meilleures secondes": "Acceleration over the best nine seconds",
     "Coup de pagaie — 9 meilleures secondes": "Stroke — best nine seconds",
     "Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir la journée de cet athlète dans le calendrier, ou une pastille pour masquer une zone.": "One column per day: its height is that day's volume, stacked by zone. Several sessions on the same day are added together; a day without a session has no column. Click a column to open that athlete's day in the calendar, or a pill to hide a zone.",
+    "Valeurs par défaut rétablies — aucun seuil propre à cet athlète.": "Defaults restored — no thresholds specific to this athlete.",
     "Voir cette journée dans le calendrier": "See this day in the calendar",
     "Voir la séance de": "View the session of",
     "Femme": "Female",
@@ -1787,7 +1788,7 @@
   /// first time somebody changed one.
   const HRV_PATTERNS = [
     { id: "F(HF-LF-)SU_ST", dot: "#C0392B",
-      reading: t("Effondrement de l'énergie — hypotonie para et orthosympathique couché"),
+      reading: t("Effondrement de l'énergie — hypotonie para et orthosympathique debout et couché, « over reaching »"),
       conds: [["hfSu", "HFsu", "<", "energyCollapseHFSupine"],
               ["lfSu", "LFsu", "<", "energyCollapseLFSupine"],
               ["hfSt", "HFst", "<", "energyCollapseHFStanding"],
@@ -3198,10 +3199,29 @@
       </div>`;
   }
 
+  /// Writes only what the coach actually moved away from the defaults.
+  ///
+  /// The drawer used to write every field shown, so a single save froze that
+  /// day's defaults into overrides — and a later recalibration of the defaults
+  /// then changed nothing for that athlete, silently. That is exactly what kept
+  /// Benoît on the workbook's thresholds after the Schmitt (2015) recalibration
+  /// of 2026-09-10. With nothing moved, the document is deleted rather than
+  /// left holding an empty map: no document means "defaults", on the dashboard
+  /// and on the phone alike.
   async function saveThresholds(athleteId, values, status) {
+    const overrides = {};
+    for (const [key, value] of Object.entries(values)) {
+      if (key in HRV_DEFAULTS && Math.abs(value - HRV_DEFAULTS[key]) > 1e-9) overrides[key] = value;
+    }
+    const ref = doc(firestore, "athletes", athleteId, "config", "hrvThresholds");
     try {
-      await setDoc(doc(firestore, "athletes", athleteId, "config", "hrvThresholds"), values);
-      if (status) status.textContent = t("Seuils enregistrés.");
+      if (Object.keys(overrides).length) {
+        await setDoc(ref, overrides);
+        if (status) status.textContent = t("Seuils enregistrés.");
+      } else {
+        await deleteDoc(ref);
+        if (status) status.textContent = t("Valeurs par défaut rétablies — aucun seuil propre à cet athlète.");
+      }
     } catch (e) {
       if (status) status.textContent = t("Échec de l'enregistrement : ") + e.message;
     }
@@ -3472,10 +3492,14 @@
         });
         saveThresholds(editor.dataset.athlete, values, card.querySelector(".thr-status"));
       });
+      // Resetting used to change the inputs on screen and write nothing, so a
+      // coach who clicked it and walked away kept the old overrides. It now
+      // clears the document, which is what "back to defaults" means.
       card.querySelector(".thr-reset")?.addEventListener("click", () => {
         editor.querySelectorAll(".thr-input").forEach(input => {
           input.value = HRV_DEFAULTS[input.dataset.key];
         });
+        saveThresholds(editor.dataset.athlete, {}, card.querySelector(".thr-status"));
       });
     });
   }
