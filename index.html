@@ -1768,10 +1768,11 @@
   // fire. Kept in step with FatiguePatterns.swift by hand; if one moves, the
   // other must.
   const HRV_DEFAULTS = {
-    energyCollapseHFSupine: -48, energyCollapseLFStanding: -30,
-    acuteStressLFSupine: 80,     acuteStressLFStanding: -70,
-    activationBrakeHFSupine: -50, activationBrakeHFStanding: 200,
-    extremeFatigueHFSupine: 500,
+    energyCollapseLFSupine: -45, energyCollapseHFSupine: -70,
+    energyCollapseLFStanding: -40, energyCollapseHFStanding: -50,
+    acuteStressLFSupine: 110,    acuteStressLFStanding: -80,
+    activationBrakeHFSupine: -60, activationBrakeHFStanding: 300,
+    extremeFatigueHFSupine: 300,
     peripheralRegulationLFStanding: -80,
     smallBasePower: 50,
   };
@@ -1788,6 +1789,8 @@
     { id: "F(HF-LF-)SU_ST", dot: "#C0392B",
       reading: t("Effondrement de l'énergie — hypotonie para et orthosympathique couché"),
       conds: [["hfSu", "HFsu", "<", "energyCollapseHFSupine"],
+              ["lfSu", "LFsu", "<", "energyCollapseLFSupine"],
+              ["hfSt", "HFst", "<", "energyCollapseHFStanding"],
               ["lfSt", "LFst", "<", "energyCollapseLFStanding"]],
       remedy: t("Fatigue importante, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique).") },
     { id: "F(LF+SU LF-ST)", dot: "#D97D0D",
@@ -3164,7 +3167,9 @@
   /// "1 motif de fatigue" without a name makes the coach open every card to
   /// find who, which is the opposite of what a banner is for.
   const HRV_THRESHOLD_FIELDS = [
+    ["energyCollapseLFSupine",        "Effondrement · LF couché <"],
     ["energyCollapseHFSupine",        "Effondrement · HF couché <"],
+    ["energyCollapseHFStanding",      "Effondrement · HF debout <"],
     ["energyCollapseLFStanding",      "Effondrement · LF debout <"],
     ["acuteStressLFSupine",           "Stress aigu · LF couché >"],
     ["acuteStressLFStanding",         "Stress aigu · LF debout <"],
