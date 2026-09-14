@@ -1574,7 +1574,11 @@
                 mech: [s.mechZone1Seconds || 0, s.mechZone2Seconds || 0, s.mechZone3Seconds || 0],
                 aboveAnchor: s.secondsAboveAnchor || 0,
                 rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
-                boatType: s.boatType || null,
+                // A session pushed without a boat was shown as K1 on the phone:
+                // until build 17 the app stored its default only once the
+                // athlete changed it. Read the same way here, or the session
+                // counts towards no record and no comparison. PPG has no boat.
+                boatType: s.boatType || (s.isConditioning ? null : "K1"),
                 isTest: !!s.isTest,
                 isConditioning: !!s.isConditioning,
                 strokeSignal: Array.isArray(s.bestNineSecondsSignal) ? s.bestNineSecondsSignal : null,
