@@ -541,10 +541,17 @@
         </div>
       </div>
       <div class="spec-group">
+        <div class="spec-group-label">Équipe</div>
+        <div class="spec-row">
+          <div class="spec-field">Rejoindre une équipe</div>
+          <div class="spec-desc">Scanne l'invitation que ton coach a créée pour toi sur le tableau de bord. Il faut un compte : l'app te le propose au passage, et ta place dans l'équipe appartient à ce compte plutôt qu'à ce téléphone. Une invitation ne sert qu'une fois et expire au bout de sept jours. Si tu synchronisais déjà, ton coach choisit ta fiche en créant l'invitation : tes séances restent les tiennes.</div>
+        </div>
+      </div>
+      <div class="spec-group">
         <div class="spec-group-label">Compte</div>
         <div class="spec-row">
           <div class="spec-field">Créer un compte ou se connecter</div>
-          <div class="spec-desc">Facultatif aujourd'hui. Un compte (adresse e-mail + mot de passe) te rattache à tes données plutôt qu'à ce téléphone : tu les retrouves après un changement d'appareil, et le coach pourra t'inviter dans une équipe. Sans compte, tout continue de fonctionner, mais seulement sur ce téléphone. À renseigner après la synchronisation ci-dessous : le compte est créé sur le projet Firebase de l'équipe.</div>
+          <div class="spec-desc">Un compte (adresse e-mail + mot de passe) te rattache à tes données plutôt qu'à ce téléphone : tu les retrouves après un changement d'appareil. Il est nécessaire pour rejoindre une équipe. Si tu en as déjà un, connecte-toi avec la même adresse plutôt que d'en créer un second.</div>
         </div>
         <div class="spec-row">
           <div class="spec-field">Se déconnecter</div>
@@ -676,10 +683,26 @@
     <h3>Accès</h3>
     <div class="access-block">
       <a class="access-url" href="index.html">benoitpeschier.github.io/appmoveload</a>
-      <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">Au premier accès, le code d'équipe est demandé — retiens-le, il fait office de mot de passe partagé pour toute l'équipe.</p>
+      <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">Connecte-toi avec le compte qui a ta place dans l'équipe : le tableau de bord retrouve tes équipes tout seul. Invité comme entraîneur, ouvre d'abord le lien reçu.</p>
     </div>
-    <p style="font-size:0.87rem; color:var(--ink-muted);">Le bouton <strong>Se connecter</strong> en haut à droite crée un compte coach ou t'y reconnecte, au choix avec <strong>Continuer avec Google</strong> ou une adresse e-mail et un mot de passe. C'est facultatif pour l'instant : le tableau de bord fonctionne sans. Avec un compte, tu es reconnu sur n'importe quel ordinateur au lieu de dépendre de ce seul navigateur — et c'est ce compte qui portera ton rôle quand les équipes arriveront.</p>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">Le bouton <strong>Se connecter</strong> en haut à droite crée un compte ou t'y reconnecte, au choix avec <strong>Continuer avec Google</strong> ou une adresse e-mail et un mot de passe. C'est ce compte qui porte ta place dans l'équipe, et donc ce que tu peux voir et faire. Si tu suis plusieurs équipes, un menu en haut permet de passer de l'une à l'autre.</p>
     <p style="font-size:0.87rem; color:var(--ink-muted);">Le projet est réglé sur <strong>un seul compte par adresse</strong> : Google et le mot de passe sur la même adresse ne créeront jamais deux comptes coach distincts. En revanche, si tu as commencé par un mot de passe, la connexion Google sur cette adresse peut être refusée — c'est Firebase qui demande de prouver que le compte est bien le tien. Dans ce cas, connecte-toi avec le mot de passe.</p>
+
+    <h3>Inviter<span class="h3-hint">Bouton Inviter, en haut</span></h3>
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">Athlète</div>
+        <div class="spec-desc">Choisis sa fiche s'il synchronise déjà, sinon « Nouvel athlète, sans fiche ». Un QR code apparaît : l'athlète le scanne dans l'app, depuis Réglages &gt; Rejoindre une équipe. Un entraîneur comme un propriétaire peut inviter un athlète.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Entraîneur · Copropriétaire</div>
+        <div class="spec-desc">Réservé au propriétaire. Un lien apparaît, à envoyer à la personne : elle l'ouvre, se connecte avec son propre compte et rejoint l'équipe. Un copropriétaire administre l'équipe à égalité avec toi.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Invitations en attente</div>
+        <div class="spec-desc">Chaque invitation ne sert qu'une fois et expire au bout de sept jours. Révoque celle qui a circulé au mauvais endroit.</div>
+      </div>
+    </div>
 
     <h3>Navigation</h3>
     <div class="spec">
@@ -729,7 +752,7 @@
 
     <div class="callout">
       <span class="callout-mark">i</span>
-      <p>Rien à rafraîchir manuellement : la page se met à jour dès qu'un athlète synchronise. Le code d'équipe ne doit circuler qu'à l'intérieur de l'équipe.</p>
+      <p>Rien à rafraîchir manuellement : la page se met à jour dès qu'un athlète synchronise. Jusqu'à la fin de la migration, une invitation contient encore le code d'équipe : ne la transmets qu'à la personne invitée.</p>
     </div>
   </section>
 

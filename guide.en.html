@@ -541,10 +541,17 @@
         </div>
       </div>
       <div class="spec-group">
+        <div class="spec-group-label">Team</div>
+        <div class="spec-row">
+          <div class="spec-field">Join a team</div>
+          <div class="spec-desc">Scan the invitation your coach created for you on the dashboard. It takes an account: the app offers to create one on the way, and your place in the team belongs to that account rather than to this phone. An invitation works only once and expires after seven days. If you were already syncing, your coach picks your profile when creating the invitation: your sessions stay yours.</div>
+        </div>
+      </div>
+      <div class="spec-group">
         <div class="spec-group-label">Account</div>
         <div class="spec-row">
           <div class="spec-field">Create an account or sign in</div>
-          <div class="spec-desc">Optional for now. An account (e-mail address + password) ties you to your data rather than to this phone: you keep it when you change device, and the coach will be able to invite you to a team. Without an account everything still works, but only on this phone. Fill it in after the sync settings below: the account is created on the team's Firebase project.</div>
+          <div class="spec-desc">An account (e-mail address + password) ties you to your data rather than to this phone: you keep it when you change device. It is required to join a team. If you already have one, sign in with the same address rather than creating a second.</div>
         </div>
         <div class="spec-row">
           <div class="spec-field">Sign out</div>
@@ -676,10 +683,26 @@
     <h3>Access</h3>
     <div class="access-block">
       <a class="access-url" href="index.html">benoitpeschier.github.io/appmoveload</a>
-      <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">On first visit the team code is asked for — remember it, it acts as a shared password for the whole squad.</p>
+      <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">Sign in with the account that holds your place in the team: the dashboard finds your teams by itself. Invited as a coach? Open the link you received first.</p>
     </div>
-    <p style="font-size:0.87rem; color:var(--ink-muted);">The <strong>Sign in</strong> button at the top right creates a coach account or signs you back into one, either with <strong>Continue with Google</strong> or with an e-mail address and a password. It is optional for now: the dashboard works without it. With an account you are recognised on any computer instead of depending on this one browser — and it is that account which will carry your role once teams arrive.</p>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">The <strong>Sign in</strong> button at the top right creates an account or signs you back into one, either with <strong>Continue with Google</strong> or with an e-mail address and a password. That account carries your place in the team, and so what you can see and do. If you follow several teams, a menu at the top switches between them.</p>
     <p style="font-size:0.87rem; color:var(--ink-muted);">The project is set to <strong>one account per address</strong>: Google and a password on the same address will never create two separate coach accounts. That said, if you started with a password, Google sign-in on that address may be refused — Firebase asking you to prove the account is yours. If that happens, sign in with the password.</p>
+
+    <h3>Inviting<span class="h3-hint">Invite button, at the top</span></h3>
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">Athlete</div>
+        <div class="spec-desc">Pick their profile if they already sync, otherwise “New athlete, no profile yet”. A QR code appears: the athlete scans it in the app, from Settings &gt; Join a team. A coach and an owner can both invite an athlete.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Coach · Co-owner</div>
+        <div class="spec-desc">Owner only. A link appears, to send to the person: they open it, sign in with their own account, and join the team. A co-owner runs the team as your equal.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Pending invitations</div>
+        <div class="spec-desc">Each invitation works only once and expires after seven days. Revoke one that travelled to the wrong place.</div>
+      </div>
+    </div>
 
     <h3>Navigation</h3>
     <div class="spec">
@@ -729,7 +752,7 @@
 
     <div class="callout">
       <span class="callout-mark">i</span>
-      <p>Nothing to refresh by hand: the page updates as soon as an athlete syncs. The team code must not travel outside the squad.</p>
+      <p>Nothing to refresh by hand: the page updates as soon as an athlete syncs. Until the migration is complete, an invitation still carries the team code: pass it only to the person invited.</p>
     </div>
   </section>
 

@@ -271,18 +271,29 @@
   .week-chip .mini-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; display: flex; background: var(--border); }
   .week-chip .mini-bar > span { height: 100%; }
 
-  #inviteOverlay, #accountOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55);
+  #inviteOverlay, #accountOverlay, #joinOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55);
     display:flex; align-items:center; justify-content:center; padding:1rem; z-index:50; }
-  #inviteOverlay[hidden], #accountOverlay[hidden] { display:none; }
-  #inviteCard, #accountCard { background:var(--card-bg); color:var(--ink); border-radius:14px;
+  #inviteOverlay[hidden], #accountOverlay[hidden], #joinOverlay[hidden] { display:none; }
+  #inviteCard, #accountCard, #joinCard { background:var(--card-bg); color:var(--ink); border-radius:14px;
     padding:1.5rem; max-width:420px; width:100%; max-height:90vh; overflow-y:auto;
     box-shadow:0 20px 60px rgba(0,0,0,.35); }
-  #inviteCard h2, #accountCard h2 { margin:0 0 .75rem; font-size:1.1rem; }
-  #inviteCard p, #accountCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
-  #accountCard label { display:block; font-size:12px; font-weight:600; margin:.75rem 0 .2rem; }
-  #accountCard input { width:100%; box-sizing:border-box; font:inherit; font-size:14px;
+  #inviteCard h2, #accountCard h2, #joinCard h2 { margin:0 0 .75rem; font-size:1.1rem; }
+  #inviteCard h3 { margin:1.25rem 0 .25rem; font-size:.9rem; }
+  #inviteCard p, #accountCard p, #joinCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
+  #accountCard label, #inviteCard label { display:block; font-size:12px; font-weight:600; margin:.75rem 0 .2rem; }
+  #accountCard input, #inviteCard select { width:100%; box-sizing:border-box; font:inherit; font-size:14px;
     padding:.45rem .6rem; border:1px solid var(--border-strong); border-radius:8px;
     background:var(--bg); color:var(--ink); }
+  .dialog-row { display:flex; gap:.5rem; margin-top:1rem; flex-wrap:wrap; }
+  .dialog-error { color:var(--i3); font-size:12px; }
+  .invite-link { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px;
+    word-break:break-all; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    padding:.5rem .6rem; margin:.75rem 0 0; }
+  .invite-pending { list-style:none; padding:0; margin:.25rem 0 0; font-size:12px; }
+  .invite-pending li { display:flex; justify-content:space-between; align-items:center; gap:.5rem;
+    padding:.4rem 0; border-top:1px solid var(--border); }
+  #teamSelect { font:inherit; font-size:13px; padding:.3rem .5rem; border:1px solid var(--border-strong);
+    border-radius:8px; background:var(--card-bg); color:var(--ink); max-width:14rem; }
   #accountError { color:var(--i3); font-size:12px; margin:.6rem 0 0; }
   #accountRow { display:flex; gap:.5rem; margin-top:1rem; flex-wrap:wrap; }
   #accountGoogle { display:flex; align-items:center; justify-content:center; gap:.55rem;
@@ -485,7 +496,8 @@
         <button data-mode="test" data-i18n="Tests">Tests</button>
       </div>
       <div class="top-meta" id="lastSync" data-i18n="Dernière synchro : —">Dernière synchro : —</div>
-      <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Inviter un athlète">Inviter un athlète</button>
+      <select id="teamSelect" hidden aria-label="Équipe" data-i18n-aria="Équipe"></select>
+      <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Inviter">Inviter</button>
       <button class="nav-btn" id="accountBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Se connecter">Se connecter</button>
       <a id="guideLink" href="guide.html#coach" style="font-size:13px; color:var(--accent); text-decoration:none;" data-i18n="Mode d'emploi">Mode d'emploi</a>
       <button class="nav-btn" id="langBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;">English</button>
@@ -529,15 +541,15 @@
 
 <div id="inviteOverlay" hidden>
   <div id="inviteCard" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
-    <h2 id="inviteTitle" data-i18n="Inviter un athlète">Inviter un athlète</h2>
-    <p data-i18n-html="Dans MoveLoad, l'athlète ouvre &lt;strong&gt;Réglages &amp;gt; Synchronisation &amp;gt; Scanner un QR code&lt;/strong&gt; et vise cette image. Les trois réglages sont remplis d'un coup.">Dans MoveLoad, l'athlète ouvre <strong>Réglages &gt; Synchronisation &gt; Scanner un QR code</strong> et vise cette image. Les trois réglages sont remplis d'un coup.</p>
-    <div id="inviteQR"></div>
-    <p class="invite-warn" data-i18n="Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.">Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.</p>
-    <details>
-      <summary data-i18n="Saisie manuelle">Saisie manuelle</summary>
-      <dl id="inviteFields"></dl>
-    </details>
-    <button class="nav-btn" id="inviteClose" style="width:auto; padding:0.4rem 1rem;" data-i18n="Fermer">Fermer</button>
+    <h2 id="inviteTitle" data-i18n="Inviter dans l'équipe">Inviter dans l'équipe</h2>
+    <div id="inviteBody"></div>
+  </div>
+</div>
+
+<div id="joinOverlay" hidden>
+  <div id="joinCard" role="dialog" aria-modal="true" aria-labelledby="joinTitle">
+    <h2 id="joinTitle" data-i18n="Rejoindre une équipe">Rejoindre une équipe</h2>
+    <div id="joinBody"></div>
   </div>
 </div>
 
@@ -553,14 +565,22 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged, signOut,
            signInWithEmailAndPassword, createUserWithEmailAndPassword,
-           GoogleAuthProvider, signInWithPopup
+           GoogleAuthProvider, signInWithPopup, connectAuthEmulator
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, deleteDoc
+  import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc,
+           writeBatch, serverTimestamp, connectFirestoreEmulator
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
+  // Local testing only: ?emulator on localhost points the page at the Auth and
+  // Firestore emulators of Firestore/emulator. The hostname check is what keeps
+  // the published page from ever being pointed anywhere else.
+  const USE_EMULATOR = ["localhost", "127.0.0.1"].includes(location.hostname)
+    && new URLSearchParams(location.search).has("emulator");
+
   // These aren't secret — Firebase's own security model puts real protection
-  // in Firestore rules, not in hiding the project id/API key. The actual
-  // shared secret is the team code below (read from ?team=, never hardcoded).
+  // in Firestore rules, not in hiding the project id/API key. Until the step 3
+  // rules are published, the team code (read from ?team=, never hardcoded) is
+  // still a shared secret; afterwards a seat in the team is what opens it.
   // `authDomain` was not needed while the only sign-in was anonymous, which is
   // a plain REST call. A popup provider is not: the SDK sends the browser to
   // https://<authDomain>/__/auth/handler, and without it signInWithPopup fails
@@ -650,23 +670,59 @@
     " de son historique": " in their history",
     "% du temps compté": "% of counted time",
     "(automatique)": "(automatic)",
-    "Aucun code d'équipe fourni — ajoute ?team=... à l'URL.": "No team code supplied — add ?team=… to the URL.",
     "Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.": "No time above the reference — or no 45 s reference confirmed for this athlete yet.",
     "Aucune séance depuis %d jours": "No session for %d days",
     "Calendrier": "Calendar",
     "Cardio": "Cardio",
-    "Ce code contient le code d'équipe, qui est la seule protection des données de l'équipe. Ne le publiez pas et ne le laissez pas affiché sur un écran sans surveillance.": "This code contains the team code, which is the only thing protecting the team's data. Do not publish it, and do not leave it on an unattended screen.",
     "Charge cardio": "Cardio load",
     "Charge mécanique": "Mechanical load",
-    "Clé API Web": "Web API key",
-    "Code d'équipe": "Team code",
     "Code d'équipe MoveLoad :": "MoveLoad team code:",
+    "Inviter": "Invite",
+    "Inviter dans l'équipe": "Invite to the team",
+    "Rejoindre une équipe": "Join a team",
+    "Équipe": "Team",
+    "Rôle": "Role",
+    "Entraîneur": "Coach",
+    "Copropriétaire": "Co-owner",
+    "Propriétaire": "Owner",
+    "Fiche athlète": "Athlete profile",
+    "Nouvel athlète, sans fiche": "New athlete, no profile yet",
+    " — a déjà sa place": " — already has a seat",
+    "Si l'athlète synchronise déjà, choisissez sa fiche : ses séances restent les siennes.": "If the athlete already syncs, pick their profile: their sessions stay theirs.",
+    "Un entraîneur voit toute l'équipe et invite des athlètes.": "A coach sees the whole team and invites athletes.",
+    "Un copropriétaire administre l'équipe à égalité avec vous : il invite les entraîneurs et peut retirer n'importe quel membre, vous compris.": "A co-owner runs the team as your equal: they invite coaches and can remove any member, you included.",
+    "Créer l'invitation": "Create the invitation",
+    "L'athlète ouvre MoveLoad, puis Réglages > Rejoindre une équipe, et scanne ce code.": "The athlete opens MoveLoad, then Settings > Join a team, and scans this code.",
+    "Envoyez ce lien à la personne invitée. Elle l'ouvre, se connecte avec son propre compte et retrouve l'équipe.": "Send this link to the person invited. They open it, sign in with their own account, and find the team.",
+    "Copier le lien": "Copy link",
+    "Lien copié": "Link copied",
+    "Valable sept jours, pour une seule personne.": "Valid for seven days, for one person only.",
+    "Jusqu'à la fin de la migration, l'invitation contient encore le code d'équipe : ne la transmettez qu'à la personne invitée.": "Until the migration is complete, the invitation still carries the team code: pass it only to the person invited.",
+    "Nouvelle invitation": "New invitation",
+    "Invitations en attente": "Pending invitations",
+    "Aucune invitation en attente.": "No pending invitations.",
+    "expire le ": "expires ",
+    "Révoquer": "Revoke",
+    "Pour inviter, connectez-vous avec le compte qui a une place d'entraîneur ou de propriétaire dans cette équipe.": "To invite, sign in with the account that holds a coach or owner seat in this team.",
+    "Ce compte n'a pas de place d'entraîneur ou de propriétaire dans cette équipe : il ne peut pas inviter.": "This account holds no coach or owner seat in this team, so it cannot invite.",
+    "Cette invitation vous propose une place dans une équipe MoveLoad. Connectez-vous ou créez un compte pour l'accepter : la place sera attachée à ce compte.": "This invitation offers you a seat in a MoveLoad team. Sign in or create an account to accept it: the seat will belong to that account.",
+    "Vérification de l'invitation…": "Checking the invitation…",
+    "Cette invitation n'existe pas, ou a été révoquée. Demandez-en une nouvelle.": "This invitation does not exist or was revoked. Ask for a new one.",
+    "Cette invitation a déjà été utilisée. Chaque invitation ne sert qu'une fois : demandez-en une nouvelle.": "This invitation has already been used. Each invitation works only once: ask for a new one.",
+    "Ce compte a déjà une place dans cette équipe.": "This account already holds a seat in this team.",
+    "Cette invitation a expiré : elle n'est valable que sept jours. Demandez-en une nouvelle.": "This invitation has expired: it is only valid for seven days. Ask for a new one.",
+    "Cette invitation est destinée à un athlète : elle se scanne dans l'app MoveLoad.": "This invitation is for an athlete: it is scanned in the MoveLoad app.",
+    "Rôle proposé : ": "Role offered: ",
+    "Compte : ": "Account: ",
+    "La place appartiendra à ce compte. Si ce n'est pas le bon, changez de compte avant d'accepter.": "The seat will belong to this account. If it is the wrong one, switch accounts before accepting.",
+    "Rejoindre l'équipe": "Join the team",
+    "Changer de compte": "Switch account",
+    "Aucune équipe ouverte : connectez-vous avec le compte qui a reçu une invitation.": "No team open: sign in with the account that received an invitation.",
     "Comparaison en pourcentage du meilleur de la catégorie, échelle 50 à 100%": "Comparison as a percentage of the best in the category, scale 50 to 100%",
     "Connecté en direct": "Connected live",
     "Connexion…": "Connecting…",
     "Courbe d'accélération de la dernière séance comparée au record personnel, sur les six fenêtres de temps": "Acceleration curve of the last session against the personal record, over the six time windows",
     "Courbe — dernière séance vs record": "Curve — last session vs record",
-    "Dans MoveLoad, l'athlète ouvre <strong>Réglages &gt; Synchronisation &gt; Scanner un QR code</strong> et vise cette image. Les trois réglages sont remplis d'un coup.": "In MoveLoad, the athlete opens <strong>Settings &gt; Sync &gt; Scan a QR code</strong> and points it at this image. All three settings are filled in at once.",
     "Dernière synchro : —": "Last sync: —",
     "Dernière séance": "Last session",
     "Dernière séance : ": "Last session: ",
@@ -676,7 +732,6 @@
     "Explication": "Explanation",
     "Fermer": "Close",
     "ID de projet Firebase": "Firebase project ID",
-    "Inviter un athlète": "Invite an athlete",
     "Mode d'emploi": "User guide",
     "Mois": "Month",
     "MoveLoad Coach — suivi des athlètes": "MoveLoad Coach — athlete tracking",
@@ -687,7 +742,6 @@
     "Records tous temps par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)": "All-time records by window — % of the best in the category (scale 50–100%)",
     "Revenir à": "Back to",
     "Répartition — dernière séance": "Split — last session",
-    "Saisie manuelle": "Manual entry",
     "Semaine": "Week",
     "Seul(e) athlète": "Only athlete in",
     "Suivant": "Next",
@@ -893,49 +947,14 @@
     lastSyncEl.textContent = t("Erreur de synchro : ") + what + " — " + err.message;
   }
 
-  // --- Inviting an athlete -------------------------------------------------
-  // Must match SyncSettings.shareablePayload in SyncKit. Built by hand rather
-  // than with URLSearchParams, which encodes a space as "+"; Swift's
-  // URLComponents reads "+" as a literal plus, so a team code containing a
-  // space would arrive corrupted on the phone.
-  function invitePayload(code) {
-    const q = [["c", code], ["p", firebaseConfig.projectId], ["k", firebaseConfig.apiKey]]
-      .map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&");
-    return "moveload://team?" + q;
-  }
+  // --- Which team this page shows -------------------------------------------
+  // From the URL, then from this browser's memory. An account holding seats
+  // finds its teams by itself; typing a team code is the old way in, kept
+  // until the step 3 rules close it.
+  const pageParams = new URLSearchParams(location.search);
 
-  function showInvite(code) {
-    const payload = invitePayload(code);
-
-    // Generated in the browser, never sent anywhere: the team code is the only
-    // thing guarding this team's data, so handing it to a QR-image web service
-    // would be giving the secret away to render a picture of it.
-    const qr = qrcode(0, "M");
-    qr.addData(payload);
-    qr.make();
-    document.getElementById("inviteQR").innerHTML = qr.createSvgTag({ scalable: true, margin: 0 });
-
-    document.getElementById("inviteFields").innerHTML =
-      [[t("Code d'équipe"), code],
-       ["ID de projet", firebaseConfig.projectId],
-       [t("Clé API Web"), firebaseConfig.apiKey]]
-        .map(([k, v]) => "<dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd>").join("");
-
-    document.getElementById("inviteOverlay").hidden = false;
-  }
-
-  function hideInvite() { document.getElementById("inviteOverlay").hidden = true; }
-
-  document.getElementById("inviteClose").addEventListener("click", hideInvite);
-  document.getElementById("inviteOverlay").addEventListener("click", (e) => {
-    if (e.target.id === "inviteOverlay") hideInvite();
-  });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideInvite(); });
-
-  function resolveTeamCode() {
-    const params = new URLSearchParams(location.search);
-    let code = params.get("team") || localStorage.getItem("moveload_team_code");
-    if (!code) code = prompt(t("Code d'équipe MoveLoad :"));
+  function rememberedTeam() {
+    const code = pageParams.get("team") || localStorage.getItem("moveload_team_code");
     if (code) {
       localStorage.setItem("moveload_team_code", code);
       const url = new URL(location.href);
@@ -945,10 +964,395 @@
     return code;
   }
 
+  /// Shows another team. A reload rather than re-wiring, for the same reason
+  /// as signing out: every listener on the page is keyed on the team.
+  function openTeam(code) {
+    try { localStorage.setItem("moveload_team_code", code); } catch (e) {}
+    const url = new URL(location.href);
+    url.searchParams.set("team", code);
+    url.searchParams.delete("join");
+    url.searchParams.delete("invite");
+    location.replace(url.toString());
+  }
+
+  /// The old way in, until the step 3 rules close it: a team code typed by hand.
+  function askForTeam() {
+    const code = prompt(t("Code d'équipe MoveLoad :"));
+    if (code) { openTeam(code); return; }
+    lastSyncEl.textContent = t("Aucune équipe ouverte : connectez-vous avec le compte qui a reçu une invitation.");
+  }
+
+  /// A coach's or co-owner's invitation link: ?join=<team>&invite=<id>.
+  const joinRequest = pageParams.get("join") && pageParams.get("invite")
+    ? { teamId: pageParams.get("join"), inviteId: pageParams.get("invite") }
+    : null;
+
   translateStaticShell();
   let firestore = null;
-  const teamCode = resolveTeamCode();
-  document.getElementById("inviteBtn").addEventListener("click", () => showInvite(teamCode));
+  const teamCode = joinRequest ? null : rememberedTeam();
+
+  // --- Seats -----------------------------------------------------------------
+  // A seat is teams/{team}/memberships/{uid}, and it is what the rules believe.
+  // users/{uid}.teamIds is only an index to find seats by: they cannot be
+  // queried across teams.
+
+  const INVITE_DAYS = 7;
+  let signedInUser = null;
+  let currentSeat = null;
+
+  function canInvite(seat) { return !!seat && (seat.role === "coach" || seat.role === "owner"); }
+
+  function roleName(role) {
+    return t({ athlete: "Athlète", coach: "Entraîneur", owner: "Copropriétaire" }[role] || role);
+  }
+
+  /// The seats this account holds, among the teams its index names and the
+  /// team this browser last showed. Each seat is read, because the index can
+  /// name a team the account has since left.
+  async function mySeats(db, user) {
+    const indexRef = doc(db, "users", user.uid);
+    let indexed = [];
+    try {
+      const snap = await getDoc(indexRef);
+      if (snap.exists() && Array.isArray(snap.data().teamIds)) indexed = snap.data().teamIds;
+    } catch (e) { /* no index yet */ }
+
+    const candidates = teamCode && !indexed.includes(teamCode) ? indexed.concat([teamCode]) : indexed;
+    const seats = [];
+    for (const teamId of candidates) {
+      try {
+        const snap = await getDoc(doc(db, "teams", teamId, "memberships", user.uid));
+        if (snap.exists()) seats.push({ teamId, ...snap.data() });
+      } catch (e) { /* not a team this account may look at */ }
+    }
+
+    // A seat written by hand in the console has no index entry: add it, so the
+    // page finds that team next time without a remembered code.
+    const missing = seats.map(s => s.teamId).filter(id => !indexed.includes(id));
+    if (missing.length) {
+      setDoc(indexRef, { teamIds: indexed.concat(missing) }, { merge: true })
+        .catch(err => listenerFailed(t("Compte"), err));
+    }
+    return seats;
+  }
+
+  async function addToTeamIndex(db, user, teamId) {
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    const known = snap.exists() && Array.isArray(snap.data().teamIds) ? snap.data().teamIds : [];
+    if (!known.includes(teamId)) await setDoc(ref, { teamIds: known.concat([teamId]) }, { merge: true });
+  }
+
+  /// One entry per team this account coaches, shown only when there is a choice.
+  async function renderTeamPicker(db, seats) {
+    const coached = seats.filter(canInvite);
+    const select = document.getElementById("teamSelect");
+    if (coached.length < 2) return;
+    const names = await Promise.all(coached.map(async s => {
+      try {
+        const snap = await getDoc(doc(db, "teams", s.teamId));
+        if (snap.exists() && snap.data().name) return snap.data().name;
+      } catch (e) {}
+      return s.teamId.slice(0, 8) + "…";
+    }));
+    select.innerHTML = coached.map((s, i) =>
+      '<option value="' + esc(s.teamId) + '"' + (s.teamId === teamCode ? " selected" : "") + ">" +
+      esc(names[i]) + "</option>").join("");
+    select.hidden = false;
+    select.addEventListener("change", () => openTeam(select.value));
+  }
+
+  // --- Inviting ----------------------------------------------------------------
+  // An invitation is teams/{team}/invites/{random id}: one seat, one role, one
+  // week. Athletes scan theirs in the app; coaches and co-owners open a link.
+
+  let inviteState = null;
+
+  /// Must match TeamInvitation.payload in SyncKit. Built by hand rather than
+  /// with URLSearchParams, which encodes a space as "+"; Swift's URLComponents
+  /// reads "+" as a literal plus, so a team id containing a space would arrive
+  /// corrupted on the phone.
+  function joinPayload(teamId, inviteId) {
+    const q = [["t", teamId], ["i", inviteId], ["p", firebaseConfig.projectId], ["k", firebaseConfig.apiKey]]
+      .map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&");
+    return "moveload://join?" + q;
+  }
+
+  function joinLink(teamId, inviteId) {
+    const url = new URL(location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("join", teamId);
+    url.searchParams.set("invite", inviteId);
+    if (USE_EMULATOR) url.searchParams.set("emulator", "");
+    return url.toString();
+  }
+
+  function inviteExpiry(invite) {
+    const created = invite.createdAt && invite.createdAt.toMillis ? invite.createdAt.toMillis() : null;
+    return created === null ? null : new Date(created + INVITE_DAYS * 24 * 3600 * 1000);
+  }
+
+  async function showInvite() {
+    inviteState = { role: "athlete", athleteId: "", created: null, busy: false, error: null,
+                    pending: [], seatedAthletes: new Set() };
+    document.getElementById("inviteBody").innerHTML = "";
+    document.getElementById("inviteOverlay").hidden = false;
+    await refreshInvites();
+  }
+
+  function hideInvite() { document.getElementById("inviteOverlay").hidden = true; }
+
+  /// Pending invitations, and which athletes already hold a seat. Read when
+  /// needed rather than listened to: only this dialog changes them.
+  async function refreshInvites() {
+    const s = inviteState;
+    try {
+      const [invites, seats] = await Promise.all([
+        getDocs(collection(firestore, "teams", teamCode, "invites")),
+        getDocs(collection(firestore, "teams", teamCode, "memberships"))
+      ]);
+      const now = Date.now();
+      s.pending = invites.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(inv => !inv.usedBy && (!inviteExpiry(inv) || inviteExpiry(inv).getTime() > now))
+        .sort((a, b) => (inviteExpiry(b)?.getTime() ?? 0) - (inviteExpiry(a)?.getTime() ?? 0));
+      s.seatedAthletes = new Set(seats.docs.map(d => d.data().athleteId).filter(Boolean));
+    } catch (err) {
+      s.error = err.message;
+    }
+    renderInvite();
+  }
+
+  function athleteName(id) {
+    const a = athletes.find(x => x.id === id);
+    return a ? (a.name || id) : id;
+  }
+
+  function renderInvite() {
+    const s = inviteState;
+    const owner = currentSeat.role === "owner";
+    const button = (id, label, disabled) =>
+      '<button class="nav-btn" id="' + id + '" style="width:auto; padding:0.4rem 1rem;"' +
+      (disabled ? " disabled" : "") + ">" + esc(label) + "</button>";
+    let html = "";
+
+    if (!s.created) {
+      const roles = owner ? ["athlete", "coach", "owner"] : ["athlete"];
+      html += '<label for="inviteRole">' + esc(t("Rôle")) + "</label>" +
+        '<select id="inviteRole">' + roles.map(r =>
+          '<option value="' + r + '"' + (r === s.role ? " selected" : "") + ">" + esc(roleName(r)) + "</option>"
+        ).join("") + "</select>";
+      if (s.role === "athlete") {
+        const roster = athletes.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", LOCALE));
+        html += '<label for="inviteAthlete">' + esc(t("Fiche athlète")) + "</label>" +
+          '<select id="inviteAthlete"><option value="">' + esc(t("Nouvel athlète, sans fiche")) + "</option>" +
+          roster.map(a => '<option value="' + esc(a.id) + '"' + (a.id === s.athleteId ? " selected" : "") + ">" +
+            esc(a.name || a.id) + (s.seatedAthletes.has(a.id) ? esc(t(" — a déjà sa place")) : "") + "</option>"
+          ).join("") + "</select>" +
+          "<p>" + esc(t("Si l'athlète synchronise déjà, choisissez sa fiche : ses séances restent les siennes.")) + "</p>";
+      } else {
+        html += "<p>" + esc(s.role === "owner"
+          ? t("Un copropriétaire administre l'équipe à égalité avec vous : il invite les entraîneurs et peut retirer n'importe quel membre, vous compris.")
+          : t("Un entraîneur voit toute l'équipe et invite des athlètes.")) + "</p>";
+      }
+      html += '<div class="dialog-row">' + button("inviteCreate", t("Créer l'invitation"), s.busy) +
+        button("inviteClose", t("Fermer")) + "</div>";
+    } else {
+      const c = s.created;
+      html += "<p><strong>" + esc(roleName(c.role) + (c.athleteId ? " — " + athleteName(c.athleteId) : "")) + "</strong></p>";
+      if (c.role === "athlete") {
+        html += "<p>" + esc(t("L'athlète ouvre MoveLoad, puis Réglages > Rejoindre une équipe, et scanne ce code.")) + "</p>" +
+          '<div id="inviteQR"></div>';
+      } else {
+        html += "<p>" + esc(t("Envoyez ce lien à la personne invitée. Elle l'ouvre, se connecte avec son propre compte et retrouve l'équipe.")) + "</p>" +
+          '<div class="invite-link">' + esc(joinLink(teamCode, c.id)) + "</div>";
+      }
+      html += '<p class="chart-note">' + esc(t("Valable sept jours, pour une seule personne.")) + "</p>" +
+        '<p class="invite-warn">' + esc(t("Jusqu'à la fin de la migration, l'invitation contient encore le code d'équipe : ne la transmettez qu'à la personne invitée.")) + "</p>" +
+        '<div class="dialog-row">' + (c.role === "athlete" ? "" : button("inviteCopy", t("Copier le lien"))) +
+        button("inviteAnother", t("Nouvelle invitation")) + button("inviteClose", t("Fermer")) + "</div>";
+    }
+
+    html += "<h3>" + esc(t("Invitations en attente")) + "</h3>";
+    if (s.error) {
+      html += '<p class="dialog-error">' + esc(s.error) + "</p>";
+    } else if (!s.pending.length) {
+      html += '<p class="chart-note">' + esc(t("Aucune invitation en attente.")) + "</p>";
+    } else {
+      html += '<ul class="invite-pending">' + s.pending.map(inv => {
+        const expiry = inviteExpiry(inv);
+        // The rules let a coach revoke athlete invitations only.
+        const revocable = owner || inv.role === "athlete";
+        return "<li><span>" + esc(roleName(inv.role) + (inv.athleteId ? " — " + athleteName(inv.athleteId) : "")) +
+          (expiry ? '<br><span class="chart-note">' + esc(t("expire le ") +
+            expiry.toLocaleDateString(LOCALE, { day: "numeric", month: "long" })) + "</span>" : "") +
+          "</span>" + (revocable ? '<button class="link-btn" data-revoke="' + esc(inv.id) + '">' + esc(t("Révoquer")) + "</button>" : "") +
+          "</li>";
+      }).join("") + "</ul>";
+    }
+
+    const body = document.getElementById("inviteBody");
+    body.innerHTML = html;
+    const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); };
+    const roleSelect = document.getElementById("inviteRole");
+    if (roleSelect) roleSelect.addEventListener("change", () => { s.role = roleSelect.value; s.athleteId = ""; renderInvite(); });
+    const athleteSelect = document.getElementById("inviteAthlete");
+    if (athleteSelect) athleteSelect.addEventListener("change", () => { s.athleteId = athleteSelect.value; });
+    on("inviteCreate", createInvite);
+    on("inviteClose", hideInvite);
+    // The next invitation starts blank: carrying the record over would hand the
+    // same athlete's profile to whoever receives it.
+    on("inviteAnother", () => { s.created = null; s.athleteId = ""; renderInvite(); });
+    on("inviteCopy", async () => {
+      try {
+        await navigator.clipboard.writeText(joinLink(teamCode, s.created.id));
+        document.getElementById("inviteCopy").textContent = t("Lien copié");
+      } catch (e) { /* the link stays on screen to copy by hand */ }
+    });
+    body.querySelectorAll("[data-revoke]").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        await deleteDoc(doc(firestore, "teams", teamCode, "invites", b.dataset.revoke));
+        if (s.created && s.created.id === b.dataset.revoke) s.created = null;
+      } catch (err) { s.error = err.message; }
+      await refreshInvites();
+    }));
+
+    if (s.created && s.created.role === "athlete") {
+      // Generated in the browser, never sent anywhere: until the step 3 rules
+      // are published, the payload still carries the team code.
+      const qr = qrcode(0, "M");
+      qr.addData(joinPayload(teamCode, s.created.id));
+      qr.make();
+      document.getElementById("inviteQR").innerHTML = qr.createSvgTag({ scalable: true, margin: 0 });
+    }
+  }
+
+  async function createInvite() {
+    const s = inviteState;
+    s.busy = true;
+    s.error = null;
+    renderInvite();
+    try {
+      const ref = doc(collection(firestore, "teams", teamCode, "invites"));
+      const data = { role: s.role, createdBy: signedInUser.uid, createdAt: serverTimestamp() };
+      // Naming the record is what hands it over: without it, the athlete's
+      // phone could not take back a record its old anonymous account wrote.
+      if (s.role === "athlete" && s.athleteId) data.athleteId = s.athleteId;
+      await setDoc(ref, data);
+      s.created = { id: ref.id, role: s.role, athleteId: data.athleteId || "" };
+    } catch (err) {
+      s.error = err.message;
+    }
+    s.busy = false;
+    await refreshInvites();
+  }
+
+  document.getElementById("inviteOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "inviteOverlay") hideInvite();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideInvite(); });
+
+  document.getElementById("inviteBtn").addEventListener("click", () => {
+    if (canInvite(currentSeat)) { showInvite(); return; }
+    showAccount(signedInUser && !signedInUser.isAnonymous
+      ? t("Ce compte n'a pas de place d'entraîneur ou de propriétaire dans cette équipe : il ne peut pas inviter.")
+      : t("Pour inviter, connectez-vous avec le compte qui a une place d'entraîneur ou de propriétaire dans cette équipe."));
+  });
+
+  // --- Joining from a link -------------------------------------------------------
+
+  function renderJoin(html) {
+    document.getElementById("joinBody").innerHTML = html;
+    document.getElementById("joinOverlay").hidden = false;
+  }
+
+  function joinFailed(message) {
+    renderJoin("<p>" + esc(message) + "</p>" +
+      '<div class="dialog-row"><button class="nav-btn" id="joinDismiss" style="width:auto; padding:0.4rem 1rem;">' +
+      esc(t("Fermer")) + "</button></div>");
+    document.getElementById("joinDismiss").addEventListener("click", () => {
+      const url = new URL(location.href);
+      url.searchParams.delete("join");
+      url.searchParams.delete("invite");
+      location.replace(url.toString());
+    });
+  }
+
+  /// Opened by the person invited, who may not be signed in yet — or signed in
+  /// with another of their accounts, which is why the account taking the seat
+  /// is named before anything is written.
+  async function showJoin(db, user) {
+    if (!user || user.isAnonymous) {
+      renderJoin("<p>" + esc(t("Cette invitation vous propose une place dans une équipe MoveLoad. Connectez-vous ou créez un compte pour l'accepter : la place sera attachée à ce compte.")) + "</p>" +
+        '<div class="dialog-row"><button class="nav-btn" id="joinSignIn" style="width:auto; padding:0.4rem 1rem;">' +
+        esc(t("Se connecter ou créer un compte")) + "</button></div>");
+      document.getElementById("joinSignIn").addEventListener("click", () => showAccount());
+      return;
+    }
+
+    renderJoin("<p>" + esc(t("Vérification de l'invitation…")) + "</p>");
+    const { teamId, inviteId } = joinRequest;
+    const inviteRef = doc(db, "teams", teamId, "invites", inviteId);
+    const seatRef = doc(db, "teams", teamId, "memberships", user.uid);
+    let invite, seat;
+    try {
+      const [inviteSnap, seatSnap] = await Promise.all([getDoc(inviteRef), getDoc(seatRef)]);
+      invite = inviteSnap.exists() ? inviteSnap.data() : null;
+      seat = seatSnap.exists() ? seatSnap.data() : null;
+    } catch (err) {
+      joinFailed(err.message);
+      return;
+    }
+
+    if (!invite) return joinFailed(t("Cette invitation n'existe pas, ou a été révoquée. Demandez-en une nouvelle."));
+    if (invite.usedBy) {
+      // Accepted already by this very account: the link opened a second time.
+      if (invite.usedBy === user.uid && seat) return openTeam(teamId);
+      return joinFailed(t("Cette invitation a déjà été utilisée. Chaque invitation ne sert qu'une fois : demandez-en une nouvelle."));
+    }
+    // Checked before the invitation is consumed: a seat never changes role, so
+    // the batch would be refused and the invitation wasted.
+    if (seat) return joinFailed(t("Ce compte a déjà une place dans cette équipe."));
+    const expiry = inviteExpiry(invite);
+    if (expiry && expiry.getTime() < Date.now()) {
+      return joinFailed(t("Cette invitation a expiré : elle n'est valable que sept jours. Demandez-en une nouvelle."));
+    }
+    if (invite.role === "athlete") return joinFailed(t("Cette invitation est destinée à un athlète : elle se scanne dans l'app MoveLoad."));
+
+    renderJoin(
+      "<p>" + esc(t("Rôle proposé : ")) + "<strong>" + esc(roleName(invite.role)) + "</strong></p>" +
+      "<p>" + esc(t("Compte : ")) + "<strong>" + esc(user.email || "") + "</strong></p>" +
+      '<p class="chart-note">' + esc(t("La place appartiendra à ce compte. Si ce n'est pas le bon, changez de compte avant d'accepter.")) + "</p>" +
+      '<p class="dialog-error" id="joinError" hidden></p>' +
+      '<div class="dialog-row">' +
+        '<button class="nav-btn" id="joinAccept" style="width:auto; padding:0.4rem 1rem;">' + esc(t("Rejoindre l'équipe")) + "</button>" +
+        '<button class="nav-btn" id="joinSwitch" style="width:auto; padding:0.4rem 1rem;">' + esc(t("Changer de compte")) + "</button>" +
+      "</div>");
+    document.getElementById("joinSwitch").addEventListener("click", async () => {
+      await signOut(authInstance);
+      location.reload();
+    });
+    document.getElementById("joinAccept").addEventListener("click", async (e) => {
+      e.target.disabled = true;
+      try {
+        // One batch: the rules accept the seat only with this invitation
+        // consumed by it, and the invitation only consumed by that seat.
+        const batch = writeBatch(db);
+        batch.set(seatRef, { role: invite.role, via: inviteId });
+        batch.update(inviteRef, { usedBy: user.uid, usedAt: serverTimestamp() });
+        await batch.commit();
+        await addToTeamIndex(db, user, teamId);
+        openTeam(teamId);
+      } catch (err) {
+        const errorEl = document.getElementById("joinError");
+        errorEl.textContent = err.message;
+        errorEl.hidden = false;
+        e.target.disabled = false;
+      }
+    });
+  }
   let athletes = [];
   const activeAthletes = new Set();
   const knownAthleteIds = new Set();
@@ -1343,29 +1747,6 @@
     return known ? t(known) : (err && err.message) || String(err);
   }
 
-  /// The coach's own membership documents.
-  ///
-  /// Not what authorises anything today — the rules still only ask for a
-  /// signed-in caller who knows the team id, exactly as before the migration.
-  /// This is the record that step 3 turns into real per-team access, and
-  /// writing it now means the data is already there when it does. Written for
-  /// anonymous accounts too: an anonymous uid is a uid, which is what keeps
-  /// the account optional.
-  async function ensureMembership(db, user) {
-    const userRef = doc(db, "users", user.uid);
-    // Read before write: a coach can run several squads, and this page knows
-    // only the one in the URL.
-    let teamIds = [];
-    try {
-      const snap = await getDoc(userRef);
-      if (snap.exists() && Array.isArray(snap.data().teamIds)) teamIds = snap.data().teamIds;
-    } catch (e) { /* first run, or a read the rules refuse — the write decides */ }
-    if (!teamIds.includes(teamCode)) teamIds = teamIds.concat([teamCode]);
-
-    await setDoc(userRef, { teamIds }, { merge: true });
-    await setDoc(doc(db, "teams", teamCode, "members", user.uid), { role: "coach" }, { merge: true });
-  }
-
   /// One-off carry-over of the coach's fatigue thresholds from the
   /// pre-migration path.
   ///
@@ -1473,54 +1854,78 @@
         }
       });
     }
+    if (accountNotice) {
+      body.insertAdjacentHTML("afterbegin", '<p class="invite-warn">' + esc(accountNotice) + "</p>");
+    }
     document.getElementById("accountClose").addEventListener("click", hideAccount);
   }
 
-  function showAccount() {
+  /// Why the dialog opened, when something other than the account button
+  /// opened it — the invite button, for an account without a coaching seat.
+  let accountNotice = null;
+
+  function showAccount(notice) {
     accountMode = "signIn";
+    accountNotice = notice || null;
     renderAccountDialog();
     document.getElementById("accountOverlay").hidden = false;
   }
   function hideAccount() { document.getElementById("accountOverlay").hidden = true; }
 
-  document.getElementById("accountBtn").addEventListener("click", showAccount);
+  document.getElementById("accountBtn").addEventListener("click", () => showAccount());
   document.getElementById("accountOverlay").addEventListener("click", (e) => {
     if (e.target.id === "accountOverlay") hideAccount();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideAccount(); });
 
-  if (!teamCode) {
-    lastSyncEl.textContent = t("Aucun code d'équipe fourni — ajoute ?team=... à l'URL.");
-  } else {
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    authInstance = auth;
-    firestore = getFirestore(app);
-    const db = firestore;
-    lastSyncEl.textContent = t("Connexion…");
-
-    let listening = false;
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        // Nobody signed in — including the moment just after a sign-out. Fall
-        // back to the anonymous session so the dashboard never goes blank.
-        signInAnonymously(auth).catch(err => {
-          lastSyncEl.textContent = t("Erreur de connexion : ") + err.message;
-        });
-        return;
-      }
-      renderAccountButton(user);
-      // Opened once: the listeners are keyed by team, not by identity, so a
-      // sign-in on top of an anonymous session does not need them restarted.
-      if (!listening) {
-        listening = true;
-        startListening(db);
-        // Recorded, not awaited: the rules no longer gate reads on it, so a
-        // dashboard that can be shown should be shown even if this fails.
-        ensureMembership(db, user).catch(err => listenerFailed(t("Compte"), err));
-      }
-    });
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  authInstance = auth;
+  firestore = getFirestore(app);
+  const db = firestore;
+  if (USE_EMULATOR) {
+    connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
   }
+  lastSyncEl.textContent = t("Connexion…");
+
+  let started = false;
+  onAuthStateChanged(auth, async user => {
+    signedInUser = user;
+    renderAccountButton(user);
+    // Opened once: the listeners are keyed by team, not by identity, so a
+    // sign-in on top of an anonymous session does not need them restarted.
+    if (started) return;
+
+    if (joinRequest) {
+      // No anonymous session for someone arriving to join: the seat needs a
+      // real account, and signing in reloads the page onto this same link.
+      if (user && !user.isAnonymous) started = true;
+      showJoin(db, user);
+      return;
+    }
+    if (!user) {
+      if (!teamCode) { askForTeam(); return; }
+      // Nobody signed in — including the moment just after a sign-out. Fall
+      // back to the anonymous session so the dashboard never goes blank.
+      signInAnonymously(auth).catch(err => {
+        lastSyncEl.textContent = t("Erreur de connexion : ") + err.message;
+      });
+      return;
+    }
+
+    started = true;
+    const seats = user.isAnonymous ? [] : await mySeats(db, user);
+    if (!teamCode) {
+      const first = seats.find(canInvite) || seats[0];
+      if (first) { openTeam(first.teamId); return; }
+      askForTeam();
+      return;
+    }
+    currentSeat = seats.find(s => s.teamId === teamCode) || null;
+    renderTeamPicker(db, seats);
+    startListening(db);
+  });
 
   function fmtMinSec(sec) {
     const m = Math.floor(sec / 60), s = Math.round(sec % 60);
