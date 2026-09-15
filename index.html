@@ -571,7 +571,7 @@
 <script src="vendor-qrcode.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged, signOut,
+  import { getAuth, onAuthStateChanged, signOut,
            signInWithEmailAndPassword, createUserWithEmailAndPassword,
            GoogleAuthProvider, signInWithPopup, connectAuthEmulator
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
@@ -586,9 +586,9 @@
     && new URLSearchParams(location.search).has("emulator");
 
   // These aren't secret — Firebase's own security model puts real protection
-  // in Firestore rules, not in hiding the project id/API key. Until the step 3
-  // rules are published, the team code (read from ?team=, never hardcoded) is
-  // still a shared secret; afterwards a seat in the team is what opens it.
+  // in Firestore rules, not in hiding the project id/API key. The team id in
+  // ?team= is no secret either since phase 03: a seat in the team opens it,
+  // and without one the id reads nothing.
   // `authDomain` was not needed while the only sign-in was anonymous, which is
   // a plain REST call. A popup provider is not: the SDK sends the browser to
   // https://<authDomain>/__/auth/handler, and without it signInWithPopup fails
@@ -684,8 +684,7 @@
     "Cardio": "Cardio",
     "Charge cardio": "Cardio load",
     "Charge mécanique": "Mechanical load",
-    "Code d'équipe MoveLoad :": "MoveLoad team code:",
-    "Inviter": "Invite",
+        "Inviter": "Invite",
     "Inviter dans l'équipe": "Invite to the team",
     "Rejoindre une équipe": "Join a team",
     "Équipe": "Team",
@@ -705,8 +704,7 @@
     "Copier le lien": "Copy link",
     "Lien copié": "Link copied",
     "Valable sept jours, pour une seule personne.": "Valid for seven days, for one person only.",
-    "Jusqu'à la fin de la migration, l'invitation contient encore le code d'équipe : ne la transmettez qu'à la personne invitée.": "Until the migration is complete, the invitation still carries the team code: pass it only to the person invited.",
-    "Nouvelle invitation": "New invitation",
+        "Nouvelle invitation": "New invitation",
     "Invitations en attente": "Pending invitations",
     "Aucune invitation en attente.": "No pending invitations.",
     "expire le ": "expires ",
@@ -899,8 +897,10 @@
     "Créer le compte": "Create account",
     "Adresse e-mail": "E-mail address",
     "Mot de passe": "Password",
-    "Se déconnecter ne retire rien à l'équipe : les données restent, et le tableau de bord reste consultable.": "Signing out takes nothing away from the team: the data stays and the dashboard is still readable.",
-    "Un compte vous identifie sur n'importe quel ordinateur. Sans compte, le tableau de bord fonctionne, mais ce navigateur est le seul à vous reconnaître.": "An account identifies you on any computer. Without one the dashboard still works, but this browser is the only thing that recognises you.",
+    "Se déconnecter ne retire rien à l'équipe : les données et votre place restent.": "Signing out takes nothing away from the team: the data and your seat stay.",
+    "Le tableau de bord montre les équipes où votre compte a une place. Connectez-vous avec le compte qui a reçu l'invitation, ou ouvrez le lien d'invitation.": "The dashboard shows the teams where your account holds a seat. Sign in with the account that received the invitation, or open the invitation link.",
+    "Connectez-vous pour voir vos équipes.": "Sign in to see your teams.",
+    "Ce compte a seulement une place d'athlète : le tableau de bord est réservé aux entraîneurs et aux propriétaires.": "This account only holds an athlete seat: the dashboard is for coaches and owners.",
     "Cette adresse a déjà un compte. Utilisez « Se connecter ».": "This address already has an account. Use \u201cSign in\u201d.",
     "Cette adresse e-mail n'est pas valide.": "This e-mail address is not valid.",
     "Le mot de passe doit faire au moins 6 caractères.": "The password must be at least 6 characters.",
@@ -956,9 +956,8 @@
   }
 
   // --- Which team this page shows -------------------------------------------
-  // From the URL, then from this browser's memory. An account holding seats
-  // finds its teams by itself; typing a team code is the old way in, kept
-  // until the step 3 rules close it.
+  // From the URL, then from this browser's memory, and only among the teams
+  // the signed-in account coaches: the rules open nothing else.
   const pageParams = new URLSearchParams(location.search);
 
   function rememberedTeam() {
@@ -983,12 +982,6 @@
     location.replace(url.toString());
   }
 
-  /// The old way in, until the step 3 rules close it: a team code typed by hand.
-  function askForTeam() {
-    const code = prompt(t("Code d'équipe MoveLoad :"));
-    if (code) { openTeam(code); return; }
-    lastSyncEl.textContent = t("Aucune équipe ouverte : connectez-vous avec le compte qui a reçu une invitation.");
-  }
 
   /// A coach's or co-owner's invitation link: ?join=<team>&invite=<id>.
   const joinRequest = pageParams.get("join") && pageParams.get("invite")
@@ -1177,7 +1170,6 @@
           '<div class="invite-link">' + esc(joinLink(teamCode, c.id)) + "</div>";
       }
       html += '<p class="chart-note">' + esc(t("Valable sept jours, pour une seule personne.")) + "</p>" +
-        '<p class="invite-warn">' + esc(t("Jusqu'à la fin de la migration, l'invitation contient encore le code d'équipe : ne la transmettez qu'à la personne invitée.")) + "</p>" +
         '<div class="dialog-row">' + (c.role === "athlete" ? "" : button("inviteCopy", t("Copier le lien"))) +
         button("inviteAnother", t("Nouvelle invitation")) + button("inviteClose", t("Fermer")) + "</div>";
     }
@@ -1228,8 +1220,8 @@
     }));
 
     if (s.created && s.created.role === "athlete") {
-      // Generated in the browser, never sent anywhere: until the step 3 rules
-      // are published, the payload still carries the team code.
+      // Generated in the browser, never sent anywhere: the invitation id in
+      // it is a bearer token for one seat until it is used or expires.
       const qr = qrcode(0, "M");
       qr.addData(joinPayload(teamCode, s.created.id));
       qr.make();
@@ -1784,7 +1776,7 @@
     if (user && !user.isAnonymous) {
       body.innerHTML =
         "<p>" + t("Connecté en tant que") + " <strong>" + esc(user.email || "") + "</strong></p>" +
-        "<p>" + t("Se déconnecter ne retire rien à l'équipe : les données restent, et le tableau de bord reste consultable.") + "</p>" +
+        "<p>" + t("Se déconnecter ne retire rien à l'équipe : les données et votre place restent.") + "</p>" +
         '<div id="accountRow">' +
           '<button class="nav-btn" id="accountSignOut" style="width:auto; padding:0.4rem 1rem;">' + esc(t("Se déconnecter")) + "</button>" +
           '<button class="nav-btn" id="accountClose" style="width:auto; padding:0.4rem 1rem;">' + esc(t("Fermer")) + "</button>" +
@@ -1803,7 +1795,7 @@
           '<button data-mode="signIn"' + (creating ? "" : ' class="active"') + ">" + esc(t("Se connecter")) + "</button>" +
           '<button data-mode="create"' + (creating ? ' class="active"' : "") + ">" + esc(t("Créer un compte")) + "</button>" +
         "</div>" +
-        "<p>" + t("Un compte vous identifie sur n'importe quel ordinateur. Sans compte, le tableau de bord fonctionne, mais ce navigateur est le seul à vous reconnaître.") + "</p>" +
+        "<p>" + t("Le tableau de bord montre les équipes où votre compte a une place. Connectez-vous avec le compte qui a reçu l'invitation, ou ouvrez le lien d'invitation.") + "</p>" +
         // Google first: on the machine a coach actually uses, it is one click
         // and no password to remember. The e-mail form stays for everyone else.
         '<button id="accountGoogle">' + GOOGLE_MARK + "<span>" + esc(t("Continuer avec Google")) + "</span></button>" +
@@ -1916,25 +1908,27 @@
       showJoin(db, user);
       return;
     }
-    if (!user) {
-      if (!teamCode) { askForTeam(); return; }
-      // Nobody signed in — including the moment just after a sign-out. Fall
-      // back to the anonymous session so the dashboard never goes blank.
-      signInAnonymously(auth).catch(err => {
-        lastSyncEl.textContent = t("Erreur de connexion : ") + err.message;
-      });
+    if (!user || user.isAnonymous) {
+      // Since phase 03 a session without a seat reads nothing, so there is no
+      // anonymous fallback any more: an empty page would only look broken.
+      lastSyncEl.textContent = t("Connectez-vous pour voir vos équipes.");
+      showAccount();
       return;
     }
 
     started = true;
-    const seats = user.isAnonymous ? [] : await mySeats(db, user);
-    if (!teamCode) {
-      const first = seats.find(canInvite) || seats[0];
-      if (first) { openTeam(first.teamId); return; }
-      askForTeam();
+    const seats = await mySeats(db, user);
+    const coached = seats.filter(canInvite);
+    currentSeat = coached.find(s => s.teamId === teamCode) || null;
+    if (!currentSeat) {
+      // No team remembered, or one this account does not coach — another
+      // account's, or a team it has left: open the first it does coach.
+      if (coached.length) { openTeam(coached[0].teamId); return; }
+      lastSyncEl.textContent = seats.length
+        ? t("Ce compte a seulement une place d'athlète : le tableau de bord est réservé aux entraîneurs et aux propriétaires.")
+        : t("Aucune équipe ouverte : connectez-vous avec le compte qui a reçu une invitation.");
       return;
     }
-    currentSeat = seats.find(s => s.teamId === teamCode) || null;
     renderTeamPicker(db, seats);
     startListening(db);
   });
