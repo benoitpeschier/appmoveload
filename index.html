@@ -572,7 +572,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut,
-           signInWithEmailAndPassword, createUserWithEmailAndPassword,
+           signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail,
            GoogleAuthProvider, signInWithPopup, connectAuthEmulator
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
   import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc,
@@ -900,6 +900,9 @@
     "Se déconnecter ne retire rien à l'équipe : les données et votre place restent.": "Signing out takes nothing away from the team: the data and your seat stay.",
     "Le tableau de bord montre les équipes où votre compte a une place. Connectez-vous avec le compte qui a reçu l'invitation, ou ouvrez le lien d'invitation.": "The dashboard shows the teams where your account holds a seat. Sign in with the account that received the invitation, or open the invitation link.",
     "Connectez-vous pour voir vos équipes.": "Sign in to see your teams.",
+    "Mot de passe oublié ?": "Forgot password?",
+    "Saisissez d'abord l'adresse du compte.": "Enter the account's address first.",
+    "Si un compte existe pour cette adresse, un e-mail vient d'y être envoyé pour choisir un nouveau mot de passe. Pensez à regarder dans les indésirables.": "If an account exists for this address, an e-mail to choose a new password has just been sent to it. Check your spam folder too.",
     "Ce compte a seulement une place d'athlète : le tableau de bord est réservé aux entraîneurs et aux propriétaires.": "This account only holds an athlete seat: the dashboard is for coaches and owners.",
     "Cette adresse a déjà un compte. Utilisez « Se connecter ».": "This address already has an account. Use \u201cSign in\u201d.",
     "Cette adresse e-mail n'est pas valide.": "This e-mail address is not valid.",
@@ -1804,7 +1807,10 @@
         '<input id="accountEmail" type="email" autocomplete="username" spellcheck="false">' +
         '<label for="accountPassword">' + esc(t("Mot de passe")) + "</label>" +
         '<input id="accountPassword" type="password" autocomplete="' + (creating ? "new-password" : "current-password") + '">' +
+        (creating ? "" : '<p style="margin:.45rem 0 0"><button class="link-btn" id="accountReset" type="button">' +
+          esc(t("Mot de passe oublié ?")) + "</button></p>") +
         '<p id="accountError" hidden></p>' +
+        '<p id="accountInfo" class="chart-note" hidden></p>' +
         '<div id="accountRow">' +
           '<button class="nav-btn" id="accountSubmit" style="width:auto; padding:0.4rem 1rem;">' +
             esc(creating ? t("Créer le compte") : t("Se connecter")) + "</button>" +
@@ -1842,6 +1848,40 @@
       submit.addEventListener("click", attempt);
       document.getElementById("accountPassword")
         .addEventListener("keydown", e => { if (e.key === "Enter") attempt(); });
+
+      // Firebase e-mails the link and hosts the page where the new password
+      // is chosen: no server of ours involved.
+      const reset = document.getElementById("accountReset");
+      if (reset) reset.addEventListener("click", async () => {
+        const email = document.getElementById("accountEmail").value.trim().toLowerCase();
+        const infoEl = document.getElementById("accountInfo");
+        const sent = t("Si un compte existe pour cette adresse, un e-mail vient d'y être envoyé pour choisir un nouveau mot de passe. Pensez à regarder dans les indésirables.");
+        errorEl.hidden = true;
+        infoEl.hidden = true;
+        if (!email) {
+          errorEl.textContent = t("Saisissez d'abord l'adresse du compte.");
+          errorEl.hidden = false;
+          return;
+        }
+        reset.disabled = true;
+        try {
+          authInstance.languageCode = LANG;
+          await sendPasswordResetEmail(authInstance, email);
+          infoEl.textContent = sent;
+          infoEl.hidden = false;
+        } catch (err) {
+          // An unknown address must read like a known one: anything else tells
+          // whoever types it which addresses have an account.
+          if (err && err.code === "auth/user-not-found") {
+            infoEl.textContent = sent;
+            infoEl.hidden = false;
+          } else {
+            errorEl.textContent = authMessage(err);
+            errorEl.hidden = false;
+          }
+        }
+        reset.disabled = false;
+      });
 
       document.getElementById("accountGoogle").addEventListener("click", async () => {
         errorEl.hidden = true;
