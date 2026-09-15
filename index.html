@@ -203,6 +203,9 @@
     display:inline-block; margin-left:4px; padding:0 4px; border-radius:6px;
     font-size:10px; line-height:15px; background:var(--accent); color:#fff; vertical-align:middle;
   }
+  .hrv-pill[data-hrv-day] { cursor:pointer; }
+  .hrv-pill[data-hrv-day]:hover { filter:brightness(1.1); }
+  .hrv-pill[data-hrv-day]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .empty-note { font-size: 12.5px; color: var(--ink-muted); font-style: italic; }
 
   .tabs { display: flex; gap: 0.35rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
@@ -335,6 +338,11 @@
     border:1px solid var(--border-strong); }
   .hrv-d[data-hrv-open] { cursor:pointer; }
   .hrv-d.sel { outline:2px solid var(--ink); outline-offset:2px; }
+  /* A bar on the athlete's page that opens its morning in the HRV tab. */
+  .hrv-jump { cursor:pointer; }
+  .hrv-jump:focus { outline:none; }
+  .hrv-jump:hover rect:last-of-type { opacity:.75; }
+  .hrv-jump:focus-visible rect:first-of-type { stroke:var(--ink); stroke-width:1.5; }
   .hrv-shown { margin:0 .25rem .7rem; font-size:12px; color:var(--ink-muted); }
   .hrv-shown strong { color:var(--ink); }
   .hrv-legend { display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; font-size:12px;
@@ -786,7 +794,7 @@
     "référence": "reference",
     "Toutes les mesures": "All measures",
     "Écarts en % ": "Deltas in % ",
-    "Les graphiques, les cinq règles et toutes les mesures sont dans l'onglet Suivi HRV, sous le nom de l'athlète.": "The charts, the five rules and every measure are in the HRV tracking tab, under the athlete's name.",
+    "Clique une barre pour ouvrir ce matin dans l'onglet Suivi HRV, avec les graphiques, les cinq règles et toutes les mesures.": "Click a bar to open that morning in the HRV tracking tab, with the charts, the five rules and every measure.",
     "score Wellness": "Wellness score",
     "pas de test depuis": "no test for",
     "Bilan": "Summary",
@@ -2143,7 +2151,10 @@
   /// drifting", not "what was the rMSSD". A morning with no test is a dot on
   /// the floor — visibly missing, never interpolated over, because a run of
   /// them is itself the signal.
-  function hrvSparkline(a) {
+  ///
+  /// `linked`: each bar opens its morning in the HRV tab. Only on the athlete's
+  /// page — on the overview card a click already opens that page.
+  function hrvSparkline(a, linked = false) {
     const tests = a && a.hrv ? a.hrv : [];
     if (!tests.length) return "";
     const w = 220, h = 26;
@@ -2153,20 +2164,31 @@
     const cells = [];
     for (let i = 13; i >= 0; i--) {
       const d = new Date(last); d.setDate(d.getDate() - i);
-      cells.push(indexByDay.has(isoDate(d)) ? hrvStateAt(a, indexByDay.get(isoDate(d))) : "none");
+      const index = indexByDay.get(isoDate(d));
+      cells.push(index === undefined
+        ? { state: "none" }
+        : { state: hrvStateAt(a, index), test: tests[index] });
     }
 
     const rank = { alert: 6, watch: 15, ok: 22, none: 0 };
     const fill = { alert: "var(--i3)", watch: "var(--i2)", ok: "var(--z1)" };
     const bw = w / cells.length;
-    const bars = cells.map((state, i) => {
+    const bars = cells.map(({ state, test }, i) => {
       const x = (i * bw + 1).toFixed(1);
       if (state === "none") {
         return `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="${h - 2}" r="1.4" fill="var(--border-strong)"/>`;
       }
       const bh = rank[state];
-      return `<rect x="${x}" y="${(h - bh).toFixed(1)}" width="${(bw - 2).toFixed(1)}"
+      const bar = `<rect x="${x}" y="${(h - bh).toFixed(1)}" width="${(bw - 2).toFixed(1)}"
         height="${bh}" fill="${fill[state]}" rx="1.2"/>`;
+      if (!linked) return bar;
+      // The whole column answers the click, not only the bar: an alert bar is
+      // six units tall, the very morning a coach most wants to open.
+      const label = `${shortDate(test.date)} — ${t(HRV_STATE_LABEL[state])}`;
+      return `<g class="hrv-jump" data-hrv-jump="${esc(test.id)}" role="button" tabindex="0"
+          aria-label="${esc(t("Ouvrir le test du") + " " + shortDate(test.date))}">
+        <title>${esc(label)}</title>
+        <rect x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${h}" fill="transparent"/>${bar}</g>`;
     }).join("");
     return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Quatorze derniers tests HRV")}">${bars}</svg>`;
   }
@@ -2350,9 +2372,9 @@
         ${deltaCell("HF " + t("debout"), verdict.deltas.hfSt)}
         ${deltaCell("LF " + t("debout"), verdict.deltas.lfSt)}
       </div>` : ""}
-      ${hrvSparkline(a)}
+      ${hrvSparkline(a, true)}
       <p class="chart-note">${verdict ? t("Écarts en % ") + t("contre") + " " + hrvRefLabel(a, tests.length - 1) + ". " : ""}${t("Une barre manquante est un matin sans test, jamais un zéro.")}</p>
-      <p class="chart-note">${t("Les graphiques, les cinq règles et toutes les mesures sont dans l'onglet Suivi HRV, sous le nom de l'athlète.")}</p>`;
+      <p class="chart-note">${t("Clique une barre pour ouvrir ce matin dans l'onglet Suivi HRV, avec les graphiques, les cinq règles et toutes les mesures.")}</p>`;
   }
 
   // ── The four coach panels ────────────────────────────────────────────
@@ -3503,6 +3525,14 @@
       });
     });
 
+    detail.querySelectorAll("[data-hrv-jump]").forEach(bar => {
+      const open = () => openHrvOn([[id, bar.dataset.hrvJump]]);
+      bar.addEventListener("click", open);
+      bar.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      });
+    });
+
     detail.querySelectorAll(".load-trend-legend .chip").forEach(chip => {
       const toggle = () => {
         const set = loadTrendHidden[chip.dataset.kind];
@@ -3803,7 +3833,7 @@
           </details>
         </td></tr>`;
 
-      return `<tr class="hrv-athlete ${open ? "open" : ""}">
+      return `<tr class="hrv-athlete ${open ? "open" : ""}" data-hrv-row="${esc(a.id)}">
           <td class="name">${esc(a.name)}</td>${cells}
           <td class="toggle"><button class="hrv-toggle" data-hrv-toggle="${esc(a.id)}"
             aria-expanded="${open}">${open ? t("Fermer") : t("Détail")}</button></td>
@@ -3989,6 +4019,28 @@
   /// athlète, donc le restreindre à lui serait tentant — mais ce filtre est un
   /// réglage que l'entraîneur a posé, et le changer sous ses pieds sans qu'il
   /// l'ait demandé est plus déroutant qu'utile.
+  /// Opens mornings in the HRV tab, each under its athlete: one from the bars
+  /// on an athlete's page, everyone who tested that day from the calendar.
+  function openHrvOn(picks) {
+    picks.forEach(([athleteId, testId]) => {
+      hrvSelectedTest.set(athleteId, testId);
+      hrvOpenAthletes.add(athleteId);
+      // A zoom belongs to the curve it was drawn on — see renderHrvGrid.
+      hrvZoom.delete(athleteId);
+    });
+    activateTab("hrv");
+    const first = picks.length ? picks[0][0] : null;
+    const row = [...document.querySelectorAll("#hrvGrid [data-hrv-row]")]
+      .find(r => r.dataset.hrvRow === first);
+    (row || document.getElementById("viewHrv")).scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /// Everyone who tested on a calendar day, each on that day's test — the same
+  /// test the square for that day opens in the HRV tab when there were several.
+  function openHrvDay(iso) {
+    openHrvOn(hrvOn(iso).map(a => [a.id, a.hrv.filter(x => x.date === iso).pop().id]));
+  }
+
   function openCalendarOn(iso, athleteId) {
     // Filtrer sur l'athlète d'origine : à dix athlètes dans l'équipe, une
     // semaine non filtrée est illisible, et on arrive justement de la fiche
@@ -4082,7 +4134,8 @@
   function hrvPill(iso) {
     const who = hrvOn(iso);
     if (!who.length) return "";
-    return `<span class="hrv-pill" data-tip="${esc(who.map(a => a.name).join(", "))}">♥ ${who.length}</span>`;
+    return `<span class="hrv-pill" data-tip="${esc(who.map(a => a.name).join(", "))}" data-hrv-day="${iso}"
+      role="button" tabindex="0" aria-label="${esc(t("Ouvrir le test du") + " " + shortDate(iso))}">♥ ${who.length}</span>`;
   }
 
   function mechPctLabel(mech) {
@@ -4193,6 +4246,18 @@
         tip.style.opacity = "0";
         activateTab("overview");
         showDetail(el.dataset.id, el.dataset.session);
+      };
+      el.addEventListener("click", open);
+      el.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+      });
+    });
+
+    // The heart opens the tests themselves, in their own tab.
+    grid.querySelectorAll("[data-hrv-day]").forEach(el => {
+      const open = () => {
+        tip.style.opacity = "0";
+        openHrvDay(el.dataset.hrvDay);
       };
       el.addEventListener("click", open);
       el.addEventListener("keydown", e => {
