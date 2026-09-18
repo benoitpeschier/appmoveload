@@ -162,6 +162,14 @@
     cursor: pointer; padding: 0.3rem 0; display: flex; align-items: center; gap: 4px;
   }
   .detail-title { font-size: 17px; font-weight: 500; }
+  .session-head { display: flex; align-items: baseline; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+  .session-nav { display: flex; gap: 0.9rem; flex-shrink: 0; }
+  .session-nav button {
+    font: inherit; font-size: 13px; color: var(--accent); background: none; border: none;
+    cursor: pointer; padding: 0.3rem 0;
+  }
+  .session-nav button[disabled] { color: var(--ink-muted); cursor: default; }
   .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
   .detail-section h3 { font-size: 12.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); margin: 0 0 0.6rem; }
   .legend { display: flex; gap: 0.9rem; flex-wrap: wrap; margin-top: 0.5rem; font-size: 12px; color: var(--ink-soft); }
@@ -732,6 +740,10 @@
     "Dernière synchro : —": "Last sync: —",
     "Dernière séance": "Last session",
     "Dernière séance : ": "Last session: ",
+    "‹ Précédente": "‹ Previous",
+    "Suivante ›": "Next ›",
+    "Séance précédente de cet athlète": "This athlete's previous session",
+    "Séance suivante de cet athlète": "This athlete's next session",
     "Embarcation analysée": "Boat analysed",
     "En attente de la première séance synchronisée…": "Waiting for the first synced session…",
     "Entraînement": "Training",
@@ -1465,6 +1477,10 @@
     a.strokeRateHz = last ? last.strokeRateHz : 0;
     a.lastSessionName = last ? (last.name || "") : "";
     a.lastSessionPeaks = last ? (last.mechanicalPeaks || {}) : {};
+    // Which session the detail view is showing when no other was asked for.
+    // Needed to step to the one before or after it — without this, the arrows
+    // would have no starting point on the default view.
+    a.lastSessionId = last ? last.id : null;
 
     const daysSince = last ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
     if (daysSince !== null && daysSince > 10) {
@@ -3355,7 +3371,10 @@
         <button class="back-btn" id="backBtn">${t("‹ Retour à la vue d'ensemble")}</button>
       </div>
       <p class="detail-title">${esc(a.name)}</p>
-      <p class="athlete-meta" style="margin-bottom:1.1rem">${a.isSpecificSession ? t("Séance") : t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
+      <div class="session-head">
+      <p class="athlete-meta" style="margin:0">${a.isSpecificSession ? t("Séance") : t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
+      ${sessionNavHTML(a)}
+      </div>
       <div class="detail-grid">
         <div class="detail-section">
           <h3>${t("Répartition — dernière séance")}</h3>
@@ -3483,6 +3502,38 @@
   /// date: a day can hold several, and a date could only ever name the first.
   let openDetailSession = null;
 
+  /// The athlete's sessions in the order the arrows walk them: oldest first,
+  /// by the full instant rather than the day, since four sessions in one
+  /// morning is an ordinary test day.
+  ///
+  /// Filtered exactly as `deriveAthlete` filters them, so the arrows never
+  /// step to a session the page would refuse to show.
+  function navigableSessions(a) {
+    return [...(a.sessions || [])].filter(matchesFilterMode)
+      .sort((x, y) => (x.startedAt || 0) - (y.startedAt || 0));
+  }
+
+  /// « ‹ Précédente » and « Suivante › », greyed at the ends.
+  ///
+  /// Chronological, not list order: previous means older. Stepping onto the
+  /// most recent session passes no id at all, so the heading goes back to
+  /// saying "Dernière séance" rather than "Séance" — the same view should not
+  /// describe itself two ways depending on how it was reached.
+  function sessionNavHTML(a) {
+    const list = navigableSessions(a);
+    const current = a.lastSessionId;
+    const i = list.findIndex(x => x.id === current);
+    if (i < 0 || list.length < 2) return "";
+    const older = list[i - 1], newer = list[i + 1];
+    const lastId = list[list.length - 1].id;
+    const attr = (s) => s ? `data-session="${s.id === lastId ? "" : s.id}"` : "disabled";
+    const label = (s) => s ? `${relDate(s.date)} · ${s.duration} min` : "";
+    return `<span class="session-nav">
+      <button id="prevSessionBtn" ${attr(older)} title="${t("Séance précédente de cet athlète")}${older ? " — " + label(older) : ""}">${t("‹ Précédente")}</button>
+      <button id="nextSessionBtn" ${attr(newer)} title="${t("Séance suivante de cet athlète")}${newer ? " — " + label(newer) : ""}">${t("Suivante ›")}</button>
+    </span>`;
+  }
+
   /// A copy of the athlete whose "last session" fields describe `sessionId`
   /// instead, so the detail view can render any session without duplicating it.
   function athleteViewFor(a, sessionId) {
@@ -3509,6 +3560,7 @@
       strokeRateHz: s.strokeRateHz,
       lastSessionName: s.name || "",
       lastSessionPeaks: s.mechanicalPeaks || {},
+      lastSessionId: s.id,
       // The "nothing since N days" note is about how recent the athlete's
       // training is, which says nothing about the session being looked at.
       note: null,
@@ -3522,6 +3574,12 @@
     openDetailSession = sessionId || null;
     detail.innerHTML = detailHTML(a);
     detail.classList.add("open");
+    for (const which of ["prevSessionBtn", "nextSessionBtn"]) {
+      const btn = document.getElementById(which);
+      if (btn && !btn.disabled) {
+        btn.addEventListener("click", () => renderDetail(id, btn.dataset.session || null));
+      }
+    }
     document.getElementById("backBtn").addEventListener("click", () => {
       openDetailId = null;
       openDetailSession = null;
