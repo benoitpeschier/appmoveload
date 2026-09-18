@@ -162,6 +162,19 @@
     cursor: pointer; padding: 0.3rem 0; display: flex; align-items: center; gap: 4px;
   }
   .detail-title { font-size: 17px; font-weight: 500; }
+  .cal-layout { display: flex; gap: 1.3rem; align-items: flex-start; flex-wrap: wrap; }
+  .cal-layout > .cal-grid { flex: 1 1 520px; min-width: 0; }
+  .cal-totals { flex: 1 1 210px; }
+  .cal-totals h3 { font-size: 12.5px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--ink-soft); margin: 0 0 0.7rem; }
+  .cal-total-row { margin-bottom: 0.85rem; }
+  .cal-total-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin-bottom: 4px; }
+  .cal-total-head .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-total-head .sum { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .cal-total-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border); }
+  .cal-total-bar span { display: block; height: 100%; }
+  .cal-total-zones { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px;
+    font-variant-numeric: tabular-nums; }
   .session-head { display: flex; align-items: baseline; justify-content: space-between;
     gap: 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
   .session-nav { display: flex; gap: 0.9rem; flex-shrink: 0; }
@@ -550,7 +563,10 @@
       </div>
     </div>
     <div class="chart-wrap" id="calGridWrap">
-      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-layout">
+        <div class="cal-grid" id="calGrid"></div>
+        <aside class="cal-totals" id="calTotals"></aside>
+      </div>
     </div>
   </div>
 </div>
@@ -761,6 +777,11 @@
     "Revenir à": "Back to",
     "Répartition — dernière séance": "Split — last session",
     "Semaine": "Week",
+    "Total de la semaine": "Week total",
+    "Total du mois": "Month total",
+    "Charge mécanique": "Mechanical load",
+    "Barres à l'échelle du plus gros total, pour comparer les athlètes d'un coup d'œil.": "Bars scaled to the largest total, so athletes compare at a glance.",
+    "Les séances PPG ne produisent pas de charge mécanique : elles ne sont pas comptées ici.": "Conditioning sessions produce no mechanical load: they are not counted here.",
     "Seul(e) athlète": "Only athlete in",
     "Suivant": "Next",
     "Suivi des athlètes": "Athlete tracking",
@@ -4250,6 +4271,69 @@
       : { values: s.mech, colors: ["var(--z1)","var(--z2)","var(--z3)"], label: mechPctLabel(s.mech) };
   }
 
+  /// A period total reads better in hours than in minutes and seconds: a week
+  /// of paddling is "4 h 12", not "252:07".
+  function fmtLoad(sec) {
+    const m = Math.round(sec / 60);
+    return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + String(m % 60).padStart(2, "0");
+  }
+
+  /// Mechanical load summed over whatever period the calendar is showing —
+  /// the week in week view, the month in month view.
+  ///
+  /// Two choices worth knowing. **The bars are scaled to the largest total in
+  /// the period, not each to its own width**: the question the panel answers
+  /// is who did the most and in what, and bars that all fill their row answer
+  /// only the second half. And **conditioning sessions are left out rather
+  /// than counted as zero** — they produce no mechanical figure at all, by
+  /// construction (invariant 14), so counting them would say an athlete
+  /// trained less rather than that this session is not measured here.
+  function renderCalendarTotals(days) {
+    const panel = document.getElementById("calTotals");
+    if (!panel) return;
+    const inPeriod = new Set(days.filter(d => !d.out).map(d => isoDate(d.date)));
+
+    let hasConditioning = false;
+    const rows = athletes
+      .filter(a => activeAthletes.has(a.id))
+      .map(a => {
+        const list = (a.sessions || []).filter(x => inPeriod.has(x.date) && matchesFilterMode(x));
+        if (list.some(x => x.isConditioning)) hasConditioning = true;
+        const mech = list.filter(x => !x.isConditioning)
+          .reduce((acc, x) => [acc[0] + x.mech[0], acc[1] + x.mech[1], acc[2] + x.mech[2]], [0, 0, 0]);
+        return { a, mech, total: mech[0] + mech[1] + mech[2] };
+      })
+      .filter(r => r.total > 0);
+
+    const title = t(calMode === "week" ? "Total de la semaine" : "Total du mois");
+    if (!rows.length) {
+      panel.innerHTML = `<h3>${title} — ${t("Charge mécanique")}</h3>
+        <p class="empty-note">${t("Aucune séance sur cette période.")}</p>`;
+      return;
+    }
+
+    const widest = Math.max(...rows.map(r => r.total));
+    const colors = ["var(--z1)", "var(--z2)", "var(--z3)"];
+    const body = rows.map(r => {
+      const segments = r.mech.map((v, i) =>
+        `<span style="width:${(v / widest * 100).toFixed(1)}%;background:${colors[i]}"></span>`).join("");
+      const zones = r.mech.map((v, i) => `Z${i + 1} ${fmtLoad(v)}`).join(" · ");
+      return `<div class="cal-total-row">
+        <div class="cal-total-head">
+          <span class="a-chip" style="background:${r.a.color}">${r.a.initial}</span>
+          <span class="who">${esc(r.a.name)}</span>
+          <span class="sum">${fmtLoad(r.total)}</span>
+        </div>
+        <div class="cal-total-bar">${segments}</div>
+        <div class="cal-total-zones">${zones}</div>
+      </div>`;
+    }).join("");
+
+    panel.innerHTML = `<h3>${title} — ${t("Charge mécanique")}</h3>${body}
+      <p class="chart-note">${t("Barres à l'échelle du plus gros total, pour comparer les athlètes d'un coup d'œil.")}</p>
+      ${hasConditioning ? `<p class="chart-note">${t("Les séances PPG ne produisent pas de charge mécanique : elles ne sont pas comptées ici.")}</p>` : ""}`;
+  }
+
   function renderCalendar() {
     const grid = document.getElementById("calGrid");
     const label = document.getElementById("calLabel");
@@ -4310,6 +4394,7 @@
     }).join("");
 
     grid.innerHTML = dow + cells;
+    renderCalendarTotals(days);
 
     const calWrap = document.getElementById("calGridWrap");
     let tip = document.getElementById("calTip");
