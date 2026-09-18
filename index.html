@@ -164,17 +164,16 @@
   .detail-title { font-size: 17px; font-weight: 500; }
   .cal-layout { display: flex; gap: 1.3rem; align-items: flex-start; flex-wrap: wrap; }
   .cal-layout > .cal-grid { flex: 1 1 520px; min-width: 0; }
-  .cal-totals { flex: 1 1 210px; }
+  .cal-totals { flex: 1 1 250px; }
   .cal-totals h3 { font-size: 12.5px; font-weight: 500; text-transform: uppercase;
     letter-spacing: 0.03em; color: var(--ink-soft); margin: 0 0 0.7rem; }
-  .cal-total-row { margin-bottom: 0.85rem; }
-  .cal-total-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin-bottom: 4px; }
+  .cal-total-row { margin-bottom: 0.9rem; }
+  .cal-total-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin-bottom: 3px; }
   .cal-total-head .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cal-total-head .sum { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-  .cal-total-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border); }
-  .cal-total-bar span { display: block; height: 100%; }
-  .cal-total-zones { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px;
-    font-variant-numeric: tabular-nums; }
+  .cal-total-line { display: flex; gap: 6px; font-size: 11.5px; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .cal-total-line .kind { flex: 0 0 4.6em; color: var(--ink-muted); }
+  .cal-total-line .vals { flex: 1; min-width: 0; }
   .session-head { display: flex; align-items: baseline; justify-content: space-between;
     gap: 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
   .session-nav { display: flex; gap: 0.9rem; flex-shrink: 0; }
@@ -649,6 +648,7 @@
     "Puissance totale": "Total power",
     "Réduire fortement le volume d'entraînement et conserver uniquement des stimulations importantes à très haute intensité entrecoupées de périodes de récupération longues (jours de repos). La récupération peut être longue (semaines) à très longue (mois).": "Sharply reduce training volume and keep only substantial very-high-intensity stimuli, separated by long recovery periods (rest days). Recovery can be long — weeks — to very long — months.",
     "séances": "sessions",
+    "séance": "session",
     "Sensation d'être bridé dans l'effort et de ne pas pouvoir faire monter la FC. Diminuer le volume d'entraînement et augmenter la part de très haute intensité (anaérobie lactique et alactique). La récupération peut être rapide, 2 à 3 jours.": "A feeling of being held back in effort, unable to drive the heart rate up. Reduce training volume and increase the share of very high intensity (lactic and alactic anaerobic). Recovery can be quick, two to three days.",
     "Sensation de vertiges possibles lors du test debout. La FC ne monte pas à l'effort. Réduire fortement le volume d'entraînement et conserver uniquement des stimulations à très haute intensité entrecoupées de périodes de récupération longues. La récupération peut être réalisée en 2 à 3 jours, mais sans remédiation cela peut durer quelques semaines.": "Possible dizziness during the standing test. Heart rate does not rise on effort. Sharply reduce training volume and keep only very-high-intensity stimuli separated by long recovery periods. Recovery can be achieved in two to three days, but without remediation it can last several weeks.",
     "total": "total",
@@ -780,8 +780,9 @@
     "Total de la semaine": "Week total",
     "Total du mois": "Month total",
     "Charge mécanique": "Mechanical load",
-    "Barres à l'échelle du plus gros total, pour comparer les athlètes d'un coup d'œil.": "Bars scaled to the largest total, so athletes compare at a glance.",
-    "Les séances PPG ne produisent pas de charge mécanique : elles ne sont pas comptées ici.": "Conditioning sessions produce no mechanical load: they are not counted here.",
+    "Temps par zone": "Time per zone",
+    "Les séances PPG comptent dans le cardio mais pas dans le mécanique : elles n'en produisent pas.": "Conditioning sessions count towards the cardio figures but not the mechanical ones: they produce none.",
+    "PPG seulement": "Conditioning only",
     "Seul(e) athlète": "Only athlete in",
     "Suivant": "Next",
     "Suivi des athlètes": "Athlete tracking",
@@ -4278,20 +4279,24 @@
     return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + String(m % 60).padStart(2, "0");
   }
 
-  /// Mechanical load summed over whatever period the calendar is showing —
-  /// the week in week view, the month in month view.
+  /// Time per zone summed over whatever period the calendar is showing — the
+  /// week in week view, the month in month view. Figures only, no bars: this
+  /// panel is read for what an athlete actually did, and a number says it
+  /// where a bar approximates it.
   ///
-  /// Two choices worth knowing. **The bars are scaled to the largest total in
-  /// the period, not each to its own width**: the question the panel answers
-  /// is who did the most and in what, and bars that all fill their row answer
-  /// only the second half. And **conditioning sessions are left out rather
-  /// than counted as zero** — they produce no mechanical figure at all, by
-  /// construction (invariant 14), so counting them would say an athlete
-  /// trained less rather than that this session is not measured here.
+  /// **Cardio counts every session, mechanical only the paddling ones.** That
+  /// asymmetry is deliberate and already what a session page says: a
+  /// conditioning session produces no mechanical figure at all, by
+  /// construction (invariant 14 — a running stride would otherwise write the
+  /// athlete's zones), while its heart rate is a real cost and counts. So an
+  /// athlete who only ran this week shows cardio and no mechanical, which is
+  /// the truth rather than a zero.
   function renderCalendarTotals(days) {
     const panel = document.getElementById("calTotals");
     if (!panel) return;
     const inPeriod = new Set(days.filter(d => !d.out).map(d => isoDate(d.date)));
+    const add = (acc, v) => [acc[0] + v[0], acc[1] + v[1], acc[2] + v[2]];
+    const sum = v => v[0] + v[1] + v[2];
 
     let hasConditioning = false;
     const rows = athletes
@@ -4299,39 +4304,41 @@
       .map(a => {
         const list = (a.sessions || []).filter(x => inPeriod.has(x.date) && matchesFilterMode(x));
         if (list.some(x => x.isConditioning)) hasConditioning = true;
-        const mech = list.filter(x => !x.isConditioning)
-          .reduce((acc, x) => [acc[0] + x.mech[0], acc[1] + x.mech[1], acc[2] + x.mech[2]], [0, 0, 0]);
-        return { a, mech, total: mech[0] + mech[1] + mech[2] };
+        return {
+          a,
+          count: list.length,
+          hr: list.reduce((acc, x) => add(acc, x.hr), [0, 0, 0]),
+          mech: list.filter(x => !x.isConditioning).reduce((acc, x) => add(acc, x.mech), [0, 0, 0])
+        };
       })
-      .filter(r => r.total > 0);
+      .filter(r => r.count > 0);
 
     const title = t(calMode === "week" ? "Total de la semaine" : "Total du mois");
     if (!rows.length) {
-      panel.innerHTML = `<h3>${title} — ${t("Charge mécanique")}</h3>
+      panel.innerHTML = `<h3>${title} — ${t("Temps par zone")}</h3>
         <p class="empty-note">${t("Aucune séance sur cette période.")}</p>`;
       return;
     }
 
-    const widest = Math.max(...rows.map(r => r.total));
-    const colors = ["var(--z1)", "var(--z2)", "var(--z3)"];
-    const body = rows.map(r => {
-      const segments = r.mech.map((v, i) =>
-        `<span style="width:${(v / widest * 100).toFixed(1)}%;background:${colors[i]}"></span>`).join("");
-      const zones = r.mech.map((v, i) => `Z${i + 1} ${fmtLoad(v)}`).join(" · ");
-      return `<div class="cal-total-row">
+    const line = (kind, values, prefix) => `<div class="cal-total-line">
+      <span class="kind">${kind}</span>
+      <span class="vals">${values.map((v, i) => `${prefix}${i + 1} ${fmtLoad(v)}`).join(" · ")}</span>
+    </div>`;
+
+    const body = rows.map(r => `<div class="cal-total-row">
         <div class="cal-total-head">
           <span class="a-chip" style="background:${r.a.color}">${r.a.initial}</span>
           <span class="who">${esc(r.a.name)}</span>
-          <span class="sum">${fmtLoad(r.total)}</span>
+          <span class="sum">${r.count} ${r.count > 1 ? t("séances") : t("séance")}</span>
         </div>
-        <div class="cal-total-bar">${segments}</div>
-        <div class="cal-total-zones">${zones}</div>
-      </div>`;
-    }).join("");
+        ${line(t("Cardio"), r.hr, "I")}
+        ${sum(r.mech) > 0
+          ? line(t("Mécanique"), r.mech, "Z")
+          : `<div class="cal-total-line"><span class="kind">${t("Mécanique")}</span><span class="vals">${t("PPG seulement")}</span></div>`}
+      </div>`).join("");
 
-    panel.innerHTML = `<h3>${title} — ${t("Charge mécanique")}</h3>${body}
-      <p class="chart-note">${t("Barres à l'échelle du plus gros total, pour comparer les athlètes d'un coup d'œil.")}</p>
-      ${hasConditioning ? `<p class="chart-note">${t("Les séances PPG ne produisent pas de charge mécanique : elles ne sont pas comptées ici.")}</p>` : ""}`;
+    panel.innerHTML = `<h3>${title} — ${t("Temps par zone")}</h3>${body}
+      ${hasConditioning ? `<p class="chart-note">${t("Les séances PPG comptent dans le cardio mais pas dans le mécanique : elles n'en produisent pas.")}</p>` : ""}`;
   }
 
   function renderCalendar() {
