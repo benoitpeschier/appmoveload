@@ -103,6 +103,8 @@
   .top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
   h1 { font-size: 22px; font-weight: 500; margin: 0; letter-spacing: -0.01em; }
   .top-meta { font-size: 13px; color: var(--ink-soft); }
+  /* The team's name reads as a name, not as another status line. */
+  #teamName { font-weight: 600; color: var(--ink); }
 
   .grid {
     display: grid;
@@ -304,7 +306,7 @@
   #inviteCard h3 { margin:1.25rem 0 .25rem; font-size:.9rem; }
   #inviteCard p, #accountCard p, #joinCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
   #accountCard label, #inviteCard label { display:block; font-size:12px; font-weight:600; margin:.75rem 0 .2rem; }
-  #accountCard input, #inviteCard select { width:100%; box-sizing:border-box; font:inherit; font-size:14px;
+  #accountCard input, #inviteCard input, #inviteCard select { width:100%; box-sizing:border-box; font:inherit; font-size:14px;
     padding:.45rem .6rem; border:1px solid var(--border-strong); border-radius:8px;
     background:var(--bg); color:var(--ink); }
   .dialog-row { display:flex; gap:.5rem; margin-top:1rem; flex-wrap:wrap; }
@@ -524,6 +526,7 @@
         <button data-mode="test" data-i18n="Tests">Tests</button>
       </div>
       <div class="top-meta" id="lastSync" data-i18n="Dernière synchro : —">Dernière synchro : —</div>
+      <div class="top-meta" id="teamName" hidden></div>
       <select id="teamSelect" hidden aria-label="Équipe" data-i18n-aria="Équipe"></select>
       <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Inviter">Inviter</button>
       <button class="nav-btn" id="accountBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Se connecter">Se connecter</button>
@@ -730,6 +733,10 @@
     "Valable sept jours, pour une seule personne.": "Valid for seven days, for one person only.",
         "Nouvelle invitation": "New invitation",
     "Invitations en attente": "Pending invitations",
+    "Nom de l'équipe": "Team name",
+    "Ce nom remplace le code de l'équipe, en haut du tableau de bord et dans l'app des athlètes.": "This name stands in for the team code, at the top of the dashboard and in the athletes' app.",
+    "Enregistrer le nom": "Save the name",
+    "Nom enregistré": "Name saved",
     "Aucune invitation en attente.": "No pending invitations.",
     "expire le ": "expires ",
     "Révoquer": "Revoke",
@@ -1081,18 +1088,43 @@
     if (!known.includes(teamId)) await setDoc(ref, { teamIds: known.concat([teamId]) }, { merge: true });
   }
 
+  /// The team's own name, when an owner has given it one. Absent by default:
+  /// nothing writes teams/{id} until the name is saved, so the document itself
+  /// may well not exist — hence the empty string rather than an error.
+  async function teamNameOf(db, teamId) {
+    try {
+      const snap = await getDoc(doc(db, "teams", teamId));
+      if (snap.exists() && snap.data().name) return snap.data().name;
+    } catch (e) { /* a team this account may not read */ }
+    return "";
+  }
+
+  function showTeamName(name) {
+    const select = document.getElementById("teamSelect");
+    const el = document.getElementById("teamName");
+    if (!select.hidden) {
+      // The picker already carries the names: one place, not two.
+      const chosen = select.options[select.selectedIndex];
+      if (chosen && name) chosen.textContent = name;
+      el.hidden = true;
+      return;
+    }
+    el.textContent = name || "";
+    el.hidden = !name;
+  }
+
   /// One entry per team this account coaches, shown only when there is a choice.
   async function renderTeamPicker(db, seats) {
     const coached = seats.filter(canInvite);
     const select = document.getElementById("teamSelect");
-    if (coached.length < 2) return;
-    const names = await Promise.all(coached.map(async s => {
-      try {
-        const snap = await getDoc(doc(db, "teams", s.teamId));
-        if (snap.exists() && snap.data().name) return snap.data().name;
-      } catch (e) {}
-      return s.teamId.slice(0, 8) + "…";
-    }));
+    if (coached.length < 2) {
+      // One team: nothing to choose between, so the name is there to say whose
+      // figures these are, not to pick.
+      showTeamName(await teamNameOf(db, teamCode));
+      return;
+    }
+    const names = await Promise.all(coached.map(async s =>
+      (await teamNameOf(db, s.teamId)) || s.teamId.slice(0, 8) + "…"));
     select.innerHTML = coached.map((s, i) =>
       '<option value="' + esc(s.teamId) + '"' + (s.teamId === teamCode ? " selected" : "") + ">" +
       esc(names[i]) + "</option>").join("");
@@ -1133,7 +1165,11 @@
 
   async function showInvite() {
     inviteState = { role: "athlete", athleteId: "", created: null, busy: false, error: null,
-                    pending: [], seatedAthletes: new Set() };
+                    pending: [], seatedAthletes: new Set(),
+                    // null, not "": a name typed but not yet saved must survive
+                    // the re-reads that revoking an invitation triggers.
+                    teamName: null, teamExists: false, nameError: null,
+                    nameSaved: false, savingName: false };
     document.getElementById("inviteBody").innerHTML = "";
     document.getElementById("inviteOverlay").hidden = false;
     await refreshInvites();
@@ -1146,10 +1182,15 @@
   async function refreshInvites() {
     const s = inviteState;
     try {
-      const [invites, seats] = await Promise.all([
+      const [invites, seats, team] = await Promise.all([
         getDocs(collection(firestore, "teams", teamCode, "invites")),
-        getDocs(collection(firestore, "teams", teamCode, "memberships"))
+        getDocs(collection(firestore, "teams", teamCode, "memberships")),
+        // Caught here rather than by the whole batch: a team without a name is
+        // the normal case, and it must not empty the list of invitations.
+        getDoc(doc(firestore, "teams", teamCode)).catch(() => null)
       ]);
+      s.teamExists = !!(team && team.exists());
+      if (s.teamName === null) s.teamName = (s.teamExists && team.data().name) || "";
       const now = Date.now();
       s.pending = invites.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -1229,6 +1270,17 @@
       }).join("") + "</ul>";
     }
 
+    if (owner) {
+      html += "<h3>" + esc(t("Nom de l'équipe")) + "</h3>" +
+        "<p>" + esc(t("Ce nom remplace le code de l'équipe, en haut du tableau de bord et dans l'app des athlètes.")) + "</p>" +
+        '<input id="teamNameInput" type="text" maxlength="60" value="' + esc(s.teamName || "") +
+        '" placeholder="' + esc(teamCode.slice(0, 8) + "…") + '">' +
+        (s.nameError ? '<p class="dialog-error">' + esc(s.nameError) + "</p>" : "") +
+        '<div class="dialog-row">' +
+        button("teamNameSave", s.nameSaved ? t("Nom enregistré") : t("Enregistrer le nom"), s.savingName) +
+        "</div>";
+    }
+
     const body = document.getElementById("inviteBody");
     body.innerHTML = html;
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); };
@@ -1236,6 +1288,17 @@
     if (roleSelect) roleSelect.addEventListener("change", () => { s.role = roleSelect.value; s.athleteId = ""; renderInvite(); });
     const athleteSelect = document.getElementById("inviteAthlete");
     if (athleteSelect) athleteSelect.addEventListener("change", () => { s.athleteId = athleteSelect.value; });
+    const nameInput = document.getElementById("teamNameInput");
+    if (nameInput) {
+      // Held in the state at every keystroke: the dialog redraws whole, and a
+      // half-typed name would otherwise vanish when the role select changes.
+      nameInput.addEventListener("input", () => {
+        s.teamName = nameInput.value;
+        s.nameSaved = false;
+      });
+      nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveTeamName(); });
+    }
+    on("teamNameSave", saveTeamName);
     on("inviteCreate", createInvite);
     on("inviteClose", hideInvite);
     // The next invitation starts blank: carrying the record over would hand the
@@ -1264,6 +1327,32 @@
       qr.make();
       document.getElementById("inviteQR").innerHTML = qr.createSvgTag({ scalable: true, margin: 0 });
     }
+  }
+
+  /// Nothing else ever writes teams/{id}: the document does not exist until an
+  /// owner names it. So the first save is a creation, which the rules ask to
+  /// carry createdBy, and every later one an update, which they forbid to touch
+  /// it — hence the two payloads rather than one merge.
+  async function saveTeamName() {
+    const s = inviteState;
+    const name = (s.teamName || "").trim().replace(/\s+/g, " ");
+    s.savingName = true;
+    s.nameError = null;
+    renderInvite();
+    try {
+      await setDoc(doc(firestore, "teams", teamCode),
+        s.teamExists ? { name }
+                     : { name, createdBy: signedInUser.uid, createdAt: serverTimestamp() },
+        { merge: true });
+      s.teamExists = true;
+      s.teamName = name;
+      s.nameSaved = true;
+      showTeamName(name);
+    } catch (err) {
+      s.nameError = err.message;
+    }
+    s.savingName = false;
+    renderInvite();
   }
 
   async function createInvite() {
