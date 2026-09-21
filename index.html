@@ -1583,6 +1583,13 @@
     a.hr = last ? last.hr : [0, 0, 0];
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
+    // Oublié de cette liste depuis le début : `athleteViewFor` le posait pour
+    // une séance ouverte depuis le calendrier, et la vue par défaut n'avait
+    // donc jamais de temps au-dessus de la référence — `undefined`, lu comme
+    // « pas de référence confirmée ». Invisible jusqu'au 2026-09-21, parce que
+    // l'encadré est masqué sur une séance PPG et que la dernière séance de
+    // l'athlète en était une.
+    a.aboveAnchor = last ? last.aboveAnchor : 0;
     a.lastSessionIsTest = last ? !!last.isTest : false;
     a.lastSessionIsConditioning = last ? !!last.isConditioning : false;
     // Morning tests, most recent last. A missing day stays missing — never
