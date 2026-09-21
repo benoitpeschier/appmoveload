@@ -1557,7 +1557,15 @@
   }
 
   function deriveAthlete(a) {
-    const sorted = [...a.sessions].filter(matchesFilterMode).sort((x, y) => x.date.localeCompare(y.date));
+    // Sur l'instant, pas sur le jour. Le jour ne départage pas deux séances
+    // du même jour : le tri les laissait dans l'ordre où Firestore les avait
+    // rendues, et « la dernière » pouvait être celle du matin. Vu le
+    // 2026-09-20 — un footing PPG à 10 h passait devant une sortie en K1 à
+    // 16 h, donc la carte annonçait la mauvaise séance et la courbe, qui lit
+    // l'embarcation de la dernière, disait « embarcation non renseignée » là
+    // où il y en avait une. L'instant complet était déjà dans `startedAt`.
+    const sorted = [...a.sessions].filter(matchesFilterMode)
+      .sort((x, y) => ((x.startedAt || 0) - (y.startedAt || 0)) || x.date.localeCompare(y.date));
     const last = sorted[sorted.length - 1];
     a.initial = (a.name || "?").charAt(0).toUpperCase();
     a.lastSession = last ? last.date : null;
