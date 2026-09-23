@@ -174,7 +174,15 @@
   .cal-total-head .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cal-total-line { display: flex; gap: 6px; font-size: 11.5px; color: var(--ink-soft);
     font-variant-numeric: tabular-nums; line-height: 1.5; }
-  .cal-total-line .kind { flex: 0 0 4.6em; color: var(--ink-muted); }
+  /* nowrap, et c'est tout le correctif : la colonne fait 4,6 em (52,9 px à
+     11,5 px), et « Mécanique » y déborde déjà de 3 px depuis toujours — sans
+     que ça se voie, parce qu'il n'offre aucun endroit où casser et que les
+     6 px d'écart suivants absorbent le dépassement. « Au-dessus » déborde de
+     1,4 px, lui, mais son trait d'union est une occasion de couper : le
+     navigateur la prenait et empilait l'intitulé sur deux lignes, décrochant
+     le chiffre des deux autres. Mesuré dans la police de la page, pas
+     supposé. */
+  .cal-total-line .kind { flex: 0 0 4.6em; color: var(--ink-muted); white-space: nowrap; }
   .cal-total-line .vals { flex: 1; min-width: 0; }
   .session-head { display: flex; align-items: baseline; justify-content: space-between;
     gap: 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
