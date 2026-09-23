@@ -642,7 +642,10 @@
     "Compte": "Account",
     "Évolution — charge cardio": "Load over time — cardio",
     "Évolution — charge mécanique": "Load over time — mechanical",
+    "Évolution — temps au-dessus de la référence": "Time above reference over time",
     "Évolution du temps passé dans chaque zone, jour par jour": "Time spent in each zone, day by day",
+    "Évolution du temps passé au-dessus de la référence, jour par jour": "Time spent above the reference, day by day",
+    "Le temps passé plus fort que la référence 45 s, jour par jour. Compté seconde par seconde sur le signal brut, là où les zones lissent sur quinze secondes : un effort court y est visible et ne l'est pas ailleurs. Une séance PPG n'en produit pas.": "Time spent harder than the 45 s reference, day by day. Counted second by second on the raw signal, where the zones smooth over fifteen seconds: a short effort shows here and nowhere else. A conditioning session produces none.",
     "Fatigue importante, réduire le volume d'entraînement et conserver une polarisation importante (basse intensité inférieure à SV1 et très haute intensité : anaérobie alactique).": "Marked fatigue. Reduce training volume and keep a strongly polarised distribution: low intensity below VT1, and very high intensity (alactic anaerobic).",
     "FC moyenne": "Mean HR",
     "La charge d'entraînement est adaptée aux capacités de l'athlète, poursuite de l'entraînement comme planifié.": "Training load matches the athlete's capacities; carry on with the training as planned.",
@@ -790,6 +793,7 @@
     "Temps par zone": "Time per zone",
     "Les séances PPG comptent dans le cardio mais pas dans le mécanique : elles n'en produisent pas.": "Conditioning sessions count towards the cardio figures but not the mechanical ones: they produce none.",
     "PPG seulement": "Conditioning only",
+    "Au-dessus de la réf.": "Above ref.",
     "Seul(e) athlète": "Only athlete in",
     "Suivant": "Next",
     "Suivi des athlètes": "Athlete tracking",
@@ -3262,8 +3266,12 @@
     if (!sessions.length) return null;
     const byDay = new Map();
     sessions.forEach(s => {
-      const cur = byDay.get(s.date) || { hr: [0, 0, 0], mech: [0, 0, 0], count: 0 };
+      const cur = byDay.get(s.date) || { hr: [0, 0, 0], mech: [0, 0, 0], above: [0], count: 0 };
       for (let i = 0; i < 3; i++) { cur.hr[i] += s.hr[i]; cur.mech[i] += s.mech[i]; }
+      // Un tableau d'un seul élément là où les deux autres en ont trois : le
+      // dessin, l'empilement et l'infobulle sont écrits pour une liste de
+      // séries, et une série unique en est une. Rien à dupliquer.
+      cur.above[0] += s.aboveAnchor || 0;
       cur.count += 1;
       byDay.set(s.date, cur);
     });
@@ -3279,27 +3287,36 @@
     for (const d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
       const iso = isoDate(d);
       const v = byDay.get(iso);
-      out.push({ iso, hr: v ? v.hr : [0, 0, 0], mech: v ? v.mech : [0, 0, 0], count: v ? v.count : 0 });
+      out.push({ iso, hr: v ? v.hr : [0, 0, 0], mech: v ? v.mech : [0, 0, 0],
+                 above: v ? v.above : [0], count: v ? v.count : 0 });
     }
     return out;
   }
 
   // Les zones masquées par l'entraîneur, par graphique. Un Set d'index 0/1/2,
   // sur le modèle d'activeAthletes dans le calendrier.
-  const loadTrendHidden = { hr: new Set(), mech: new Set() };
+  const loadTrendHidden = { hr: new Set(), mech: new Set(), above: new Set() };
 
   function loadTrendSVG(points, kind) {
     const w = 900, h = 210, padL = 38, padR = 12, padT = 12, padB = 24;
     const plotW = w - padL - padR, plotH = h - padT - padB;
-    const key = kind === "hr" ? "hr" : "mech";
+    const key = kind;
     const colors = kind === "hr"
       ? ["var(--i1)", "var(--i2)", "var(--i3)"]
-      : ["var(--z1)", "var(--z2)", "var(--z3)"];
+      : kind === "mech"
+        ? ["var(--z1)", "var(--z2)", "var(--z3)"]
+        // La même couleur que la barre de l'encadré « Temps au-dessus de la
+        // référence 45 s » : c'est la même mesure, vue dans le temps.
+        : ["var(--z3)"];
     const names = kind === "hr"
       ? ["I1", "I2", "I3"]
-      : [t("Zone 1"), t("Zone 2"), t("Zone 3")];
+      : kind === "mech"
+        ? [t("Zone 1"), t("Zone 2"), t("Zone 3")]
+        : [t("au-dessus de la référence")];
+    const zones = colors.map((_, j) => j);
+    const topZone = zones[zones.length - 1];
     const hidden = loadTrendHidden[key];
-    const shown = [0, 1, 2].filter(j => !hidden.has(j));
+    const shown = zones.filter(j => !hidden.has(j));
 
     const n = points.length;
     // Un jour est une colonne, pas un point d'une courbe : relier deux jours
@@ -3319,9 +3336,9 @@
     // c'est ce qui rend le geste utile plutôt que décoratif.
     const cum = points.map(p => {
       let acc = 0;
-      return [0, 1, 2].map(j => { if (!hidden.has(j)) acc += p[key][j] / 60; return acc; });
+      return zones.map(j => { if (!hidden.has(j)) acc += p[key][j] / 60; return acc; });
     });
-    const maxV = Math.max(1, ...cum.map(c => c[2]));
+    const maxV = Math.max(1, ...cum.map(c => c[topZone]));
     const yFor = v => padT + plotH - (v / maxV) * plotH;
     const floorFor = (i, j) => {
       const below = shown.filter(k => k < j);
@@ -3346,10 +3363,14 @@
       if (!p.count || !shown.length) return "";
       const z = p[key];
       if (!shown.reduce((acc, j) => acc + z[j], 0)) return "";
-      const value = shown.map(j => names[j] + " " + fmtMinSec(z[j])).join(" · ")
-        + " · " + t("total") + " " + fmtMinSec(shown.reduce((acc, j) => acc + z[j], 0))
-        + (p.count > 1 ? " · " + p.count + " " + t("séances") : "");
-      const base = yFor(0), top = Math.min(yFor(cum[i][2]), base - 16);
+      const parts = shown.map(j => names[j] + " " + fmtMinSec(z[j]));
+      // « I1 3:00 · I2 1:00 · total 4:00 » a un sens ; « au-dessus de la
+      // référence 4:00 · total 4:00 » n'en a aucun. Le total ne s'écrit que
+      // s'il additionne plusieurs choses.
+      if (shown.length > 1) parts.push(t("total") + " " + fmtMinSec(shown.reduce((acc, j) => acc + z[j], 0)));
+      if (p.count > 1) parts.push(p.count + " " + t("séances"));
+      const value = parts.join(" · ");
+      const base = yFor(0), top = Math.min(yFor(cum[i][topZone]), base - 16);
       return `<rect class="hoverpt load-trend-day" x="${xa(i).toFixed(1)}" y="${top.toFixed(1)}" width="${colW.toFixed(1)}" height="${(base - top).toFixed(1)}" fill="transparent" data-day="${p.iso}" data-label="${shortDate(p.iso)}" data-value="${esc(value)}" role="button" tabindex="0" aria-label="${t("Voir cette journée dans le calendrier")} — ${shortDate(p.iso)}"/>`;
     }).join("");
 
@@ -3365,30 +3386,49 @@
         ? `<text x="${xm(i).toFixed(1)}" y="${h - 7}" text-anchor="middle" font-size="9" fill="var(--ink-muted)">${shortDate(p.iso)}</text>`
         : "").join("");
 
-    return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${t("Évolution du temps passé dans chaque zone, jour par jour")}" style="height:auto">
+    const aria = kind === "above"
+      ? t("Évolution du temps passé au-dessus de la référence, jour par jour")
+      : t("Évolution du temps passé dans chaque zone, jour par jour");
+    return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${aria}" style="height:auto">
       ${yTicks}${bands}${totalLine}${xLabels}${dots}
     </svg>`;
   }
 
   function loadTrendCard(a, kind) {
     const points = loadTrendSeries(a, loadTrendDays);
-    const title = kind === "hr" ? t("Évolution — charge cardio") : t("Évolution — charge mécanique");
+    const title = kind === "hr" ? t("Évolution — charge cardio")
+      : kind === "mech" ? t("Évolution — charge mécanique")
+      : t("Évolution — temps au-dessus de la référence");
     const names = kind === "hr"
       ? [["I1", "var(--i1)"], ["I2", "var(--i2)"], ["I3", "var(--i3)"]]
-      : [[t("Zone 1"), "var(--z1)"], [t("Zone 2"), "var(--z2)"], [t("Zone 3"), "var(--z3)"]];
+      : kind === "mech"
+        ? [[t("Zone 1"), "var(--z1)"], [t("Zone 2"), "var(--z2)"], [t("Zone 3"), "var(--z3)"]]
+        : [];
     // Mêmes pastilles que les athlètes du calendrier : même geste, même
-    // affordance, rien de nouveau à apprendre.
-    const key = kind === "hr" ? "hr" : "mech";
+    // affordance, rien de nouveau à apprendre. Pas de pastille quand il n'y a
+    // qu'une série : une légende d'un seul élément ne dit rien que le titre
+    // n'ait déjà dit, et une pastille qui masque la seule courbe est un
+    // bouton pour vider l'écran.
+    const key = kind;
     const hidden = loadTrendHidden[key];
     const legend = names.map(([nm, c], j) => {
       const on = !hidden.has(j);
       return `<span class="chip ${on ? "" : "off"}" data-kind="${key}" data-zone="${j}" tabindex="0" role="button" aria-pressed="${on}" title="${t("Afficher ou masquer cette zone")}">
         <span class="dot" style="background:${c}"></span>${nm}</span>`;
     }).join("");
-    const allHidden = hidden.size === 3;
-    const hasData = points && points.some(p => p.count);
+    const allHidden = names.length > 0 && hidden.size === names.length;
+    // Une colonne vide n'est pas la même chose selon le graphique. Pour les
+    // zones, « il y a eu des séances » suffit. Pour le temps au-dessus de la
+    // référence, tout à zéro veut souvent dire qu'aucune référence 45 s n'a
+    // été confirmée — ce qui se dit, plutôt que de laisser un axe plat.
+    const hasData = points && (kind === "above"
+      ? points.some(p => p.above[0] > 0)
+      : points.some(p => p.count));
     const seg = kind === "hr" ? `<span class="seg" id="loadTrendSeg">${LOAD_TREND_PERIODS.map(d =>
       `<button data-days="${d}" class="${d === loadTrendDays ? "active" : ""}">${t(LOAD_TREND_LABEL[d])}</button>`).join("")}</span>` : "";
+    const emptyNote = kind === "above"
+      ? t("Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.")
+      : t("Aucune séance sur cette période.");
 
     return `<div class="detail-section" style="grid-column:1/-1">
       <div class="load-trend-head">
@@ -3397,11 +3437,14 @@
       </div>
       ${hasData
         ? `<div class="chart-wrap">${loadTrendSVG(points, kind)}<div class="tooltip"></div></div>
-           <div class="legend load-trend-legend">${legend}</div>
+           ${legend ? `<div class="legend load-trend-legend">${legend}</div>` : ""}
            ${allHidden ? `<p class="chart-note">${t("Toutes les zones sont masquées — reclique une pastille pour la réafficher.")}</p>` : ""}`
-        : `<p class="empty-note">${t("Aucune séance sur cette période.")}</p>`}
+        : `<p class="empty-note">${emptyNote}</p>`}
       ${kind === "hr" && hasData
         ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir la journée de cet athlète dans le calendrier, ou une pastille pour masquer une zone.")}</p>`
+        : ""}
+      ${kind === "above" && hasData
+        ? `<p class="chart-note">${t("Le temps passé plus fort que la référence 45 s, jour par jour. Compté seconde par seconde sur le signal brut, là où les zones lissent sur quinze secondes : un effort court y est visible et ne l'est pas ailleurs. Une séance PPG n'en produit pas.")}</p>`
         : ""}
     </div>`;
   }
@@ -3580,6 +3623,7 @@
         </div>
         ${loadTrendCard(a, "hr")}
         ${loadTrendCard(a, "mech")}
+        ${loadTrendCard(a, "above")}
       </div>`;
   }
 
@@ -4408,11 +4452,16 @@
       .map(a => {
         const list = (a.sessions || []).filter(x => inPeriod.has(x.date) && matchesFilterMode(x));
         if (list.some(x => x.isConditioning)) hasConditioning = true;
+        const paddled = list.filter(x => !x.isConditioning);
         return {
           a,
           count: list.length,
           hr: list.reduce((acc, x) => add(acc, x.hr), [0, 0, 0]),
-          mech: list.filter(x => !x.isConditioning).reduce((acc, x) => add(acc, x.mech), [0, 0, 0])
+          mech: paddled.reduce((acc, x) => add(acc, x.mech), [0, 0, 0]),
+          // Sur les séances de pagaie seulement, comme le mécanique dont il
+          // est la pointe : une PPG n'en produit pas.
+          above: paddled.reduce((acc, x) => acc + (x.aboveAnchor || 0), 0),
+          paddledCount: paddled.length
         };
       })
       .filter(r => r.count > 0);
@@ -4439,6 +4488,9 @@
         ${sum(r.mech) > 0
           ? line(t("Mécanique"), r.mech, "Z")
           : `<div class="cal-total-line"><span class="kind">${t("Mécanique")}</span><span class="vals">${t("PPG seulement")}</span></div>`}
+        ${r.paddledCount > 0
+          ? `<div class="cal-total-line"><span class="kind">${t("Au-dessus de la réf.")}</span><span class="vals">${fmtLoad(r.above)}</span></div>`
+          : ""}
       </div>`).join("");
 
     panel.innerHTML = `<h3>${title} — ${t("Temps par zone")}</h3>${body}
