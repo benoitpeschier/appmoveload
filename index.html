@@ -793,7 +793,7 @@
     "Temps par zone": "Time per zone",
     "Les séances PPG comptent dans le cardio mais pas dans le mécanique : elles n'en produisent pas.": "Conditioning sessions count towards the cardio figures but not the mechanical ones: they produce none.",
     "PPG seulement": "Conditioning only",
-    "Au-dessus de la réf.": "Above ref.",
+    "Au-dessus": "Above ref.",
     "Seul(e) athlète": "Only athlete in",
     "Suivant": "Next",
     "Suivi des athlètes": "Athlete tracking",
@@ -4489,7 +4489,7 @@
           ? line(t("Mécanique"), r.mech, "Z")
           : `<div class="cal-total-line"><span class="kind">${t("Mécanique")}</span><span class="vals">${t("PPG seulement")}</span></div>`}
         ${r.paddledCount > 0
-          ? `<div class="cal-total-line"><span class="kind">${t("Au-dessus de la réf.")}</span><span class="vals">${fmtLoad(r.above)}</span></div>`
+          ? `<div class="cal-total-line"><span class="kind" title="${t("Temps au-dessus de la référence 45 s")}">${t("Au-dessus")}</span><span class="vals">${fmtLoad(r.above)}</span></div>`
           : ""}
       </div>`).join("");
 
