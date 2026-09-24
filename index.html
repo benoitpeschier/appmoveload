@@ -738,7 +738,6 @@
     "Un copropriétaire administre l'équipe à égalité avec vous : il invite les entraîneurs et peut retirer n'importe quel membre, vous compris.": "A co-owner runs the team as your equal: they invite coaches and can remove any member, you included.",
     "Créer l'invitation": "Create the invitation",
     "L'athlète ouvre MoveLoad, puis Réglages > Rejoindre une équipe, et scanne ce code.": "The athlete opens MoveLoad, then Settings > Join a team, and scans this code.",
-    "Envoyez ce lien à la personne invitée. Elle l'ouvre, se connecte avec son propre compte et retrouve l'équipe.": "Send this link to the person invited. They open it, sign in with their own account, and find the team.",
     "Copier le lien": "Copy link",
     "Lien copié": "Link copied",
     "Valable sept jours, pour une seule personne.": "Valid for seven days, for one person only.",
@@ -749,6 +748,7 @@
     "Enregistrer le nom": "Save the name",
     "Nom enregistré": "Name saved",
     "Aucune invitation en attente.": "No pending invitations.",
+    "En face de vous : faites-lui scanner ce code avec l'appareil photo de son téléphone, son navigateur s'ouvre sur l'équipe. À distance : envoyez-lui le lien.": "Face to face: have them scan this code with their phone's camera and their browser opens on the team. Remotely: send them the link.",
     "expire le ": "expires ",
     "Révoquer": "Revoke",
     "Pour inviter, connectez-vous avec le compte qui a une place d'entraîneur ou de propriétaire dans cette équipe.": "To invite, sign in with the account that holds a coach or owner seat in this team.",
@@ -1256,7 +1256,11 @@
         html += "<p>" + esc(t("L'athlète ouvre MoveLoad, puis Réglages > Rejoindre une équipe, et scanne ce code.")) + "</p>" +
           '<div id="inviteQR"></div>';
       } else {
-        html += "<p>" + esc(t("Envoyez ce lien à la personne invitée. Elle l'ouvre, se connecte avec son propre compte et retrouve l'équipe.")) + "</p>" +
+        // Les deux, parce que les deux situations existent : la personne est
+        // devant vous, ou elle est ailleurs. Le code d'abord — c'est le geste
+        // le plus court quand elle est là.
+        html += "<p>" + esc(t("En face de vous : faites-lui scanner ce code avec l'appareil photo de son téléphone, son navigateur s'ouvre sur l'équipe. À distance : envoyez-lui le lien.")) + "</p>" +
+          '<div id="inviteQR"></div>' +
           '<div class="invite-link">' + esc(joinLink(teamCode, c.id)) + "</div>";
       }
       html += '<p class="chart-note">' + esc(t("Valable sept jours, pour une seule personne.")) + "</p>" +
@@ -1331,11 +1335,21 @@
       await refreshInvites();
     }));
 
-    if (s.created && s.created.role === "athlete") {
+    if (s.created) {
       // Generated in the browser, never sent anywhere: the invitation id in
       // it is a bearer token for one seat until it is used or expires.
+      //
+      // **Deux contenus, et c'est tout ce qui sépare les deux rôles.** Un
+      // athlète reçoit l'adresse `moveload://`, que seule l'app sait ouvrir —
+      // scanner ce code avec l'appareil photo ne fait rien, et c'est voulu :
+      // sans l'app, un athlète n'a rien à faire de sa place. Un entraîneur
+      // reçoit l'adresse de la webapp, que l'appareil photo ouvre dans le
+      // navigateur, parce que la webapp *est* son outil et qu'il n'a aucune
+      // raison d'installer l'app.
       const qr = qrcode(0, "M");
-      qr.addData(joinPayload(teamCode, s.created.id));
+      qr.addData(s.created.role === "athlete"
+        ? joinPayload(teamCode, s.created.id)
+        : joinLink(teamCode, s.created.id));
       qr.make();
       document.getElementById("inviteQR").innerHTML = qr.createSvgTag({ scalable: true, margin: 0 });
     }
