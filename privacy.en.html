@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveLoad — Privacy</title>
+<style>
+  :root {
+    --ground: #EDF2EF; --surface: #FFFFFF; --ink: #10221E; --ink-muted: #4C625C;
+    --border: #D2DEDA; --accent: #146B5E; --accent-soft: #DCEEE9;
+    --warning: #9A3C2E; --warning-soft: #F3E0DA;
+    --shadow: 0 1px 2px rgba(16,34,30,.06), 0 8px 24px -12px rgba(16,34,30,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0A1613; --surface: #0F1C19; --ink: #E7F0EC; --ink-muted: #93A9A2;
+      --border: #24413A; --accent: #4FB6A3; --accent-soft: #163832;
+      --warning: #D97B62; --warning-soft: #331F19;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px; line-height: 1.6;
+  }
+  h1, h2 { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; line-height: 1.25; }
+  h1 { font-size: 2rem; margin: 0 0 .5rem; }
+  h2 { font-size: 1.3rem; margin: 2.2rem 0 .6rem; }
+  .masthead { border-bottom: 1px solid var(--border); background: var(--surface); }
+  .masthead-inner { max-width: 44rem; margin: 0 auto; padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: baseline; justify-content: space-between; }
+  .brand { text-decoration: none; color: inherit; font-weight: 700; letter-spacing: .01em; }
+  .brand-sub { color: var(--ink-muted); font-weight: 400; margin-left: .5rem; }
+  nav a { color: var(--accent); text-decoration: none; margin-left: 1rem; font-size: .95rem; }
+  .page { max-width: 44rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  .updated { color: var(--ink-muted); font-size: .9rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.25rem; box-shadow: var(--shadow); margin: 1rem 0; }
+  .card h2 { margin-top: 0; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  .callout { background: var(--accent-soft); border-radius: 12px; padding: .9rem 1.1rem; margin: 1.2rem 0; }
+  .todo { background: var(--warning-soft); border-left: 4px solid var(--warning); border-radius: 8px; padding: .9rem 1.1rem; margin: 1.2rem 0; }
+  .todo strong { color: var(--warning); }
+  a { color: var(--accent); }
+  .colophon { color: var(--ink-muted); font-size: .9rem; margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .9em; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <a class="brand" href="index.html"><span>MoveLoad</span><span class="brand-sub">Privacy</span></a>
+    <nav>
+      <a href="guide.en.html">Guide</a>
+      <a href="privacy.html">Français</a>
+    </nav>
+  </div>
+</div>
+
+<div class="page">
+
+  <h1>Privacy policy</h1>
+  <p class="updated">Last updated: 3 October 2026</p>
+
+  <p>MoveLoad measures training load in canoeing and kayaking from a chest-worn sensor. This page says exactly what data the app handles, what leaves your phone, and what you can do about it.</p>
+
+  <div class="todo">
+    <strong>To complete before publishing —</strong> the contact address below and the Firebase hosting region must be filled in. While they still read &ldquo;to be completed&rdquo;, this page must not go online.
+  </div>
+
+  <h2>Who is responsible</h2>
+  <p>Benoît Peschier, in a personal capacity. For any question or request about your data: <strong>[contact address to be completed]</strong>.</p>
+
+  <h2>What stays on your phone, and never leaves it</h2>
+  <div class="card">
+    <ul>
+      <li>The sensor's raw recordings: acceleration and heart rate, second by second.</li>
+      <li>The intervals between heartbeats from your morning tests.</li>
+      <li><strong>The five answers to the Wellness questionnaire.</strong> Only the overall score is sent; the detail — fatigue, sleep, soreness, stress, mood — stays on the device. That is deliberate: an athlete who knows their &ldquo;stress 2/5&rdquo; is being read stops answering honestly.</li>
+    </ul>
+  </div>
+
+  <h2>What is sent, and only if you join a team</h2>
+  <p>Until you have scanned a coach's invitation, <strong>nothing leaves your phone</strong>. The app works entirely offline. Once you have joined a team, the following is sent:</p>
+  <div class="card">
+    <ul>
+      <li><strong>Your profile</strong>: name, gender, account identifier, teams joined.</li>
+      <li><strong>Each session</strong>: date, duration, the name you give it, perceived exertion, time spent in each cardiac and mechanical zone, power peaks, and — for sessions marked as tests — the average shape of your paddle stroke.</li>
+      <li><strong>Each morning test</strong>: the computed figures (heart rate, rMSSD, spectral powers), the overall Wellness score, and the intervals between heartbeats.</li>
+      <li><strong>Your account</strong>: e-mail address and password.</li>
+    </ul>
+  </div>
+
+  <h2>Who sees this data</h2>
+  <p>The coaches of the team you joined, and no one else. <strong>Other athletes see nothing</strong> — not your data, not even that you exist. If you leave a team, its coaches lose access immediately.</p>
+
+  <h2>What the app does not do</h2>
+  <div class="card">
+    <ul>
+      <li>No trackers, no analytics, no crash reporter.</li>
+      <li>No advertising, no profiling, no selling or sharing for commercial purposes.</li>
+      <li>No access to your location, your contacts, your photos, or Apple's Health app.</li>
+      <li>No third-party tracking library: the code that talks to Firebase is hand-written, and Firebase is the only external service contacted.</li>
+    </ul>
+  </div>
+
+  <h2>Where the data is hosted</h2>
+  <p>With Google, through Firebase (Firestore for the data, Firebase Authentication for accounts). Hosting region: <strong>[to be completed]</strong>. Google acts as a processor.</p>
+
+  <h2>How long it is kept</h2>
+  <p>For as long as you keep your account. Deleting a session or a test from the app also removes it from your coach's dashboard. Deleting your account erases your profile, your sessions and your tests on the server, along with your place in your teams — <strong>this cannot be undone</strong>. The sessions stored on your phone stay: they are yours.</p>
+
+  <h2>Your rights</h2>
+  <p>You may access your data, correct it, erase it, take it elsewhere, or object to its processing. The app makes three of these immediate:</p>
+  <div class="card">
+    <ul>
+      <li><strong>Erase</strong>: Settings → Account → &ldquo;Delete my account&rdquo;.</li>
+      <li><strong>Take with you</strong>: the share button on a session or a test exports the raw data and the figures as CSV.</li>
+      <li><strong>Correct</strong>: name, a session's date, perceived exertion, trimming — all editable in the app, and the correction reaches the coach.</li>
+    </ul>
+  </div>
+  <p>For anything else, write to the contact address above. You may also lodge a complaint with the CNIL, the French data protection authority, if you believe your rights have not been respected.</p>
+
+  <h2>Minors</h2>
+  <p>MoveLoad is aimed at a sporting community with many young people in it. In France, a minor under <strong>15</strong> cannot consent alone to the processing of their data: their legal guardian's agreement is required.</p>
+  <div class="callout">
+    <p>When creating an account, the app asks you to declare that you are 15 or over, or that your legal guardian agrees. <strong>Clubs and coaches who invite under-age athletes must make sure that agreement has been obtained</strong> before sending the invitation. A legal guardian may at any time request the erasure of their child's data at the contact address above.</p>
+  </div>
+
+  <h2>Permissions the app asks for</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Bluetooth</strong>: to talk to the Movesense sensor, start and stop a recording, and fetch sessions.</li>
+      <li><strong>Camera</strong>: only to scan your team's invitation QR code. No image is kept or sent.</li>
+    </ul>
+  </div>
+
+  <h2>Changes</h2>
+  <p>This page will be updated if the app changes what it collects. The date at the top shows the latest version.</p>
+
+  <div class="colophon">MoveLoad — privacy policy. This English version is the one given to the App Store; both say the same thing.</div>
+
+</div>
+</body>
+</html>

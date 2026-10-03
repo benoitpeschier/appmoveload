@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveLoad — Confidentialité</title>
+<style>
+  :root {
+    --ground: #EDF2EF; --surface: #FFFFFF; --ink: #10221E; --ink-muted: #4C625C;
+    --border: #D2DEDA; --accent: #146B5E; --accent-soft: #DCEEE9;
+    --warning: #9A3C2E; --warning-soft: #F3E0DA;
+    --shadow: 0 1px 2px rgba(16,34,30,.06), 0 8px 24px -12px rgba(16,34,30,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0A1613; --surface: #0F1C19; --ink: #E7F0EC; --ink-muted: #93A9A2;
+      --border: #24413A; --accent: #4FB6A3; --accent-soft: #163832;
+      --warning: #D97B62; --warning-soft: #331F19;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px; line-height: 1.6;
+  }
+  h1, h2 { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; line-height: 1.25; }
+  h1 { font-size: 2rem; margin: 0 0 .5rem; }
+  h2 { font-size: 1.3rem; margin: 2.2rem 0 .6rem; }
+  .masthead { border-bottom: 1px solid var(--border); background: var(--surface); }
+  .masthead-inner { max-width: 44rem; margin: 0 auto; padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: baseline; justify-content: space-between; }
+  .brand { text-decoration: none; color: inherit; font-weight: 700; letter-spacing: .01em; }
+  .brand-sub { color: var(--ink-muted); font-weight: 400; margin-left: .5rem; }
+  nav a { color: var(--accent); text-decoration: none; margin-left: 1rem; font-size: .95rem; }
+  .page { max-width: 44rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  .updated { color: var(--ink-muted); font-size: .9rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.25rem; box-shadow: var(--shadow); margin: 1rem 0; }
+  .card h2 { margin-top: 0; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  .callout { background: var(--accent-soft); border-radius: 12px; padding: .9rem 1.1rem; margin: 1.2rem 0; }
+  .todo { background: var(--warning-soft); border-left: 4px solid var(--warning); border-radius: 8px; padding: .9rem 1.1rem; margin: 1.2rem 0; }
+  .todo strong { color: var(--warning); }
+  a { color: var(--accent); }
+  .colophon { color: var(--ink-muted); font-size: .9rem; margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .9em; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <a class="brand" href="index.html"><span>MoveLoad</span><span class="brand-sub">Confidentialité</span></a>
+    <nav>
+      <a href="guide.html">Mode d'emploi</a>
+      <a href="privacy.en.html">English</a>
+    </nav>
+  </div>
+</div>
+
+<div class="page">
+
+  <h1>Politique de confidentialité</h1>
+  <p class="updated">Dernière mise à jour : 3 octobre 2026</p>
+
+  <p>MoveLoad mesure une charge d'entraînement en canoë-kayak à partir d'un capteur porté au torse. Cette page dit exactement quelles données l'application manipule, lesquelles quittent votre téléphone, et ce que vous pouvez en faire.</p>
+
+  <div class="todo">
+    <strong>À compléter avant publication —</strong> l'adresse de contact ci-dessous et la région d'hébergement Firebase doivent être renseignées. Tant qu'elles portent la mention « à compléter », cette page ne doit pas être mise en ligne.
+  </div>
+
+  <h2>Qui est responsable</h2>
+  <p>Benoît Peschier, à titre personnel. Pour toute question ou demande concernant vos données : <strong>[adresse de contact à compléter]</strong>.</p>
+
+  <h2>Ce qui reste sur votre téléphone, et n'en sort jamais</h2>
+  <div class="card">
+    <ul>
+      <li>Les enregistrements bruts du capteur : accélération et fréquence cardiaque, seconde par seconde.</li>
+      <li>Les intervalles entre battements de vos tests du matin.</li>
+      <li><strong>Les cinq réponses du questionnaire Wellness.</strong> Seul le score global part ; le détail — fatigue, sommeil, courbatures, stress, humeur — reste sur l'appareil. C'est délibéré : un athlète qui sait son « stress 2/5 » lu cesse de répondre honnêtement.</li>
+    </ul>
+  </div>
+
+  <h2>Ce qui part, et seulement si vous rejoignez une équipe</h2>
+  <p>Tant que vous n'avez pas scanné l'invitation d'un coach, <strong>rien ne quitte votre téléphone</strong>. L'application fonctionne entièrement hors ligne. Une fois une équipe rejointe, sont envoyés :</p>
+  <div class="card">
+    <ul>
+      <li><strong>Votre fiche</strong> : nom, genre, identifiant de compte, équipes rejointes.</li>
+      <li><strong>Chaque séance</strong> : date, durée, nom que vous lui donnez, charge ressentie, temps passé dans chaque zone cardiaque et mécanique, pics de puissance, et — pour les séances marquées « test » — la forme moyenne de votre coup de pagaie.</li>
+      <li><strong>Chaque test du matin</strong> : les mesures calculées (fréquence cardiaque, rMSSD, puissances spectrales), le score Wellness global, et les intervalles entre battements.</li>
+      <li><strong>Votre compte</strong> : adresse e-mail et mot de passe.</li>
+    </ul>
+  </div>
+
+  <h2>Qui voit ces données</h2>
+  <p>Les coachs de l'équipe que vous avez rejointe, et eux seuls. <strong>Les autres athlètes ne voient rien</strong> — ni vos données, ni même que vous existez. Si vous quittez une équipe, ses coachs cessent immédiatement d'y accéder.</p>
+
+  <h2>Ce que l'application ne fait pas</h2>
+  <div class="card">
+    <ul>
+      <li>Aucun traceur, aucune mesure d'audience, aucun rapporteur de plantage.</li>
+      <li>Aucune publicité, aucun profilage, aucune revente ni partage à des fins commerciales.</li>
+      <li>Aucun accès à votre localisation, à vos contacts, à vos photos, ni à l'app Santé d'Apple.</li>
+      <li>Aucune bibliothèque tierce de suivi : le code qui parle à Firebase est écrit à la main, et c'est le seul service externe contacté.</li>
+    </ul>
+  </div>
+
+  <h2>Où les données sont hébergées</h2>
+  <p>Chez Google, via Firebase (Firestore pour les données, Firebase Authentication pour les comptes). Région d'hébergement : <strong>[à compléter]</strong>. Google agit comme sous-traitant.</p>
+
+  <h2>Combien de temps elles sont conservées</h2>
+  <p>Aussi longtemps que vous gardez votre compte. Supprimer une séance ou un test depuis l'application le retire aussi du tableau de bord de votre coach. Supprimer votre compte efface votre fiche, vos séances et vos tests côté serveur, ainsi que votre place dans vos équipes — <strong>c'est définitif</strong>. Les séances enregistrées sur votre téléphone, elles, restent : elles sont à vous.</p>
+
+  <h2>Vos droits</h2>
+  <p>Vous pouvez accéder à vos données, les corriger, les effacer, les emporter ailleurs, ou vous opposer à leur traitement. L'application en rend trois immédiats :</p>
+  <div class="card">
+    <ul>
+      <li><strong>Effacer</strong> : Réglages → Compte → « Supprimer mon compte ».</li>
+      <li><strong>Emporter</strong> : le bouton de partage sur une séance ou un test exporte les données brutes et les mesures en CSV.</li>
+      <li><strong>Corriger</strong> : nom, date d'une séance, charge ressentie, rognage — tout se modifie dans l'app, et la correction remonte au coach.</li>
+    </ul>
+  </div>
+  <p>Pour le reste, écrivez à l'adresse de contact ci-dessus. Vous pouvez aussi saisir la CNIL si vous estimez vos droits méconnus.</p>
+
+  <h2>Mineurs</h2>
+  <p>MoveLoad s'adresse à une communauté sportive qui compte beaucoup de jeunes. En France, un mineur de moins de <strong>15 ans</strong> ne peut consentir seul au traitement de ses données : l'accord de son responsable légal est nécessaire.</p>
+  <div class="callout">
+    <p>À la création d'un compte, l'application demande de déclarer que l'on a 15 ans ou plus, ou l'accord de son responsable légal. <strong>Les clubs et les coachs qui invitent des athlètes mineurs doivent s'assurer que cet accord a bien été recueilli</strong> avant d'envoyer l'invitation. Un responsable légal peut à tout moment demander l'effacement des données de son enfant à l'adresse de contact ci-dessus.</p>
+  </div>
+
+  <h2>Autorisations demandées par l'application</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Bluetooth</strong> : pour parler au capteur Movesense, démarrer et arrêter un enregistrement, récupérer les séances.</li>
+      <li><strong>Caméra</strong> : uniquement pour scanner le QR code d'invitation de votre équipe. Aucune image n'est conservée ni envoyée.</li>
+    </ul>
+  </div>
+
+  <h2>Modifications</h2>
+  <p>Cette page sera mise à jour si l'application change ce qu'elle collecte. La date en haut indique la dernière version.</p>
+
+  <div class="colophon">MoveLoad — politique de confidentialité. La version anglaise fait foi pour l'App Store ; les deux disent la même chose.</div>
+
+</div>
+</body>
+</html>
