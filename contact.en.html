@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveLoad — Contact and support</title>
+<style>
+  :root {
+    --ground: #EDF2EF; --surface: #FFFFFF; --ink: #10221E; --ink-muted: #4C625C;
+    --border: #D2DEDA; --accent: #146B5E; --accent-soft: #DCEEE9;
+    --warning: #9A3C2E; --warning-soft: #F3E0DA;
+    --shadow: 0 1px 2px rgba(16,34,30,.06), 0 8px 24px -12px rgba(16,34,30,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0A1613; --surface: #0F1C19; --ink: #E7F0EC; --ink-muted: #93A9A2;
+      --border: #24413A; --accent: #4FB6A3; --accent-soft: #163832;
+      --warning: #D97B62; --warning-soft: #331F19;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px; line-height: 1.6;
+  }
+  h1, h2 { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; line-height: 1.25; }
+  h1 { font-size: 2rem; margin: 0 0 .5rem; }
+  h2 { font-size: 1.3rem; margin: 2.2rem 0 .6rem; }
+  .masthead { border-bottom: 1px solid var(--border); background: var(--surface); }
+  .masthead-inner { max-width: 44rem; margin: 0 auto; padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: baseline; justify-content: space-between; }
+  .brand { text-decoration: none; color: inherit; font-weight: 700; letter-spacing: .01em; }
+  .brand-sub { color: var(--ink-muted); font-weight: 400; margin-left: .5rem; }
+  nav a { color: var(--accent); text-decoration: none; margin-left: 1rem; font-size: .95rem; }
+  .page { max-width: 44rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  .updated { color: var(--ink-muted); font-size: .9rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.25rem; box-shadow: var(--shadow); margin: 1rem 0; }
+  .card h2 { margin-top: 0; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  .callout { background: var(--accent-soft); border-radius: 12px; padding: .9rem 1.1rem; margin: 1.2rem 0; }
+  .todo { background: var(--warning-soft); border-left: 4px solid var(--warning); border-radius: 8px; padding: .9rem 1.1rem; margin: 1.2rem 0; }
+  .todo strong { color: var(--warning); }
+  a { color: var(--accent); }
+  .colophon { color: var(--ink-muted); font-size: .9rem; margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .9em; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <a class="brand" href="index.html"><span>MoveLoad</span><span class="brand-sub">Contact</span></a>
+    <nav>
+      <a href="guide.en.html">Guide</a>
+      <a href="privacy.en.html">Privacy</a>
+      <a href="contact.html">Français</a>
+    </nav>
+  </div>
+</div>
+
+<div class="page">
+
+  <h1>Contact and support</h1>
+
+  <p>MoveLoad tracks training load in canoeing and kayaking from a Movesense Flash sensor worn on the chest: an iPhone app for the athlete, a web dashboard for their coach.</p>
+
+  <div class="card">
+    <h2>Write</h2>
+    <p style="font-size:1.15rem"><a href="mailto:contact@moveload.app">contact@moveload.app</a></p>
+    <p>One address for everything: a question, a defect, a measurement that looks wrong, a request about your data. I read and answer these myself; expect a few days rather than a few minutes.</p>
+  </div>
+
+  <h2>Two places the answer may already be</h2>
+  <div class="card">
+    <ul>
+      <li><strong><a href="guide.en.html">The guide</a></strong> — the whole tour, athlete side and coach side: sensor, recording, morning test, zones, dashboard.</li>
+      <li><strong><a href="privacy.en.html">The privacy policy</a></strong> — what data the app handles, what leaves the phone, who sees it, and how to erase it.</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    <p><strong>A measurement that looks wrong?</strong> Start with how the strap is washed. Never any detergent or fabric softener: the film they leave is invisible and is enough to make the measurement useless. Clean water after every outing, pure soap if needed, rinse at length. It is by far the most common cause, and it cost us five days to find.</p>
+  </div>
+
+  <h2>Your data</h2>
+  <p>To erase your account and everything your coach sees of you, the simplest way is from the app: <strong>Settings → Account → &ldquo;Delete my account&rdquo;</strong>. To export your sessions, the share button on a session or a test gives the raw data as CSV. For anything else, write to the address above.</p>
+
+  <div class="colophon">MoveLoad — Benoît Peschier. iPhone app and coach dashboard for canoeing and kayaking.</div>
+
+</div>
+</body>
+</html>
