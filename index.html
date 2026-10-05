@@ -103,6 +103,15 @@
   .top { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
   h1 { font-size: 22px; font-weight: 500; margin: 0; letter-spacing: -0.01em; }
   .top-meta { font-size: 13px; color: var(--ink-soft); }
+  .legal {
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .legal a { color: var(--ink-soft); text-decoration: none; }
+  .legal a:hover { text-decoration: underline; }
   /* The team's name reads as a name, not as another status line. */
   #teamName { font-weight: 600; color: var(--ink); }
 
@@ -579,6 +588,12 @@
       </div>
     </div>
   </div>
+  <footer class="legal">
+    © 2026 Benoît Peschier ·
+    <a id="legalLink" href="mentions-legales.html" data-i18n="Mentions légales">Mentions légales</a> ·
+    <a id="privacyLink" href="privacy.html" data-i18n="Confidentialité">Confidentialité</a> ·
+    <a id="contactLink" href="contact.html" data-i18n="Contact">Contact</a>
+  </footer>
 </div>
 
 <div id="inviteOverlay" hidden>
@@ -783,6 +798,9 @@
     "Entraînement": "Training",
     "Explication": "Explanation",
     "Fermer": "Close",
+    "Mentions légales": "Legal notice",
+    "Confidentialité": "Privacy",
+    "Contact": "Contact",
     "ID de projet Firebase": "Firebase project ID",
     "Mode d'emploi": "User guide",
     "Mois": "Month",
@@ -986,6 +1004,13 @@
     document.title = t("MoveLoad Coach — suivi des athlètes");
     const guide = document.getElementById("guideLink");
     if (guide && LANG === "en") guide.setAttribute("href", "guide.en.html#coach");
+    if (LANG === "en") {
+      const legalPages = { legalLink: "legal-notice.en.html", privacyLink: "privacy.en.html", contactLink: "contact.en.html" };
+      for (const [id, href] of Object.entries(legalPages)) {
+        const el = document.getElementById(id);
+        if (el) el.setAttribute("href", href);
+      }
+    }
     const toggle = document.getElementById("langBtn");
     if (toggle) {
       // Shows the language it switches *to*, which is what a reader who cannot
