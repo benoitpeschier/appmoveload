@@ -798,6 +798,8 @@
     "Entraînement": "Training",
     "Explication": "Explanation",
     "Fermer": "Close",
+    "Affichage": "Display",
+    "Carte indisponible — ouvrez le détail.": "Card unavailable — open the detail view.",
     "Mentions légales": "Legal notice",
     "Confidentialité": "Privacy",
     "Contact": "Contact",
@@ -2189,6 +2191,9 @@
     return values.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${colors[i]}"></span>`).join("");
   }
   function sparkline(history, w, h) {
+    // Même raison que `trendDelta` : sans ce garde, `pts[pts.length-1]` est
+    // indéfini et la carte explose.
+    if (!history.length) return "";
     const vals = history.map(p => p.v);
     const denom = vals.length > 1 ? vals.length - 1 : 1;
     const min = Math.min(...vals), max = Math.max(...vals);
@@ -2206,6 +2211,13 @@
     </svg>`;
   }
   function trendDelta(history) {
+    // Vide pour un athlète dont aucune séance de bateau ne porte de record
+    // 45 s — des séances importées, de la PPG, ou un historique antérieur au
+    // champ. Rendre null plutôt que lire `history[0].v` sur un tableau vide :
+    // l'exception remontait jusqu'au `.map()` de `render`, qui abandonnait
+    // avant d'affecter `grid.innerHTML`, et **toute la grille** restait sur
+    // son affichage précédent. D'où des athlètes qui « disparaissent ».
+    if (!history.length) return null;
     const first = history[0].v, last = history[history.length-1].v;
     const pct = first ? ((last-first)/first*100) : 0;
     const dir = pct > 8 ? "up" : pct < -8 ? "down" : "flat";
@@ -2225,6 +2237,10 @@
 
   function cardHTML(a) {
     const trend = trendDelta(a.history);
+    const trendHTML = trend
+      ? `<div class="trend">${sparkline(a.history, 64, 24)}` +
+        `<span class="trend-delta ${trend.dir}">${trend.label}</span></div>`
+      : "";
     const badge = a.status === "watch" ? `<span class="badge">${t("À surveiller")}</span>` : "";
     return `
       <article class="card" tabindex="0" data-id="${a.id}" role="button" aria-label="${t("Voir le détail de")} ${esc(a.name)}">
@@ -2262,10 +2278,7 @@
           </div>`;
         })()}
         <div class="card-foot">
-          <div class="trend">
-            ${sparkline(a.history, 64, 24)}
-            <span class="trend-delta ${trend.dir}">${trend.label}</span>
-          </div>
+          ${trendHTML}
         </div>
       </article>`;
   }
@@ -3703,8 +3716,24 @@
 
   function render() {
     const renderable = renderableAthletes();
-    grid.innerHTML = renderable.length
-      ? renderable.map(cardHTML).join("")
+    // Une carte qui échoue ne doit coûter qu'elle-même. Sans ce filet, une
+    // exception dans `cardHTML` interrompait le `.map()`, `grid.innerHTML`
+    // n'était jamais affecté, et la grille restait figée sur un rendu
+    // antérieur : les athlètes arrivés depuis semblaient avoir disparu, et
+    // rien à l'écran ne disait qu'il s'était passé quoi que ce soit.
+    const cards = renderable.map(a => {
+      try {
+        return cardHTML(a);
+      } catch (e) {
+        listenerFailed(t("Affichage"), e);
+        return `<article class="card" tabindex="0" data-id="${esc(a.id)}" role="button">
+          <div class="card-head"><div><p class="athlete-name">${esc(a.name)}</p>
+          <p class="athlete-meta">${t("Carte indisponible — ouvrez le détail.")}</p></div></div>
+        </article>`;
+      }
+    });
+    grid.innerHTML = cards.length
+      ? cards.join("")
       : `<p class="empty-note">${t("En attente de la première séance synchronisée…")}</p>`;
     grid.querySelectorAll(".card").forEach(card => {
       const open = () => showDetail(card.dataset.id);
