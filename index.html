@@ -798,6 +798,8 @@
     "Entraînement": "Training",
     "Explication": "Explanation",
     "Fermer": "Close",
+    "date erronée": "wrong date",
+    "Le capteur n'était pas à l'heure : l'athlète peut corriger la date dans l'app.": "The sensor's clock was never set: the athlete can correct the date in the app.",
     "Affichage": "Display",
     "Carte indisponible — ouvrez le détail.": "Card unavailable — open the detail view.",
     "Mentions légales": "Legal notice",
@@ -1661,8 +1663,18 @@
     // would have no starting point on the default view.
     a.lastSessionId = last ? last.id : null;
 
-    const daysSince = last ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
-    if (daysSince !== null && daysSince > 10) {
+    a.lastSessionDateIsWrong = last ? dateIsImplausible(last.date) : false;
+
+    // Une date impossible ne doit pas décider de l'état de l'athlète : compter
+    // les jours depuis 2015 affichait « À surveiller » et « aucune séance
+    // depuis 4299 jours » sur quelqu'un qui s'était entraîné la veille. On dit
+    // ce qui ne va pas, et on ne prétend rien sur son entraînement.
+    const daysSince = last && !a.lastSessionDateIsWrong
+      ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
+    if (a.lastSessionDateIsWrong) {
+      a.status = "ok";
+      a.note = t("Le capteur n'était pas à l'heure : l'athlète peut corriger la date dans l'app.");
+    } else if (daysSince !== null && daysSince > 10) {
       a.status = "watch";
       a.note = t("Aucune séance depuis %d jours").replace("%d", daysSince);
     } else {
@@ -2172,6 +2184,23 @@
     const m = Math.floor(sec / 60), s = Math.round(sec % 60);
     return m + ":" + String(s).padStart(2, "0");
   }
+  /// Une date qu'aucun enregistrement n'a pu porter.
+  ///
+  /// Le RTC du capteur repart à 2015-01-01 à chaque perte d'alimentation, et
+  /// rien sur le capteur ne le règle : c'est le téléphone qui le fait à la
+  /// connexion. Une séance enregistrée avant qu'un téléphone n'ait jamais
+  /// parlé à ce capteur porte donc une date de 2015 — vu en vrai le
+  /// 2026-10-17, un athlète affiché « dernière séance il y a 4299 j » alors
+  /// qu'il s'était entraîné la veille. Le seuil 2020 est celui que l'app
+  /// emploie déjà de son côté. Le futur est tout aussi impossible, avec un
+  /// jour de marge pour les fuseaux.
+  function dateIsImplausible(iso) {
+    if (!iso) return false;
+    const d = new Date(iso + "T12:00:00");
+    if (isNaN(d)) return true;
+    return d.getFullYear() < 2020 || d - new Date() > 86400000;
+  }
+
   function relDate(iso) {
     const d = new Date(iso + "T12:00:00");
     const days = Math.round((new Date() - d) / 86400000);
@@ -2247,7 +2276,7 @@
         <div class="card-head">
           <div>
             <p class="athlete-name">${esc(a.name)}</p>
-            <p class="athlete-meta">${t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""}</p>
+            <p class="athlete-meta">${t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${a.lastSessionDateIsWrong ? t("date erronée") : relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""}</p>
           </div>
           ${badge}
         </div>
@@ -3601,7 +3630,7 @@
       </div>
       <p class="detail-title">${esc(a.name)}</p>
       <div class="session-head">
-      <p class="athlete-meta" style="margin:0">${a.isSpecificSession ? t("Séance") : t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
+      <p class="athlete-meta" style="margin:0">${a.isSpecificSession ? t("Séance") : t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${a.lastSessionDateIsWrong ? t("date erronée") : relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
       ${sessionNavHTML(a)}
       </div>
       <div class="detail-grid">
