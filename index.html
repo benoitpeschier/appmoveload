@@ -753,6 +753,7 @@
     "Un copropriétaire administre l'équipe à égalité avec vous : il invite les entraîneurs et peut retirer n'importe quel membre, vous compris.": "A co-owner runs the team as your equal: they invite coaches and can remove any member, you included.",
     "Créer l'invitation": "Create the invitation",
     "L'athlète ouvre MoveLoad, puis Réglages > Rejoindre une équipe, et scanne ce code.": "The athlete opens MoveLoad, then Settings > Join a team, and scans this code.",
+    "En face de vous : faites-lui scanner ce code depuis MoveLoad, Réglages > Rejoindre une équipe. À distance : envoyez-lui le lien, il le collera au même endroit.": "Face to face: have them scan this code from MoveLoad, Settings > Join a team. Remotely: send them the link, they paste it in the same place.",
     "Copier le lien": "Copy link",
     "Lien copié": "Link copied",
     "Valable sept jours, pour une seule personne.": "Valid for seven days, for one person only.",
@@ -1282,8 +1283,12 @@
       const c = s.created;
       html += "<p><strong>" + esc(roleName(c.role) + (c.athleteId ? " — " + athleteName(c.athleteId) : "")) + "</strong></p>";
       if (c.role === "athlete") {
-        html += "<p>" + esc(t("L'athlète ouvre MoveLoad, puis Réglages > Rejoindre une équipe, et scanne ce code.")) + "</p>" +
-          '<div id="inviteQR"></div>';
+        // Les deux routes, parce que scanner suppose deux écrans — celui qui
+        // montre le code et celui qui le lit. Un athlète à distance n'en a
+        // qu'un, et il n'avait rien jusqu'ici.
+        html += "<p>" + esc(t("En face de vous : faites-lui scanner ce code depuis MoveLoad, Réglages > Rejoindre une équipe. À distance : envoyez-lui le lien, il le collera au même endroit.")) + "</p>" +
+          '<div id="inviteQR"></div>' +
+          '<div class="invite-link">' + esc(joinPayload(teamCode, c.id)) + "</div>";
       } else {
         // Les deux, parce que les deux situations existent : la personne est
         // devant vous, ou elle est ailleurs. Le code d'abord — c'est le geste
@@ -1293,7 +1298,7 @@
           '<div class="invite-link">' + esc(joinLink(teamCode, c.id)) + "</div>";
       }
       html += '<p class="chart-note">' + esc(t("Valable sept jours, pour une seule personne.")) + "</p>" +
-        '<div class="dialog-row">' + (c.role === "athlete" ? "" : button("inviteCopy", t("Copier le lien"))) +
+        '<div class="dialog-row">' + button("inviteCopy", t("Copier le lien")) +
         button("inviteAnother", t("Nouvelle invitation")) + button("inviteClose", t("Fermer")) + "</div>";
     }
 
@@ -1351,7 +1356,11 @@
     on("inviteAnother", () => { s.created = null; s.athleteId = ""; renderInvite(); });
     on("inviteCopy", async () => {
       try {
-        await navigator.clipboard.writeText(joinLink(teamCode, s.created.id));
+        // L'athlète colle son lien dans l'app, l'entraîneur ouvre le sien
+        // dans un navigateur : ce ne sont pas les mêmes adresses.
+        await navigator.clipboard.writeText(s.created.role === "athlete"
+          ? joinPayload(teamCode, s.created.id)
+          : joinLink(teamCode, s.created.id));
         document.getElementById("inviteCopy").textContent = t("Lien copié");
       } catch (e) { /* the link stays on screen to copy by hand */ }
     });
