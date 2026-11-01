@@ -259,6 +259,13 @@
   .view.active { display: block; }
 
   .cal-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+  .csv-btn {
+    border: 1px solid var(--border); background: var(--card-bg); color: var(--ink-soft);
+    border-radius: 7px; padding: 1px 7px; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.02em; line-height: 1.7; white-space: nowrap; cursor: pointer;
+  }
+  .csv-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .head-tools { display: inline-flex; align-items: center; gap: 0.5rem; }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 12.5px; font-weight: 500; color: var(--ink-soft);
@@ -820,6 +827,7 @@
     "Semaine": "Week",
     "Total de la semaine": "Week total",
     "Total du mois": "Month total",
+    "Télécharger en CSV": "Download as CSV",
     "Charge mécanique": "Mechanical load",
     "Temps par zone": "Time per zone",
     "Les séances PPG comptent dans le cardio mais pas dans le mécanique : elles n'en produisent pas.": "Conditioning sessions count towards the cardio figures but not the mechanical ones: they produce none.",
@@ -3528,10 +3536,19 @@
       ? t("Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.")
       : t("Aucune séance sur cette période.");
 
+    // À gauche du sélecteur de période, parce que c'est ce sélecteur qui
+    // décide de ce que le fichier contiendra : les deux se lisent ensemble.
+    // Pas de bouton sans colonne à écrire — ni quand il n'y a rien à
+    // dessiner, ni quand toutes les zones sont masquées : un bouton qui ne
+    // fait rien se lit comme une panne.
+    const csvBtn = hasData && !allHidden
+      ? `<button class="csv-btn" data-csv-trend="${kind}" title="${t("Télécharger en CSV")}" aria-label="${t("Télécharger en CSV")} — ${title}">CSV</button>`
+      : "";
+
     return `<div class="detail-section" style="grid-column:1/-1">
       <div class="load-trend-head">
         <h3 style="margin:0">${title} <span class="load-trend-unit">${t("minutes par jour")}</span></h3>
-        ${seg}
+        <span class="head-tools">${csvBtn}${seg}</span>
       </div>
       ${hasData
         ? `<div class="chart-wrap">${loadTrendSVG(points, kind)}<div class="tooltip"></div></div>
@@ -3545,6 +3562,37 @@
         ? `<p class="chart-note">${t("Le temps passé plus fort que la référence 45 s, jour par jour. Compté seconde par seconde sur le signal brut, là où les zones lissent sur quinze secondes : un effort court y est visible et ne l'est pas ailleurs. Une séance PPG n'en produit pas.")}</p>`
         : ""}
     </div>`;
+  }
+
+  /// Une ligne par jour, comme une colonne du graphique est un jour — zéros
+  /// compris, parce qu'un jour sans séance est une information et qu'une ligne
+  /// absente se lirait « je ne sais pas » au lieu de « rien ».
+  ///
+  /// **Les zones masquées ne sont pas dans le fichier.** Elles ne sont déjà
+  /// plus dans l'empilement ni dans la hauteur des colonnes : les laisser dans
+  /// le CSV rendrait le fichier et le dessin incomparables, alors qu'on
+  /// télécharge précisément pour citer ce qu'on regarde.
+  function exportLoadTrendCSV(athleteId, kind) {
+    const a = athletes.find(x => x.id === athleteId);
+    const points = a ? loadTrendSeries(a, loadTrendDays) : null;
+    if (!points || !points.length) return;
+
+    const columns = kind === "hr" ? ["hr_i1_min", "hr_i2_min", "hr_i3_min"]
+      : kind === "mech" ? ["mech_z1_min", "mech_z2_min", "mech_z3_min"]
+        : ["above_45s_min"];
+    const hidden = loadTrendHidden[kind];
+    const shown = columns.map((name, j) => ({ name, j })).filter(c => !hidden.has(c.j));
+    if (!shown.length) return;
+
+    const rows = [["date", "athlete", "sessions", ...shown.map(c => c.name)]];
+    points.forEach(p => rows.push([
+      p.iso, a.name, p.count, ...shown.map(c => csvMinutes(p[kind][c.j]))
+    ]));
+
+    const what = kind === "hr" ? "cardio" : kind === "mech" ? "mecanique" : "au-dessus-reference";
+    csvDownload(
+      `moveload-${what}-${csvSlug(a.name)}-${points[0].iso}-${points[points.length - 1].iso}.csv`,
+      rows);
   }
 
   function mechCurveSVG(a) {
@@ -3891,6 +3939,10 @@
         loadTrendDays = Number(btn.dataset.days);
         renderDetail(id, sessionId);
       });
+    });
+
+    detail.querySelectorAll("[data-csv-trend]").forEach(btn => {
+      btn.addEventListener("click", () => exportLoadTrendCSV(id, btn.dataset.csvTrend));
     });
 
     detail.querySelectorAll(".load-trend-day").forEach(col => {
@@ -4336,6 +4388,10 @@
   // squad in, and it is the only span where a session shows its load bar
   // rather than a coloured initial.
   let calMode = "week";
+  // La période que le panneau des totaux vient d'afficher. Le bouton CSV la
+  // relit au clic : sans elle il exporterait ce que le calendrier montre à cet
+  // instant, qui n'est plus forcément ce que le panneau disait.
+  let calTotalsPeriod = [];
   // Jour mis en avant à l'arrivée depuis un graphique de charge. Effacé dès
   // que l'entraîneur navigue : la surbrillance répond à un clic précis, elle
   // ne suit pas la promenade qui vient après.
@@ -4534,6 +4590,49 @@
       : { values: s.mech, colors: ["var(--z1)","var(--z2)","var(--z3)"], label: mechPctLabel(s.mech) };
   }
 
+  /// Un CSV se relit par un tableur ou par un script, jamais par un lecteur
+  /// francophone : virgule pour séparer, point pour décimer, en-têtes en
+  /// anglais et dates ISO — exactement la convention des exports de l'app iOS,
+  /// pour qu'un entraîneur qui reçoit les deux puisse les empiler sans rien
+  /// convertir.
+  ///
+  /// **Le fichier dit ce que l'écran dit.** Il n'emporte que la période
+  /// affichée, le filtre de séances en cours et les zones visibles : masquer
+  /// une zone la retire du dessin *et* du fichier, comme elle est déjà retirée
+  /// de l'empilement et de la hauteur. Un CSV plus complet que le graphique
+  /// au-dessus de lui serait un CSV qu'on ne peut pas citer.
+  function csvCell(v) {
+    const str = (v === null || v === undefined) ? "" : String(v);
+    return /[",\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+  }
+
+  function csvDownload(filename, rows) {
+    const text = rows.map(r => r.map(csvCell).join(",")).join("\n") + "\n";
+    const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Révoquée au tour de boucle suivant : rendre l'URL tout de suite coupe le
+    // téléchargement sous Safari, qui n'a pas fini de la lire quand le clic
+    // revient.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  /// Un nom de fichier sans accent ni espace : il part par mail et atterrit
+  /// sur un autre système de fichiers que le nôtre.
+  function csvSlug(value) {
+    return (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase() || "athlete";
+  }
+
+  /// Des minutes, parce que l'écran parle en minutes et en heures. Les zones
+  /// sont stockées en secondes et une seconde vaut 0,017 min : deux décimales
+  /// la rendent au lieu de l'arrondir à un chiffre que personne n'a mesuré.
+  function csvMinutes(seconds) { return (seconds / 60).toFixed(2); }
+
   /// A period total reads better in hours than in minutes and seconds: a week
   /// of paddling is "4 h 12", not "252:07".
   function fmtLoad(sec) {
@@ -4557,6 +4656,7 @@
     const panel = document.getElementById("calTotals");
     if (!panel) return;
     const inPeriod = new Set(days.filter(d => !d.out).map(d => isoDate(d.date)));
+    calTotalsPeriod = [...inPeriod].sort();
     const add = (acc, v) => [acc[0] + v[0], acc[1] + v[1], acc[2] + v[2]];
     const sum = v => v[0] + v[1] + v[2];
 
@@ -4596,6 +4696,7 @@
         <div class="cal-total-head">
           <span class="a-chip" style="background:${r.a.color}">${r.a.initial}</span>
           <span class="who">${esc(r.a.name)}</span>
+          <button class="csv-btn" data-csv-cal="${esc(r.a.id)}" title="${t("Télécharger en CSV")}" aria-label="${t("Télécharger en CSV")} — ${esc(r.a.name)}">CSV</button>
           <span class="sum">${r.count} ${r.count > 1 ? t("séances") : t("séance")}</span>
         </div>
         ${line(t("Cardio"), r.hr, "I")}
@@ -4609,6 +4710,46 @@
 
     panel.innerHTML = `<h3>${title} — ${t("Temps par zone")}</h3>${body}
       ${hasConditioning ? `<p class="chart-note">${t("Les séances PPG comptent dans le cardio mais pas dans le mécanique : elles n'en produisent pas.")}</p>` : ""}`;
+
+    panel.querySelectorAll("[data-csv-cal]").forEach(btn => {
+      btn.addEventListener("click", () => exportCalendarCSV(btn.dataset.csvCal));
+    });
+  }
+
+  /// Une ligne par séance, et non la ligne de totaux que le panneau affiche.
+  /// Les totaux tiennent déjà sur l'écran, et quatre chiffres ne se recoupent
+  /// pas : c'est le détail qu'on resomme comme on veut, par semaine, par
+  /// embarcation ou par type de séance.
+  ///
+  /// Les colonnes mécaniques d'une PPG valent zéro par construction, et
+  /// `is_conditioning` dit pourquoi. C'est ce qui permet de refaire le calcul
+  /// du panneau — cardio sur tout, mécanique sur la pagaie seule — plutôt que
+  /// de le croire sur parole.
+  function exportCalendarCSV(athleteId) {
+    const a = athletes.find(x => x.id === athleteId);
+    if (!a || !calTotalsPeriod.length) return;
+    const period = new Set(calTotalsPeriod);
+    const list = (a.sessions || [])
+      .filter(x => period.has(x.date) && matchesFilterMode(x))
+      .sort((x, y) => x.startedAt - y.startedAt);
+
+    const rows = [[
+      "date", "started_at", "athlete", "session", "is_test", "is_conditioning",
+      "boat", "duration_min", "rpe",
+      "hr_i1_min", "hr_i2_min", "hr_i3_min",
+      "mech_z1_min", "mech_z2_min", "mech_z3_min", "above_45s_min"
+    ]];
+    list.forEach(x => rows.push([
+      x.date, x.startedAtLabel, a.name, x.name, x.isTest, x.isConditioning,
+      x.boatType || "", x.duration, x.rpe === null ? "" : x.rpe,
+      csvMinutes(x.hr[0]), csvMinutes(x.hr[1]), csvMinutes(x.hr[2]),
+      csvMinutes(x.mech[0]), csvMinutes(x.mech[1]), csvMinutes(x.mech[2]),
+      csvMinutes(x.aboveAnchor || 0)
+    ]));
+
+    const from = calTotalsPeriod[0];
+    const to = calTotalsPeriod[calTotalsPeriod.length - 1];
+    csvDownload(`moveload-seances-${csvSlug(a.name)}-${from}-${to}.csv`, rows);
   }
 
   function renderCalendar() {
