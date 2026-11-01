@@ -259,6 +259,15 @@
   .view.active { display: block; }
 
   .cal-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+  .obs { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; gap: 0.3rem; }
+  .obs li {
+    font-size: 12px; line-height: 1.45; color: var(--ink-soft);
+    padding-left: 0.85rem; position: relative;
+  }
+  .obs li::before {
+    content: ""; position: absolute; left: 0; top: 0.5em;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--border-strong);
+  }
   .csv-btn {
     border: 1px solid var(--border); background: var(--card-bg); color: var(--ink-soft);
     border-radius: 7px; padding: 1px 7px; font-size: 11px; font-weight: 600;
@@ -740,6 +749,12 @@
     "(automatique)": "(automatic)",
     "Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.": "No time above the reference — or no 45 s reference confirmed for this athlete yet.",
     "Aucune séance depuis %d jours": "No session for %d days",
+    "Charge cardio +%p % cette semaine (%a contre %b par semaine sur les 3 précédentes)": "Cardio load +%p% this week (%a against %b per week over the previous 3)",
+    ", dont I3 +%p % (%a contre %b)": ", including I3 +%p% (%a against %b)",
+    "Charge I3 +%p % cette semaine (%a contre %b par semaine sur les 3 précédentes), à volume cardio stable": "I3 load +%p% this week (%a against %b per week over the previous 3), at steady cardio volume",
+    "Moins d'une minute en I3 sur %d jours, en %n séances": "Under a minute in I3 over %d days, across %n sessions",
+    "Ressenti et mesure divergent : la séance jugée la plus dure (RPE %r, %d) n'est que la %ke plus chargée sur %n": "Perceived and measured disagree: the session rated hardest (RPE %r, %d) ranks only %k of %n by measured load",
+    "Ressenti et mesure divergent : la séance jugée la plus dure (RPE %r, %d) est la moins chargée des %n": "Perceived and measured disagree: the session rated hardest (RPE %r, %d) is the least loaded of the %n",
     "Calendrier": "Calendar",
     "Cardio": "Cardio",
     "Charge cardio": "Cardio load",
@@ -1688,16 +1703,31 @@
     // ce qui ne va pas, et on ne prétend rien sur son entraînement.
     const daysSince = last && !a.lastSessionDateIsWrong
       ? Math.round((new Date() - new Date(last.date + "T12:00:00")) / 86400000) : null;
+    a.notes = [];
     if (a.lastSessionDateIsWrong) {
       a.status = "ok";
-      a.note = t("Le capteur n'était pas à l'heure : l'athlète peut corriger la date dans l'app.");
+      a.notes.push(t("Le capteur n'était pas à l'heure : l'athlète peut corriger la date dans l'app."));
     } else if (daysSince !== null && daysSince > 10) {
       a.status = "watch";
-      a.note = t("Aucune séance depuis %d jours").replace("%d", daysSince);
+      a.notes.push(t("Aucune séance depuis %d jours").replace("%d", daysSince));
     } else {
       a.status = "ok";
-      a.note = undefined;
     }
+
+    // Les observations de charge viennent après, et ne touchent pas au statut.
+    // « À surveiller » reste réservé à ce qui ne va pas — un athlète qui monte
+    // en charge s'entraîne, ce n'est pas une alerte, c'est un fait.
+    //
+    // Ce qui précède passe devant : un capteur à l'heure fausse rend toutes
+    // les dates douteuses, et un athlète silencieux n'a pas de charge à
+    // commenter.
+    const todayIso = isoDate(new Date());
+    [loadRampNote, flatIntensityNote, perceivedLoadNote].forEach(rule => {
+      const note = rule(a, todayIso);
+      if (note) a.notes.push(note);
+    });
+    // Gardé pour l'en-tête du détail, qui n'en montre qu'une.
+    a.note = a.notes[0];
 
     a.history = paddling
       .filter(s => s.mechanicalPeaks && s.mechanicalPeaks["45"] != null)
@@ -1745,6 +1775,162 @@
       a.curveRecords = other.records;
       a.curveRecordDates = other.dates;
     }
+  }
+
+
+  /// Les trois observations de charge, en plus des deux que `deriveAthlete`
+  /// posait déjà (capteur à l'heure, silence prolongé).
+  ///
+  /// **Ce sont des constats, pas des avis.** Chacun porte ses chiffres, pour
+  /// qu'on puisse le recouper dans le calendrier au lieu de le croire ; aucun
+  /// ne dit quelle séance faire, parce que la webapp dit déjà le contraire en
+  /// toutes lettres sur l'écran VFC.
+  ///
+  /// **Chacun se tait plutôt que de parler sur trop peu.** Une règle sans
+  /// garde fabrique des pourcentages spectaculaires sur trois séances, et
+  /// l'entraîneur qui s'est fait avoir une fois n'en relit plus aucune.
+  ///
+  /// Les seuils sont ici, nommés, parce qu'ils se règlent sur six athlètes
+  /// réels : ce sont des points de départ, pas des constantes de la nature.
+  const LOAD_RULES = {
+    // ① la montée
+    rampDays: 7,
+    rampReferenceWeeks: 3,
+    rampTrigger: 1.5,
+    rampFloorSeconds: 30 * 60,
+    rampI3FloorSeconds: 5 * 60,
+    // ② l'intensité absente
+    flatDays: 14,
+    flatMaxI3Seconds: 60,
+    flatMinSessions: 3,
+    // ⑤ le ressenti qui diverge
+    divergeDays: 30,
+    divergeMinSessions: 5,
+    // Une minute en I3 pèse trois minutes en I1 : la pondération classique des
+    // scores de charge, ramenée à trois zones. C'est un choix, pas une loi, et
+    // c'est pour ça qu'il est écrit ici plutôt que dissous dans le calcul.
+    zoneWeights: [1, 2, 3]
+  };
+
+  function isoShift(iso, days) {
+    const d = new Date(iso + "T12:00:00");
+    d.setDate(d.getDate() + days);
+    return isoDate(d);
+  }
+
+  /// Les séances de l'athlète entre deux jours inclus, filtre de l'écran
+  /// compris : une observation qui compterait les tests pendant que l'écran
+  /// les masque parlerait d'autre chose que ce qu'on regarde.
+  function sessionsBetween(a, fromIso, toIso) {
+    return (a.sessions || []).filter(x => matchesFilterMode(x) && x.date >= fromIso && x.date <= toIso);
+  }
+
+  const zoneSum = (list, key) => list.reduce((acc, x) => acc + x[key][0] + x[key][1] + x[key][2], 0);
+  const zoneWeighted = (x, key) => LOAD_RULES.zoneWeights.reduce((acc, w, i) => acc + w * x[key][i], 0);
+  const pct = (now, was) => Math.round((now / was - 1) * 100);
+
+  /// ① La charge de la semaine contre les trois précédentes, sur le volume
+  /// cardio et sur la seule I3 — une semaine de même volume mais trois fois
+  /// plus intense n'est pas la même semaine.
+  ///
+  /// **Le ratio aigu/chronique est le cadrage le plus répandu et le plus
+  /// contesté** : la littérature récente lui reproche sa méthode, pas son
+  /// intuition. D'où un constat chiffré et daté, jamais un « risque élevé ».
+  ///
+  /// Trois gardes, et la troisième est celle qui compte : sans historique
+  /// couvrant le début de la fenêtre de référence, la moyenne est calculée
+  /// sur un athlète qui n'avait pas encore de capteur, et tout le monde est
+  /// en hausse de 300 % sa deuxième semaine.
+  function loadRampNote(a, todayIso) {
+    const R = LOAD_RULES;
+    const recentFrom = isoShift(todayIso, -(R.rampDays - 1));
+    const refTo = isoShift(todayIso, -R.rampDays);
+    const refFrom = isoShift(refTo, -(7 * R.rampReferenceWeeks - 1));
+
+    const first = (a.sessions || []).filter(matchesFilterMode).map(x => x.date).sort()[0];
+    if (!first || first > refFrom) return null;
+
+    const recent = sessionsBetween(a, recentFrom, todayIso);
+    const reference = sessionsBetween(a, refFrom, refTo);
+    if (reference.length < 3 || !recent.length) return null;
+
+    const nowAll = zoneSum(recent, "hr");
+    const wasAll = zoneSum(reference, "hr") / R.rampReferenceWeeks;
+    const nowI3 = recent.reduce((acc, x) => acc + x.hr[2], 0);
+    const wasI3 = reference.reduce((acc, x) => acc + x.hr[2], 0) / R.rampReferenceWeeks;
+
+    const allUp = wasAll >= R.rampFloorSeconds && nowAll >= wasAll * R.rampTrigger;
+    const i3Up = wasI3 >= R.rampI3FloorSeconds && nowI3 >= wasI3 * R.rampTrigger;
+
+    if (allUp) {
+      let note = t("Charge cardio +%p % cette semaine (%a contre %b par semaine sur les 3 précédentes)")
+        .replace("%p", pct(nowAll, wasAll)).replace("%a", fmtLoad(nowAll)).replace("%b", fmtLoad(wasAll));
+      if (i3Up) {
+        note += t(", dont I3 +%p % (%a contre %b)")
+          .replace("%p", pct(nowI3, wasI3)).replace("%a", fmtLoad(nowI3)).replace("%b", fmtLoad(wasI3));
+      }
+      return note;
+    }
+    if (i3Up) {
+      return t("Charge I3 +%p % cette semaine (%a contre %b par semaine sur les 3 précédentes), à volume cardio stable")
+        .replace("%p", pct(nowI3, wasI3)).replace("%a", fmtLoad(nowI3)).replace("%b", fmtLoad(wasI3));
+    }
+    return null;
+  }
+
+  /// ② De l'entraînement, mais aucune intensité.
+  ///
+  /// La garde sur le nombre de séances est ce qui sépare cette règle du
+  /// silence : sans elle, un athlète qui ne s'entraîne plus déclencherait les
+  /// deux, et la seconde ne dirait rien que la première n'ait dit.
+  ///
+  /// Moins d'une minute cumulée plutôt que zéro strict : trois secondes d'I3
+  /// arrachées à un démarrage ne sont pas de l'intensité, et un zéro strict se
+  /// laisse annuler par elles.
+  function flatIntensityNote(a, todayIso) {
+    const R = LOAD_RULES;
+    const from = isoShift(todayIso, -(R.flatDays - 1));
+    const list = sessionsBetween(a, from, todayIso);
+    if (list.length < R.flatMinSessions) return null;
+    const i3 = list.reduce((acc, x) => acc + x.hr[2], 0);
+    if (i3 >= R.flatMaxI3Seconds) return null;
+    return t("Moins d'une minute en I3 sur %d jours, en %n séances")
+      .replace("%d", R.flatDays).replace("%n", list.length);
+  }
+
+  /// ⑤ Le ressenti et la mesure ne classent pas les séances dans le même
+  /// ordre. C'est la seule des trois qui croise le vécu et le mesuré, donc la
+  /// seule qui dise quelque chose qu'aucun des deux ne dit seul.
+  ///
+  /// **Les PPG sont écartées, et c'est structurel** : elles ne produisent
+  /// aucune charge mécanique par construction, donc elles seraient toujours
+  /// les moins chargées et une PPG dure déclencherait la règle à chaque fois.
+  /// Comparer le ressenti à une mesure qui ne peut pas voir l'effort n'est pas
+  /// une divergence, c'est un angle mort.
+  function perceivedLoadNote(a, todayIso) {
+    const R = LOAD_RULES;
+    const from = isoShift(todayIso, -(R.divergeDays - 1));
+    const list = sessionsBetween(a, from, todayIso)
+      .filter(x => !x.isConditioning && x.rpe != null);
+    if (list.length < R.divergeMinSessions) return null;
+
+    const scored = list.map(x => ({ s: x, load: zoneWeighted(x, "hr") + zoneWeighted(x, "mech") }));
+    // La plus récente départage deux séances au même ressenti : c'est celle
+    // sur laquelle l'entraîneur peut encore agir.
+    const hardest = scored.reduce((best, c) =>
+      (c.s.rpe > best.s.rpe || (c.s.rpe === best.s.rpe && c.s.startedAt > best.s.startedAt)) ? c : best);
+    if (scored.filter(c => c.s.rpe === hardest.s.rpe).length === scored.length) return null;
+
+    const ranked = [...scored].sort((x, y) => y.load - x.load);
+    const rank = ranked.findIndex(c => c.s.id === hardest.s.id) + 1;
+    if (rank <= Math.ceil(scored.length / 2)) return null;
+
+    const phrase = rank === scored.length
+      ? t("Ressenti et mesure divergent : la séance jugée la plus dure (RPE %r, %d) est la moins chargée des %n")
+      : t("Ressenti et mesure divergent : la séance jugée la plus dure (RPE %r, %d) n'est que la %ke plus chargée sur %n");
+    return phrase
+      .replace("%r", rpeLabel(hardest.s.rpe)).replace("%d", shortDate(hardest.s.date))
+      .replace("%k", rank).replace("%n", scored.length);
   }
 
   function onDataChanged() {
@@ -2281,6 +2467,11 @@
     })[ch]);
   }
 
+  // Deux au maximum. Au-delà la carte devient un mur de texte, et ce qu'on
+  // lit en diagonale on finit par ne plus le lire du tout. Les suivantes
+  // existent toujours dans `a.notes` pour qui veut les afficher ailleurs.
+  const MAX_CARD_NOTES = 2;
+
   function cardHTML(a) {
     const trend = trendDelta(a.history);
     const trendHTML = trend
@@ -2307,6 +2498,8 @@
           <div class="bar-label"><span>${t("Charge mécanique")}</span><span>${fmtMinSec(a.mech[2])} ${t("en zone 3")}</span></div>
           <div class="bar">${stackBar(a.mech, ["var(--z1)","var(--z2)","var(--z3)"])}</div>
         </div>`}
+        ${a.notes && a.notes.length ? `<ul class="obs">${
+          a.notes.slice(0, MAX_CARD_NOTES).map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
         ${!(a.hrv || []).length ? "" : (() => {
           const state = hrvStateAt(a, a.hrv.length - 1);
           const fresh = a.hrvToday && a.hrvToday.date === isoDate(new Date());
