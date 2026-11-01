@@ -259,7 +259,15 @@
   .view.active { display: block; }
 
   .cal-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
-  .obs { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; gap: 0.3rem; }
+  /* Un filet au-dessus : sans lui la note se lit dans la foulée de la ligne
+     grise qui la précède — « Séance PPG — charge cardio uniquement » — et les
+     deux se confondent alors qu'elles ne disent pas la même chose. Même trait
+     que le bandeau VFC, mais sans sa bande teintée : c'est une séparation,
+     pas une seconde zone. */
+  .obs {
+    list-style: none; margin: 0.7rem 0 0; padding: 0.7rem 0 0;
+    display: grid; gap: 0.3rem; border-top: 1px solid var(--border);
+  }
   .obs li {
     font-size: 12px; line-height: 1.45; color: var(--ink-soft);
     padding-left: 0.85rem; position: relative;
