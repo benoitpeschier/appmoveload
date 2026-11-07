@@ -649,7 +649,7 @@
            GoogleAuthProvider, signInWithPopup, connectAuthEmulator
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
   import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, getDocs, deleteDoc,
-           writeBatch, serverTimestamp, connectFirestoreEmulator
+           deleteField, writeBatch, serverTimestamp, connectFirestoreEmulator
          } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
   // Local testing only: ?emulator on localhost points the page at the Auth and
@@ -797,6 +797,13 @@
     "En face de vous : faites-lui scanner ce code avec l'appareil photo de son téléphone, son navigateur s'ouvre sur l'équipe. À distance : envoyez-lui le lien.": "Face to face: have them scan this code with their phone's camera and their browser opens on the team. Remotely: send them the link.",
     "expire le ": "expires ",
     "Révoquer": "Revoke",
+    "Membres de l'équipe": "Team members",
+    "Retirer quelqu'un supprime sa place et, pour un athlète, le nom que l'équipe garde de lui et l'accès de l'équipe à ses séances. Ses données restent les siennes, dans son app et dans son compte.": "Removing someone deletes their seat and, for an athlete, the name the team keeps for them and the team's access to their sessions. Their data stays theirs, in their app and in their account.",
+    "Vous êtes seul dans cette équipe.": "You are the only member of this team.",
+    "Retirer": "Remove",
+    "Confirmer le retrait": "Confirm removal",
+    "Annuler": "Cancel",
+    "Cette place n'existe plus.": "This seat no longer exists.",
     "Pour inviter, connectez-vous avec le compte qui a une place d'entraîneur ou de propriétaire dans cette équipe.": "To invite, sign in with the account that holds a coach or owner seat in this team.",
     "Ce compte n'a pas de place d'entraîneur ou de propriétaire dans cette équipe : il ne peut pas inviter.": "This account holds no coach or owner seat in this team, so it cannot invite.",
     "Cette invitation vous propose une place dans une équipe MoveLoad. Connectez-vous ou créez un compte pour l'accepter : la place sera attachée à ce compte.": "This invitation offers you a seat in a MoveLoad team. Sign in or create an account to accept it: the seat will belong to that account.",
@@ -1238,7 +1245,10 @@
 
   async function showInvite() {
     inviteState = { role: "athlete", athleteId: "", created: null, busy: false, error: null,
-                    pending: [], seatedAthletes: new Set(),
+                    pending: [], seats: [], seatedAthletes: new Set(),
+                    // Le retrait d'un membre se confirme en deux temps : cette
+                    // clé porte la place en attente de confirmation.
+                    confirmRemove: null,
                     // null, not "": a name typed but not yet saved must survive
                     // the re-reads that revoking an invitation triggers.
                     teamName: null, teamExists: false, nameError: null,
@@ -1269,7 +1279,8 @@
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(inv => !inv.usedBy && (!inviteExpiry(inv) || inviteExpiry(inv).getTime() > now))
         .sort((a, b) => (inviteExpiry(b)?.getTime() ?? 0) - (inviteExpiry(a)?.getTime() ?? 0));
-      s.seatedAthletes = new Set(seats.docs.map(d => d.data().athleteId).filter(Boolean));
+      s.seats = seats.docs.map(d => ({ uid: d.id, ...d.data() }));
+      s.seatedAthletes = new Set(s.seats.map(x => x.athleteId).filter(Boolean));
     } catch (err) {
       s.error = err.message;
     }
@@ -1351,6 +1362,29 @@
       }).join("") + "</ul>";
     }
 
+    // Retirer un membre est réservé au propriétaire, exactement comme dans les
+    // règles : `isOwner`, pas `isCoach`. Un entraîneur ne peut que révoquer une
+    // invitation non utilisée, ce que la liste au-dessus lui offre déjà.
+    if (owner) {
+      const others = s.seats.filter(x => x.uid !== signedInUser.uid);
+      html += "<h3>" + esc(t("Membres de l'équipe")) + "</h3>" +
+        "<p>" + esc(t("Retirer quelqu'un supprime sa place et, pour un athlète, le nom que l'équipe garde de lui et l'accès de l'équipe à ses séances. Ses données restent les siennes, dans son app et dans son compte.")) + "</p>";
+      if (!others.length) {
+        html += '<p class="chart-note">' + esc(t("Vous êtes seul dans cette équipe.")) + "</p>";
+      } else {
+        html += '<ul class="invite-pending">' + others.map(x => {
+          const label = roleName(x.role) + (x.athleteId ? " — " + athleteName(x.athleteId) : "");
+          // Deux temps, parce que ça retire l'accès de quelqu'un d'autre et que
+          // rien ne le rend : un clic de trop ne doit pas suffire.
+          const action = s.confirmRemove === x.uid
+            ? '<button class="link-btn" data-remove-go="' + esc(x.uid) + '">' + esc(t("Confirmer le retrait")) + "</button>" +
+              '<button class="link-btn" data-remove-cancel="1">' + esc(t("Annuler")) + "</button>"
+            : '<button class="link-btn" data-remove="' + esc(x.uid) + '">' + esc(t("Retirer")) + "</button>";
+          return "<li><span>" + esc(label) + "</span>" + action + "</li>";
+        }).join("") + "</ul>";
+      }
+    }
+
     if (owner) {
       html += "<h3>" + esc(t("Nom de l'équipe")) + "</h3>" +
         "<p>" + esc(t("Ce nom remplace le code de l'équipe, en haut du tableau de bord et dans l'app des athlètes.")) + "</p>" +
@@ -1403,6 +1437,23 @@
       } catch (err) { s.error = err.message; }
       await refreshInvites();
     }));
+    body.querySelectorAll("[data-remove]").forEach(b => b.addEventListener("click", () => {
+      s.confirmRemove = b.dataset.remove;
+      renderInvite();
+    }));
+    body.querySelectorAll("[data-remove-cancel]").forEach(b => b.addEventListener("click", () => {
+      s.confirmRemove = null;
+      renderInvite();
+    }));
+    body.querySelectorAll("[data-remove-go]").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true;
+      s.error = null;
+      try {
+        await removeMember(s.seats.find(x => x.uid === b.dataset.removeGo));
+      } catch (err) { s.error = err.message; }
+      s.confirmRemove = null;
+      await refreshInvites();
+    }));
 
     if (s.created) {
       // Generated in the browser, never sent anywhere: the invitation id in
@@ -1448,6 +1499,44 @@
     }
     s.savingName = false;
     renderInvite();
+  }
+
+  // Retirer un membre, en un seul lot d'écritures, parce que les règles
+  // l'exigent : la suppression de la place n'est permise que si, **après**
+  // l'écriture, la fiche athlète ne porte plus l'équipe — `getAfter` dans
+  // firestore.rules. Cette condition n'est pas une formalité : l'accès de
+  // l'entraîneur dérive entièrement de `teamIds` (`coachesAthlete` va lire la
+  // fiche), donc tant que l'équipe y figure, il lit toujours les séances. Les
+  // deux écritures doivent partir ensemble ou pas du tout.
+  async function removeMember(seat) {
+    if (!seat) throw new Error(t("Cette place n'existe plus."));
+    const batch = writeBatch(firestore);
+    batch.delete(doc(firestore, "teams", teamCode, "memberships", seat.uid));
+    if (seat.athleteId) {
+      const ref = doc(firestore, "athletes", seat.athleteId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        const before = Array.isArray(data.teamIds) ? data.teamIds : [];
+        // Si l'équipe n'y est déjà plus, ne rien écrire : la règle refuse une
+        // mise à jour qui ne réduit pas la liste, et la place part très bien
+        // seule puisque sa condition est déjà remplie.
+        if (before.includes(teamCode)) {
+          const after = before.filter(id => id !== teamCode);
+          const patch = { teamIds: after };
+          // Rien n'écrit ce champ aujourd'hui, mais la règle le vérifie : s'il
+          // désignait l'équipe qu'on quitte, il doit suivre ou disparaître.
+          if (data.principalTeamId === teamCode) {
+            patch.principalTeamId = after.length ? after[0] : deleteField();
+          }
+          batch.update(ref, patch);
+        }
+      }
+      // Le tableau de bord écoute cette collection : c'est la disparition de
+      // cette fiche qui retire l'athlète de l'écran et coupe ses abonnements.
+      batch.delete(doc(firestore, "teams", teamCode, "roster", seat.athleteId));
+    }
+    await batch.commit();
   }
 
   async function createInvite() {
