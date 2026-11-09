@@ -337,17 +337,17 @@
   .week-chip .mini-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; display: flex; background: var(--border); }
   .week-chip .mini-bar > span { height: 100%; }
 
-  #inviteOverlay, #accountOverlay, #joinOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55);
+  #inviteOverlay, #accountOverlay, #joinOverlay, #teamOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55);
     display:flex; align-items:center; justify-content:center; padding:1rem; z-index:50; }
-  #inviteOverlay[hidden], #accountOverlay[hidden], #joinOverlay[hidden] { display:none; }
-  #inviteCard, #accountCard, #joinCard { background:var(--card-bg); color:var(--ink); border-radius:14px;
+  #inviteOverlay[hidden], #accountOverlay[hidden], #joinOverlay[hidden], #teamOverlay[hidden] { display:none; }
+  #inviteCard, #accountCard, #joinCard, #teamCard { background:var(--card-bg); color:var(--ink); border-radius:14px;
     padding:1.5rem; max-width:420px; width:100%; max-height:90vh; overflow-y:auto;
     box-shadow:0 20px 60px rgba(0,0,0,.35); }
-  #inviteCard h2, #accountCard h2, #joinCard h2 { margin:0 0 .75rem; font-size:1.1rem; }
+  #inviteCard h2, #accountCard h2, #joinCard h2, #teamCard h2 { margin:0 0 .75rem; font-size:1.1rem; }
   #inviteCard h3 { margin:1.25rem 0 .25rem; font-size:.9rem; }
-  #inviteCard p, #accountCard p, #joinCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
-  #accountCard label, #inviteCard label { display:block; font-size:12px; font-weight:600; margin:.75rem 0 .2rem; }
-  #accountCard input, #inviteCard input, #inviteCard select { width:100%; box-sizing:border-box; font:inherit; font-size:14px;
+  #inviteCard p, #accountCard p, #joinCard p, #teamCard p { font-size:13px; line-height:1.5; margin:.5rem 0; }
+  #accountCard label, #inviteCard label, #teamCard label { display:block; font-size:12px; font-weight:600; margin:.75rem 0 .2rem; }
+  #accountCard input, #inviteCard input, #teamCard input, #inviteCard select { width:100%; box-sizing:border-box; font:inherit; font-size:14px;
     padding:.45rem .6rem; border:1px solid var(--border-strong); border-radius:8px;
     background:var(--bg); color:var(--ink); }
   .dialog-row { display:flex; gap:.5rem; margin-top:1rem; flex-wrap:wrap; }
@@ -569,6 +569,7 @@
       <div class="top-meta" id="lastSync" data-i18n="Dernière synchro : —">Dernière synchro : —</div>
       <div class="top-meta" id="teamName" hidden></div>
       <select id="teamSelect" hidden aria-label="Équipe" data-i18n-aria="Équipe"></select>
+      <button class="nav-btn" id="newTeamBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Créer une équipe">Créer une équipe</button>
       <button class="nav-btn" id="inviteBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Inviter">Inviter</button>
       <button class="nav-btn" id="accountBtn" style="font-size:13px; padding:0.3rem 0.7rem; width:auto;" data-i18n="Se connecter">Se connecter</button>
       <a id="guideLink" href="guide.html#coach" style="font-size:13px; color:var(--accent); text-decoration:none;" data-i18n="Mode d'emploi">Mode d'emploi</a>
@@ -631,6 +632,13 @@
   <div id="joinCard" role="dialog" aria-modal="true" aria-labelledby="joinTitle">
     <h2 id="joinTitle" data-i18n="Rejoindre une équipe">Rejoindre une équipe</h2>
     <div id="joinBody"></div>
+  </div>
+</div>
+
+<div id="teamOverlay" hidden>
+  <div id="teamCard" role="dialog" aria-modal="true" aria-labelledby="teamTitle">
+    <h2 id="teamTitle" data-i18n="Créer une équipe">Créer une équipe</h2>
+    <div id="teamBody"></div>
   </div>
 </div>
 
@@ -797,6 +805,14 @@
     "En face de vous : faites-lui scanner ce code avec l'appareil photo de son téléphone, son navigateur s'ouvre sur l'équipe. À distance : envoyez-lui le lien.": "Face to face: have them scan this code with their phone's camera and their browser opens on the team. Remotely: send them the link.",
     "expire le ": "expires ",
     "Révoquer": "Revoke",
+    "Nouvelle invitation": "New invitation",
+    "Créer une équipe": "Create a team",
+    "Créer l'équipe": "Create the team",
+    "Vous en serez le propriétaire, et vous pourrez y inviter des entraîneurs et des athlètes.": "You will be its owner, and you will be able to invite coaches and athletes to it.",
+    "Pour créer une équipe, connectez-vous d'abord : elle appartiendra à ce compte.": "To create a team, sign in first: it will belong to that account.",
+    "Club, groupe, promotion…": "Club, squad, year group…",
+    "Donnez-lui un nom : sans nom, le tableau de bord n'affiche qu'un code.": "Give it a name: without one, the dashboard shows only a code.",
+    "Aucune équipe : créez la vôtre avec « Créer une équipe », ou connectez-vous avec le compte qui a reçu une invitation.": "No team yet: create your own with “Create a team”, or sign in with the account that received an invitation.",
     "Membres de l'équipe": "Team members",
     "Retirer quelqu'un supprime sa place et, pour un athlète, le nom que l'équipe garde de lui et l'accès de l'équipe à ses séances. Ses données restent les siennes, dans son app et dans son compte.": "Removing someone deletes their seat and, for an athlete, the name the team keeps for them and the team's access to their sessions. Their data stays theirs, in their app and in their account.",
     "Vous êtes seul dans cette équipe.": "You are the only member of this team.",
@@ -1212,6 +1228,94 @@
     select.addEventListener("change", () => openTeam(select.value));
   }
 
+  // --- Fonder une équipe -------------------------------------------------------
+  // Les règles la prévoient depuis le début — `founding()` — mais aucun écran
+  // ne l'appelait : une équipe se créait à la main dans la console Firestore,
+  // et le code ne l'avouait qu'à demi-mot, dans `mySeats`. Un entraîneur qui
+  // venait de créer son compte se voyait donc conseiller d'aller chercher une
+  // invitation que personne n'était en mesure de lui envoyer.
+
+  let newTeamState = null;
+
+  function showNewTeam() {
+    newTeamState = { name: "", busy: false, error: null };
+    document.getElementById("teamOverlay").hidden = false;
+    renderNewTeam();
+  }
+
+  function hideNewTeam() { document.getElementById("teamOverlay").hidden = true; }
+
+  function renderNewTeam() {
+    const s = newTeamState;
+    const body = document.getElementById("teamBody");
+    const fermer = '<button class="nav-btn" id="newTeamClose" style="width:auto; padding:0.4rem 1rem;">' +
+      esc(t("Fermer")) + "</button>";
+
+    // Un compte anonyme ne peut pas fonder : `realAccount()` le refuse, et le
+    // siège serait attaché à un navigateur plutôt qu'à une personne.
+    if (!signedInUser || signedInUser.isAnonymous) {
+      body.innerHTML = "<p>" + esc(t("Pour créer une équipe, connectez-vous d'abord : elle appartiendra à ce compte.")) +
+        '</p><div class="dialog-row">' + fermer + "</div>";
+      document.getElementById("newTeamClose").addEventListener("click", hideNewTeam);
+      return;
+    }
+
+    body.innerHTML =
+      "<p>" + esc(t("Vous en serez le propriétaire, et vous pourrez y inviter des entraîneurs et des athlètes.")) + "</p>" +
+      '<label for="newTeamName">' + esc(t("Nom de l'équipe")) + "</label>" +
+      '<input id="newTeamName" type="text" maxlength="60" value="' + esc(s.name) +
+      '" placeholder="' + esc(t("Club, groupe, promotion…")) + '">' +
+      (s.error ? '<p class="dialog-error">' + esc(s.error) + "</p>" : "") +
+      '<div class="dialog-row"><button class="nav-btn" id="newTeamCreate" style="width:auto; padding:0.4rem 1rem;"' +
+      (s.busy ? " disabled" : "") + ">" + esc(t("Créer l'équipe")) + "</button>" + fermer + "</div>";
+
+    const input = document.getElementById("newTeamName");
+    // Tenu dans l'état à chaque frappe : le dialogue se redessine entier, et
+    // un nom à moitié tapé disparaîtrait au premier refus.
+    input.addEventListener("input", () => { s.name = input.value; });
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") createTeam(); });
+    document.getElementById("newTeamCreate").addEventListener("click", createTeam);
+    document.getElementById("newTeamClose").addEventListener("click", hideNewTeam);
+    input.focus();
+  }
+
+  /// Un seul lot, parce que les deux règles se tiennent l'une l'autre : le
+  /// document d'équipe n'est accepté que si le siège qui l'accompagne dit
+  /// « owner », et le siège n'est accepté que si le document nommera son
+  /// créateur. Séparer les écritures ne passerait dans aucun des deux sens.
+  async function createTeam() {
+    const s = newTeamState;
+    const name = (s.name || "").trim().replace(/\s+/g, " ");
+    if (!name) {
+      s.error = t("Donnez-lui un nom : sans nom, le tableau de bord n'affiche qu'un code.");
+      renderNewTeam();
+      return;
+    }
+    s.busy = true;
+    s.error = null;
+    renderNewTeam();
+    try {
+      // Identifiant tiré par Firestore : `founding()` exige que l'équipe
+      // n'existe pas encore, et un code choisi à la main finirait par
+      // rencontrer celui d'un autre.
+      const ref = doc(collection(firestore, "teams"));
+      const batch = writeBatch(firestore);
+      batch.set(ref, { name, createdBy: signedInUser.uid, createdAt: serverTimestamp() });
+      batch.set(doc(firestore, "teams", ref.id, "memberships", signedInUser.uid),
+                { role: "owner", via: "creation" });
+      await batch.commit();
+      // L'index avant le rechargement : la page qui revient cherche ses
+      // places par là, et sans cette ligne la nouvelle équipe n'existerait
+      // que dans l'URL.
+      await addToTeamIndex(firestore, signedInUser, ref.id);
+      openTeam(ref.id);
+    } catch (err) {
+      s.busy = false;
+      s.error = err.message;
+      renderNewTeam();
+    }
+  }
+
   // --- Inviting ----------------------------------------------------------------
   // An invitation is teams/{team}/invites/{random id}: one seat, one role, one
   // week. Athletes scan theirs in the app; coaches and co-owners open a link.
@@ -1562,7 +1666,15 @@
   document.getElementById("inviteOverlay").addEventListener("click", (e) => {
     if (e.target.id === "inviteOverlay") hideInvite();
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideInvite(); });
+  document.getElementById("newTeamBtn").addEventListener("click", showNewTeam);
+  document.getElementById("teamOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "teamOverlay") hideNewTeam();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    hideInvite();
+    hideNewTeam();
+  });
 
   document.getElementById("inviteBtn").addEventListener("click", () => {
     if (canInvite(currentSeat)) { showInvite(); return; }
@@ -2473,7 +2585,7 @@
       if (coached.length) { openTeam(coached[0].teamId); return; }
       lastSyncEl.textContent = seats.length
         ? t("Ce compte a seulement une place d'athlète : le tableau de bord est réservé aux entraîneurs et aux propriétaires.")
-        : t("Aucune équipe ouverte : connectez-vous avec le compte qui a reçu une invitation.");
+        : t("Aucune équipe : créez la vôtre avec « Créer une équipe », ou connectez-vous avec le compte qui a reçu une invitation.");
       return;
     }
     renderTeamPicker(db, seats);
