@@ -795,7 +795,7 @@
     "Copier le lien": "Copy link",
     "Lien copié": "Link copied",
     "Valable sept jours, pour une seule personne.": "Valid for seven days, for one person only.",
-        "Nouvelle invitation": "New invitation",
+    "Nouvelle invitation": "New invitation",
     "Invitations en attente": "Pending invitations",
     "Nom de l'équipe": "Team name",
     "Ce nom remplace le code de l'équipe, en haut du tableau de bord et dans l'app des athlètes.": "This name stands in for the team code, at the top of the dashboard and in the athletes' app.",
@@ -805,7 +805,11 @@
     "En face de vous : faites-lui scanner ce code avec l'appareil photo de son téléphone, son navigateur s'ouvre sur l'équipe. À distance : envoyez-lui le lien.": "Face to face: have them scan this code with their phone's camera and their browser opens on the team. Remotely: send them the link.",
     "expire le ": "expires ",
     "Révoquer": "Revoke",
-    "Nouvelle invitation": "New invitation",
+    "Nom de la personne invitée": "Name of the person invited",
+    "Prénom et nom": "First and last name",
+    "Ce nom reste attaché à sa place : c'est lui qui vous dira plus tard qui vous retirez.": "This name stays attached to their seat: it is what will tell you later who you are removing.",
+    "Indiquez pour qui est cette invitation.": "Say who this invitation is for.",
+    "entré le ": "joined ",
     "Créer une équipe": "Create a team",
     "Créer l'équipe": "Create the team",
     "Vous en serez le propriétaire, et vous pourrez y inviter des entraîneurs et des athlètes.": "You will be its owner, and you will be able to invite coaches and athletes to it.",
@@ -1349,7 +1353,10 @@
 
   async function showInvite() {
     inviteState = { role: "athlete", athleteId: "", created: null, busy: false, error: null,
-                    pending: [], seats: [], seatedAthletes: new Set(),
+                    pending: [], invites: [], seats: [], seatedAthletes: new Set(),
+                    // Le nom de la personne invitée, pour un entraîneur ou un
+                    // copropriétaire : eux n'ont pas de fiche d'effectif.
+                    invitedName: "",
                     // Le retrait d'un membre se confirme en deux temps : cette
                     // clé porte la place en attente de confirmation.
                     confirmRemove: null,
@@ -1379,8 +1386,11 @@
       s.teamExists = !!(team && team.exists());
       if (s.teamName === null) s.teamName = (s.teamExists && team.data().name) || "";
       const now = Date.now();
-      s.pending = invites.docs
-        .map(d => ({ id: d.id, ...d.data() }))
+      // Toutes, les consommées comprises : un siège d'entraîneur ne garde de
+      // son occupant que `via`, donc l'invitation dépensée est la seule
+      // mémoire de qui est entré.
+      s.invites = invites.docs.map(d => ({ id: d.id, ...d.data() }));
+      s.pending = s.invites
         .filter(inv => !inv.usedBy && (!inviteExpiry(inv) || inviteExpiry(inv).getTime() > now))
         .sort((a, b) => (inviteExpiry(b)?.getTime() ?? 0) - (inviteExpiry(a)?.getTime() ?? 0));
       s.seats = seats.docs.map(d => ({ uid: d.id, ...d.data() }));
@@ -1394,6 +1404,31 @@
   function athleteName(id) {
     const a = athletes.find(x => x.id === id);
     return a ? (a.name || id) : id;
+  }
+
+  /// Ce que porte une invitation : la fiche de l'athlète qu'elle nomme, ou le
+  /// nom saisi pour un entraîneur.
+  function inviteLabel(inv) {
+    if (inv.athleteId) return roleName(inv.role) + " — " + athleteName(inv.athleteId);
+    return roleName(inv.role) + (inv.invitedName ? " — " + inv.invitedName : "");
+  }
+
+  /// Qui occupe cette place. Un athlète a une fiche d'effectif ; un entraîneur
+  /// n'a que l'invitation qu'il a consommée, dont le siège garde l'identifiant
+  /// dans `via` — c'est pour ça que `refreshInvites` les lit toutes.
+  ///
+  /// Les sièges d'avant le 2026-11-09 n'ont pas de nom. Plutôt que de les
+  /// laisser nus, la date d'entrée : elle ne dit pas qui, mais elle distingue
+  /// deux entraîneurs l'un de l'autre, ce qui était tout le problème.
+  function seatLabel(seat) {
+    if (seat.athleteId) return roleName(seat.role) + " — " + athleteName(seat.athleteId);
+    const invite = inviteState.invites.find(i => i.id === seat.via);
+    if (invite && invite.invitedName) return roleName(seat.role) + " — " + invite.invitedName;
+    const created = invite && invite.createdAt && invite.createdAt.toMillis
+      ? new Date(invite.createdAt.toMillis()) : null;
+    return roleName(seat.role) + (created
+      ? " — " + t("entré le ") + created.toLocaleDateString(LOCALE, { day: "numeric", month: "long" })
+      : "");
   }
 
   function renderInvite() {
@@ -1421,13 +1456,19 @@
       } else {
         html += "<p>" + esc(s.role === "owner"
           ? t("Un copropriétaire administre l'équipe à égalité avec vous : il invite les entraîneurs et peut retirer n'importe quel membre, vous compris.")
-          : t("Un entraîneur voit toute l'équipe et invite des athlètes.")) + "</p>";
+          : t("Un entraîneur voit toute l'équipe et invite des athlètes.")) + "</p>" +
+          // Un athlète est nommé par sa fiche ; un entraîneur n'a rien, et
+          // sans ce nom sa place s'affichera « Entraîneur », sans plus.
+          '<label for="inviteName">' + esc(t("Nom de la personne invitée")) + "</label>" +
+          '<input id="inviteName" type="text" maxlength="60" value="' + esc(s.invitedName) +
+          '" placeholder="' + esc(t("Prénom et nom")) + '">' +
+          "<p>" + esc(t("Ce nom reste attaché à sa place : c'est lui qui vous dira plus tard qui vous retirez.")) + "</p>";
       }
       html += '<div class="dialog-row">' + button("inviteCreate", t("Créer l'invitation"), s.busy) +
         button("inviteClose", t("Fermer")) + "</div>";
     } else {
       const c = s.created;
-      html += "<p><strong>" + esc(roleName(c.role) + (c.athleteId ? " — " + athleteName(c.athleteId) : "")) + "</strong></p>";
+      html += "<p><strong>" + esc(inviteLabel(c)) + "</strong></p>";
       if (c.role === "athlete") {
         // Les deux routes, parce que scanner suppose deux écrans — celui qui
         // montre le code et celui qui le lit. Un athlète à distance n'en a
@@ -1458,7 +1499,7 @@
         const expiry = inviteExpiry(inv);
         // The rules let a coach revoke athlete invitations only.
         const revocable = owner || inv.role === "athlete";
-        return "<li><span>" + esc(roleName(inv.role) + (inv.athleteId ? " — " + athleteName(inv.athleteId) : "")) +
+        return "<li><span>" + esc(inviteLabel(inv)) +
           (expiry ? '<br><span class="chart-note">' + esc(t("expire le ") +
             expiry.toLocaleDateString(LOCALE, { day: "numeric", month: "long" })) + "</span>" : "") +
           "</span>" + (revocable ? '<button class="link-btn" data-revoke="' + esc(inv.id) + '">' + esc(t("Révoquer")) + "</button>" : "") +
@@ -1477,7 +1518,7 @@
         html += '<p class="chart-note">' + esc(t("Vous êtes seul dans cette équipe.")) + "</p>";
       } else {
         html += '<ul class="invite-pending">' + others.map(x => {
-          const label = roleName(x.role) + (x.athleteId ? " — " + athleteName(x.athleteId) : "");
+          const label = seatLabel(x);
           // Deux temps, parce que ça retire l'accès de quelqu'un d'autre et que
           // rien ne le rend : un clic de trop ne doit pas suffire.
           const action = s.confirmRemove === x.uid
@@ -1507,6 +1548,10 @@
     if (roleSelect) roleSelect.addEventListener("change", () => { s.role = roleSelect.value; s.athleteId = ""; renderInvite(); });
     const athleteSelect = document.getElementById("inviteAthlete");
     if (athleteSelect) athleteSelect.addEventListener("change", () => { s.athleteId = athleteSelect.value; });
+    const nameField = document.getElementById("inviteName");
+    // Dans l'état à chaque frappe : le dialogue se redessine entier au moindre
+    // changement de rôle, et un nom à moitié tapé disparaîtrait.
+    if (nameField) nameField.addEventListener("input", () => { s.invitedName = nameField.value; });
     const nameInput = document.getElementById("teamNameInput");
     if (nameInput) {
       // Held in the state at every keystroke: the dialog redraws whole, and a
@@ -1645,17 +1690,27 @@
 
   async function createInvite() {
     const s = inviteState;
+    // Les règles l'acceptent sans nom, pour ne pas refuser rétroactivement les
+    // invitations d'avant le 2026-11-09. L'écran, lui, l'exige : une place
+    // d'entraîneur anonyme est exactement le problème qu'on répare.
+    if (s.role !== "athlete" && !(s.invitedName || "").trim()) {
+      s.error = t("Indiquez pour qui est cette invitation.");
+      renderInvite();
+      return;
+    }
     s.busy = true;
     s.error = null;
     renderInvite();
     try {
       const ref = doc(collection(firestore, "teams", teamCode, "invites"));
       const data = { role: s.role, createdBy: signedInUser.uid, createdAt: serverTimestamp() };
+      if (s.role !== "athlete") data.invitedName = (s.invitedName || "").trim().replace(/\s+/g, " ");
       // Naming the record is what hands it over: without it, the athlete's
       // phone could not take back a record its old anonymous account wrote.
       if (s.role === "athlete" && s.athleteId) data.athleteId = s.athleteId;
       await setDoc(ref, data);
-      s.created = { id: ref.id, role: s.role, athleteId: data.athleteId || "" };
+      s.created = { id: ref.id, role: s.role, athleteId: data.athleteId || "",
+                    invitedName: data.invitedName || "" };
     } catch (err) {
       s.error = err.message;
     }
