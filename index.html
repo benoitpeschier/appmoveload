@@ -775,7 +775,7 @@
     "Cardio": "Cardio",
     "Charge cardio": "Cardio load",
     "Charge mécanique": "Mechanical load",
-        "Inviter": "Invite",
+    "Inviter": "Invite",
     "Inviter dans l'équipe": "Invite to the team",
     "Rejoindre une équipe": "Join a team",
     "Équipe": "Team",
@@ -816,7 +816,7 @@
     "Pour créer une équipe, connectez-vous d'abord : elle appartiendra à ce compte.": "To create a team, sign in first: it will belong to that account.",
     "Club, groupe, promotion…": "Club, squad, year group…",
     "Donnez-lui un nom : sans nom, le tableau de bord n'affiche qu'un code.": "Give it a name: without one, the dashboard shows only a code.",
-    "Aucune équipe : créez la vôtre avec « Créer une équipe », ou connectez-vous avec le compte qui a reçu une invitation.": "No team yet: create your own with “Create a team”, or sign in with the account that received an invitation.",
+    "Aucune équipe : créez la vôtre avec « Créer une équipe », ou ouvrez le lien d'invitation qu'on vous a envoyé — l'ouvrir vous donne votre place, avec le compte où vous êtes connecté.": "No team yet: create your own with “Create a team”, or open the invitation link you were sent — opening it gives you your seat, with the account you are signed in to.",
     "Membres de l'équipe": "Team members",
     "Retirer quelqu'un supprime sa place et, pour un athlète, le nom que l'équipe garde de lui et l'accès de l'équipe à ses séances. Ses données restent les siennes, dans son app et dans son compte.": "Removing someone deletes their seat and, for an athlete, the name the team keeps for them and the team's access to their sessions. Their data stays theirs, in their app and in their account.",
     "Vous êtes seul dans cette équipe.": "You are the only member of this team.",
@@ -878,7 +878,6 @@
     "Total de la semaine": "Week total",
     "Total du mois": "Month total",
     "Télécharger en CSV": "Download as CSV",
-    "Charge mécanique": "Mechanical load",
     "Temps par zone": "Time per zone",
     "Les séances PPG comptent dans le cardio mais pas dans le mécanique : elles n'en produisent pas.": "Conditioning sessions count towards the cardio figures but not the mechanical ones: they produce none.",
     "PPG seulement": "Conditioning only",
@@ -2640,7 +2639,7 @@
       if (coached.length) { openTeam(coached[0].teamId); return; }
       lastSyncEl.textContent = seats.length
         ? t("Ce compte a seulement une place d'athlète : le tableau de bord est réservé aux entraîneurs et aux propriétaires.")
-        : t("Aucune équipe : créez la vôtre avec « Créer une équipe », ou connectez-vous avec le compte qui a reçu une invitation.");
+        : t("Aucune équipe : créez la vôtre avec « Créer une équipe », ou ouvrez le lien d'invitation qu'on vous a envoyé — l'ouvrir vous donne votre place, avec le compte où vous êtes connecté.");
       return;
     }
     renderTeamPicker(db, seats);

@@ -700,6 +700,22 @@
     <p style="font-size:0.87rem; color:var(--ink-muted);">Le bouton <strong>Se connecter</strong> en haut à droite crée un compte ou t'y reconnecte, au choix avec <strong>Continuer avec Google</strong> ou une adresse e-mail et un mot de passe — en cas d'oubli, « Mot de passe oublié ? » t'envoie un e-mail pour en choisir un nouveau. C'est ce compte qui porte ta place dans l'équipe, et donc ce que tu peux voir et faire. Si tu suis plusieurs équipes, un menu en haut permet de passer de l'une à l'autre.</p>
     <p style="font-size:0.87rem; color:var(--ink-muted);">Le projet est réglé sur <strong>un seul compte par adresse</strong> : Google et le mot de passe sur la même adresse ne créeront jamais deux comptes coach distincts. En revanche, si tu as commencé par un mot de passe, la connexion Google sur cette adresse peut être refusée — c'est Firebase qui demande de prouver que le compte est bien le tien. Dans ce cas, connecte-toi avec le mot de passe.</p>
 
+    <h3>Rejoindre une équipe<span class="h3-hint">Il n'y a pas de bouton : le lien est le geste</span></h3>
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">Le lien</div>
+        <div class="spec-desc">Le propriétaire crée l'invitation et t'envoie un lien. L'ouvrir <em>est</em> l'action de rejoindre : il n'y a rien à chercher dans le tableau de bord, aucun bouton « Rejoindre ». Si le lien t'est arrivé ailleurs que dans un message cliquable, colle-le dans la barre d'adresse.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Le bon compte</div>
+        <div class="spec-desc">La place va au compte connecté au moment où le lien s'ouvre. Connecte-toi d'abord avec celui qui doit la porter : une invitation ne sert qu'une fois, et ouverte par mégarde depuis un autre compte, c'est lui qui prend la place.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">« Aucune équipe »</div>
+        <div class="spec-desc">Le tableau de bord ne montre que les équipes où ton compte a une place. Ce message veut dire que le lien n'a pas encore été ouvert depuis ce compte-là — ou qu'il l'a été depuis un autre.</div>
+      </div>
+    </div>
+
     <h3>Inviter<span class="h3-hint">Bouton Inviter, en haut</span></h3>
     <div class="spec">
       <div class="spec-row" style="border-top:none">

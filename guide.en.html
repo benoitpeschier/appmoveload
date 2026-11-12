@@ -700,6 +700,22 @@
     <p style="font-size:0.87rem; color:var(--ink-muted);">The <strong>Sign in</strong> button at the top right creates an account or signs you back into one, either with <strong>Continue with Google</strong> or with an e-mail address and a password — if you forget it, “Forgot password?” e-mails you a link to choose a new one. That account carries your place in the team, and so what you can see and do. If you follow several teams, a menu at the top switches between them.</p>
     <p style="font-size:0.87rem; color:var(--ink-muted);">The project is set to <strong>one account per address</strong>: Google and a password on the same address will never create two separate coach accounts. That said, if you started with a password, Google sign-in on that address may be refused — Firebase asking you to prove the account is yours. If that happens, sign in with the password.</p>
 
+    <h3>Joining a team<span class="h3-hint">There is no button: the link is the action</span></h3>
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">The link</div>
+        <div class="spec-desc">The owner creates the invitation and sends you a link. Opening it <em>is</em> the act of joining: there is nothing to look for in the dashboard, no &ldquo;Join&rdquo; button. If the link reached you somewhere that is not clickable, paste it into the address bar.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">The right account</div>
+        <div class="spec-desc">The seat goes to whichever account is signed in when the link opens. Sign in first with the one that should hold it: an invitation serves once, and opened by mistake from another account, that account takes the seat.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">&ldquo;No team yet&rdquo;</div>
+        <div class="spec-desc">The dashboard only shows teams where your account holds a seat. That message means the link has not been opened from this account yet &mdash; or that it was opened from another one.</div>
+      </div>
+    </div>
+
     <h3>Inviting<span class="h3-hint">Invite button, at the top</span></h3>
     <div class="spec">
       <div class="spec-row" style="border-top:none">
