@@ -874,6 +874,9 @@
     "Records tous temps par fenêtre — % du meilleur de la catégorie (échelle 50-100 %)": "All-time records by window — % of the best in the category (scale 50–100%)",
     "Revenir à": "Back to",
     "Répartition — dernière séance": "Split — last session",
+    "Retiré du temps compté, sur les deux barres : %m de marche et %s sans effort.": "Removed from counted time, from both bars: %m walking and %s with no effort.",
+    "Retiré du temps compté, sur les deux barres : %m de marche.": "Removed from counted time, from both bars: %m walking.",
+    "Retiré du temps compté, sur les deux barres : %s sans effort.": "Removed from counted time, from both bars: %s with no effort.",
     "Semaine": "Week",
     "Total de la semaine": "Week total",
     "Total du mois": "Month total",
@@ -1940,6 +1943,11 @@
     // l'encadré est masqué sur une séance PPG et que la dernière séance de
     // l'athlète en était une.
     a.aboveAnchor = last ? last.aboveAnchor : 0;
+    // Et ici aussi, pour la même raison que la ligne du dessus : ce qui
+    // manque dans cette liste n'existe que sur une séance ouverte depuis le
+    // calendrier, jamais sur la vue par défaut.
+    a.excludedWalking = last ? last.excludedWalking : null;
+    a.inactive = last ? last.inactive : null;
     a.lastSessionIsTest = last ? !!last.isTest : false;
     a.lastSessionIsConditioning = last ? !!last.isConditioning : false;
     // Morning tests, most recent last. A missing day stays missing — never
@@ -2249,6 +2257,14 @@
                 hr: [s.hrZone1Seconds || 0, s.hrZone2Seconds || 0, s.hrZone3Seconds || 0],
                 mech: [s.mechZone1Seconds || 0, s.mechZone2Seconds || 0, s.mechZone3Seconds || 0],
                 aboveAnchor: s.secondsAboveAnchor || 0,
+                // Ce que l'analyse a retiré du temps compté : la marche vers
+                // l'eau, et les passages sans effort. `null` plutôt que 0 sur
+                // une séance synchronisée avant le build 71 — la somme des
+                // zones y est tout aussi courte que la durée, mais la cause
+                // n'a pas voyagé, et annoncer « 0 min de marche » serait une
+                // affirmation fausse là où il n'y a qu'une absence.
+                excludedWalking: typeof s.excludedWalkingSeconds === "number" ? s.excludedWalkingSeconds : null,
+                inactive: typeof s.inactiveSeconds === "number" ? s.inactiveSeconds : null,
                 rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
                 // A session pushed without a boat was shown as K1 on the phone:
                 // until build 17 the app stored its default only once the
@@ -2793,6 +2809,36 @@
   }
 
   const RADAR_SCALE_MIN = 50; // zoomed-in scale: center = 50%, edge = 100%, so small gaps read clearly
+
+  /// Ce que l'analyse a retiré du temps compté, sous les deux barres.
+  ///
+  /// Les six temps en zones ne couvrent pas la durée de la séance, et les deux
+  /// barres portent le même masque : la marche vers l'eau et les passages sans
+  /// effort sortent du cardio comme du mécanique — sinon un trajet à pied
+  /// gonflerait l'un sans toucher l'autre. Sans cette ligne, le trou ne se lit
+  /// que comme une panne : vu le 2026-11-12 sur une séance de 1 h 59 dont 52
+  /// minutes étaient écartées, où la première hypothèse a été une analyse
+  /// cassée.
+  ///
+  /// Rien d'affiché sous 30 secondes, comme sur la fiche de séance de l'app :
+  /// à cette échelle le trou n'est pas visible sur les barres, et une note
+  /// qui explique ce qu'on ne voit pas est du bruit.
+  function excludedHTML(a) {
+    const walking = typeof a.excludedWalking === "number" ? a.excludedWalking : null;
+    const still = typeof a.inactive === "number" ? a.inactive : null;
+    if (walking === null && still === null) return "";
+    const showWalking = (walking || 0) >= 30, showStill = (still || 0) >= 30;
+    if (!showWalking && !showStill) return "";
+    // Trois phrases entières plutôt qu'une phrase assemblée de morceaux, et
+    // la clé écrite dans l'appel : c'est ce que relit la vérification des
+    // traductions, qui ne suit pas une variable.
+    const note = showWalking && showStill
+      ? t("Retiré du temps compté, sur les deux barres : %m de marche et %s sans effort.")
+      : showWalking
+        ? t("Retiré du temps compté, sur les deux barres : %m de marche.")
+        : t("Retiré du temps compté, sur les deux barres : %s sans effort.");
+    return `<p class="chart-note">${note.replace("%m", fmtLoad(walking || 0)).replace("%s", fmtLoad(still || 0))}</p>`;
+  }
 
   /// Seconds above the athlete's anchor, as a figure and as a share of the
   /// time the zones counted — a number without a size is hard to weigh.
@@ -4169,6 +4215,7 @@
               <span class="legend-item"><span class="legend-dot" style="background:var(--z3)"></span>Zone 3 ${fmtMinSec(a.mech[2])}</span>
             </div>
           </div>`}
+          ${excludedHTML(a)}
         </div>
         ${!a.strokeSignal ? "" : `
         <div class="detail-section" style="grid-column:1/-1">
@@ -4341,6 +4388,8 @@
       hr: s.hr,
       mech: s.mech,
       aboveAnchor: s.aboveAnchor,
+      excludedWalking: s.excludedWalking,
+      inactive: s.inactive,
       rpe: s.rpe,
       lastSessionIsTest: !!s.isTest,
       lastSessionIsConditioning: !!s.isConditioning,
@@ -5193,14 +5242,20 @@
       "date", "started_at", "athlete", "session", "is_test", "is_conditioning",
       "boat", "duration_min", "rpe",
       "hr_i1_min", "hr_i2_min", "hr_i3_min",
-      "mech_z1_min", "mech_z2_min", "mech_z3_min", "above_45s_min"
+      "mech_z1_min", "mech_z2_min", "mech_z3_min", "above_45s_min",
+      // Sans ces deux colonnes, `duration_min` et les six temps en zones ne
+      // se recoupent pas et rien dans le fichier ne dit pourquoi. Vides, et
+      // non zéro, sur une séance synchronisée avant le build 71.
+      "walking_min", "no_effort_min"
     ]];
     list.forEach(x => rows.push([
       x.date, x.startedAtLabel, a.name, x.name, x.isTest, x.isConditioning,
       x.boatType || "", x.duration, x.rpe === null ? "" : x.rpe,
       csvMinutes(x.hr[0]), csvMinutes(x.hr[1]), csvMinutes(x.hr[2]),
       csvMinutes(x.mech[0]), csvMinutes(x.mech[1]), csvMinutes(x.mech[2]),
-      csvMinutes(x.aboveAnchor || 0)
+      csvMinutes(x.aboveAnchor || 0),
+      typeof x.excludedWalking === "number" ? csvMinutes(x.excludedWalking) : "",
+      typeof x.inactive === "number" ? csvMinutes(x.inactive) : ""
     ]));
 
     const from = calTotalsPeriod[0];
