@@ -64,7 +64,7 @@
 <div class="page">
 
   <h1>Privacy policy</h1>
-  <p class="updated">Last updated: 3 October 2026</p>
+  <p class="updated">Last updated: 20 November 2026</p>
 
   <p>MoveLoad measures training load in canoeing and kayaking from a chest-worn sensor. This page says exactly what data the app handles, what leaves your phone, and what you can do about it.</p>
 
@@ -93,7 +93,25 @@
   </div>
 
   <h2>Who sees this data</h2>
-  <p>The coaches of the team you joined, and no one else. <strong>Other athletes see nothing</strong> — not your data, not even that you exist. If you leave a team, its coaches lose access immediately.</p>
+  <p>The coaches of the team you joined. <strong>Other athletes see nothing</strong> — not your data, not even that you exist. If you leave a team, its coaches lose access immediately.</p>
+  <p>And, since November 2026, an AI assistant — but only if you connect one yourself. That is the next section.</p>
+
+  <h2>If you connect an AI assistant</h2>
+  <p>You can authorise an AI assistant, Claude for instance, to read your training data: to go through it with you, spot a trend, plan a session. <strong>Nothing happens until you do it yourself.</strong> The assistant shows an eight-character code, you type it into the app, and the next screen <strong>names who is asking</strong> before you grant anything.</p>
+  <div class="card">
+    <ul>
+      <li><strong>What it reads</strong>: your sessions and your morning tests, the same fields your coach sees. And, if it asks for them expressly, one session at a time: the average shape of your stroke on a test, and the beat-to-beat intervals of a morning test.</li>
+      <li><strong>What it never reads</strong>: the sensor's raw recordings, which are not on the server at all, and the five answers to the Wellness questionnaire, which never leave your phone.</li>
+      <li><strong>What you choose</strong>: your data alone, or — if you coach a team — also the data of the athletes who authorised your assistant from their own phone.</li>
+      <li><strong>Where it goes</strong>: to the maker of the assistant you chose, under their own privacy policy. That is usually a company established outside the European Union, and from there <strong>this data is no longer under our control</strong>. That is exactly why the authorisation is a separate, explicit act, and why it covers one assistant at a time.</li>
+      <li><strong>How you withdraw it</strong>: Settings → Account → &ldquo;AI sharing&rdquo; lists every authorisation, the date you granted it and <strong>the date it last read</strong>. One button withdraws it, and access closes on the very next call.</li>
+    </ul>
+  </div>
+  <p>A withdrawn authorisation stays in the list, tucked away at the bottom of the screen. It gives no access any more: it is there because a record of what read your data should not be erasable.</p>
+  <p>Your coach may also have an assistant read their team's data. That is a separate switch, on the same screen, and you hold it: it shows the date that assistant last read, and withdrawing it is immediate.</p>
+  <div class="callout">
+    <p>The service that carries these authorisations keeps nothing beyond what it takes to hold them: the eight-character code for <strong>ten minutes</strong>, the read token for <strong>one hour</strong>, its renewal token for <strong>thirty days</strong>, and the authorisation itself until you withdraw it. The legal basis for this sharing is your <strong>explicit consent</strong>, given one assistant at a time, withdrawable whenever you like and with no consequence for the rest of the app.</p>
+  </div>
 
   <h2>What the app does not do</h2>
   <div class="card">
@@ -101,15 +119,15 @@
       <li>No trackers, no analytics, no crash reporter.</li>
       <li>No advertising, no profiling, no selling or sharing for commercial purposes.</li>
       <li>No access to your location, your contacts, your photos, or Apple's Health app.</li>
-      <li>No third-party tracking library: the code that talks to Firebase is hand-written, and Firebase is the only external service contacted.</li>
+      <li>No third-party tracking library: the code that talks to Firebase is hand-written. The only external services contacted are Firebase and, only if you connect an assistant, the MoveLoad service that carries that authorisation.</li>
     </ul>
   </div>
 
   <h2>Where the data is hosted</h2>
-  <p>With Google, through Firebase (Firestore for the data, Firebase Authentication for accounts). The data is stored in the <strong>europe-west9 region, in Paris</strong>. Google acts as a processor; transfers outside the European Union remain possible under its own contractual commitments, which you can consult in its data processing terms.</p>
+  <p>With Google, through Firebase (Firestore for the data, Firebase Authentication for accounts) and Cloud Run for the service that carries assistant authorisations. All of it sits in the <strong>europe-west9 region, in Paris</strong>. Google acts as a processor; transfers outside the European Union remain possible under its own contractual commitments, which you can consult in its data processing terms.</p>
 
   <h2>How long it is kept</h2>
-  <p>For as long as you keep your account. Deleting a session or a test from the app also removes it from your coach's dashboard. Deleting your account erases your profile, your sessions and your tests on the server, along with your place in your teams — <strong>this cannot be undone</strong>. The sessions stored on your phone stay: they are yours.</p>
+  <p>For as long as you keep your account. Deleting a session or a test from the app also removes it from your coach's dashboard. Deleting your account erases your profile, your sessions and your tests on the server, along with your place in your teams — <strong>this cannot be undone</strong>. Two technical traces do remain in the database, and neither holds any measurement: the list of your assistant authorisations (the client's name and address, the dates) and the settings your coach had set for you (thresholds, remarks). No one can read them any more, neither from the app nor from the dashboard; you can ask for them to be erased at the contact address. The sessions stored on your phone stay: they are yours.</p>
 
   <h2>Your rights</h2>
   <p>You may access your data, correct it, erase it, take it elsewhere, or object to its processing. The app makes three of these immediate:</p>
@@ -118,6 +136,7 @@
       <li><strong>Erase</strong>: Settings → Account → &ldquo;Delete my account&rdquo;.</li>
       <li><strong>Take with you</strong>: the share button on a session or a test exports the raw data and the figures as CSV.</li>
       <li><strong>Correct</strong>: name, a session's date, perceived exertion, trimming — all editable in the app, and the correction reaches the coach.</li>
+      <li><strong>Withdraw</strong>: Settings → Account → &ldquo;AI sharing&rdquo; removes an assistant's access, and your coach's assistant's too.</li>
     </ul>
   </div>
   <p>For anything else, write to the contact address above. You may also lodge a complaint with the CNIL, the French data protection authority, if you believe your rights have not been respected.</p>

@@ -64,7 +64,7 @@
 <div class="page">
 
   <h1>Politique de confidentialité</h1>
-  <p class="updated">Dernière mise à jour : 3 octobre 2026</p>
+  <p class="updated">Dernière mise à jour : 20 novembre 2026</p>
 
   <p>MoveLoad mesure une charge d'entraînement en canoë-kayak à partir d'un capteur porté au torse. Cette page dit exactement quelles données l'application manipule, lesquelles quittent votre téléphone, et ce que vous pouvez en faire.</p>
 
@@ -93,7 +93,25 @@
   </div>
 
   <h2>Qui voit ces données</h2>
-  <p>Les coachs de l'équipe que vous avez rejointe, et eux seuls. <strong>Les autres athlètes ne voient rien</strong> — ni vos données, ni même que vous existez. Si vous quittez une équipe, ses coachs cessent immédiatement d'y accéder.</p>
+  <p>Les coachs de l'équipe que vous avez rejointe. <strong>Les autres athlètes ne voient rien</strong> — ni vos données, ni même que vous existez. Si vous quittez une équipe, ses coachs cessent immédiatement d'y accéder.</p>
+  <p>Et, depuis novembre 2026, un assistant IA — mais seulement si vous le connectez vous-même. C'est la section suivante.</p>
+
+  <h2>Si vous connectez un assistant IA</h2>
+  <p>Vous pouvez autoriser un assistant IA, par exemple Claude, à lire vos données d'entraînement : pour les relire avec vous, repérer une tendance, préparer une séance. <strong>Rien ne se passe tant que vous ne le faites pas vous-même.</strong> L'assistant affiche un code de huit caractères, vous le tapez dans l'application, et l'écran suivant <strong>nomme qui demande</strong> avant que vous accordiez quoi que ce soit.</p>
+  <div class="card">
+    <ul>
+      <li><strong>Ce qu'il lit</strong> : vos séances et vos tests du matin, les mêmes champs que voit votre coach. Et, s'il les demande expressément, séance par séance : la forme moyenne de votre coup de pagaie sur un test, et les intervalles entre battements d'un test du matin.</li>
+      <li><strong>Ce qu'il ne lit jamais</strong> : les enregistrements bruts du capteur, qui ne sont pas sur le serveur du tout, et les cinq réponses du questionnaire Wellness, qui ne quittent pas votre téléphone.</li>
+      <li><strong>Ce que vous choisissez</strong> : vos données seules, ou — si vous entraînez une équipe — aussi celles des athlètes qui ont autorisé votre assistant depuis leur propre téléphone.</li>
+      <li><strong>Où elles vont</strong> : chez l'éditeur de l'assistant que vous avez choisi, sous sa propre politique de confidentialité. C'est le plus souvent une entreprise établie hors de l'Union européenne, et à partir de là <strong>ces données ne sont plus sous notre contrôle</strong>. C'est précisément pour ça que l'autorisation est un geste à part, explicite, et qu'elle ne vaut que pour un assistant à la fois.</li>
+      <li><strong>Comment vous reprenez</strong> : Réglages → Compte → « Partage avec une IA » liste chaque autorisation, la date où vous l'avez accordée et <strong>la date de la dernière lecture</strong>. Un bouton la reprend, et l'accès se ferme dès l'appel suivant.</li>
+    </ul>
+  </div>
+  <p>Une autorisation reprise reste dans la liste, rangée en bas de l'écran. Elle ne donne plus aucun accès : elle est là parce que la trace de ce qui a lu vos données ne doit pas pouvoir s'effacer.</p>
+  <p>Votre coach peut lui aussi faire lire les données de son équipe par un assistant. C'est un interrupteur séparé, dans le même écran, et c'est vous qui le tenez : il affiche la date de la dernière lecture par cet assistant, et le retirer est immédiat.</p>
+  <div class="callout">
+    <p>Le service qui porte ces autorisations ne garde rien d'autre que ce qu'il faut pour les tenir : le code de huit caractères <strong>dix minutes</strong>, le jeton de lecture <strong>une heure</strong>, son jeton de renouvellement <strong>trente jours</strong>, et l'autorisation elle-même jusqu'à ce que vous la repreniez. Le fondement juridique de ce partage est votre <strong>consentement explicite</strong>, donné assistant par assistant, retirable à tout moment et sans conséquence sur le reste de l'application.</p>
+  </div>
 
   <h2>Ce que l'application ne fait pas</h2>
   <div class="card">
@@ -101,15 +119,15 @@
       <li>Aucun traceur, aucune mesure d'audience, aucun rapporteur de plantage.</li>
       <li>Aucune publicité, aucun profilage, aucune revente ni partage à des fins commerciales.</li>
       <li>Aucun accès à votre localisation, à vos contacts, à vos photos, ni à l'app Santé d'Apple.</li>
-      <li>Aucune bibliothèque tierce de suivi : le code qui parle à Firebase est écrit à la main, et c'est le seul service externe contacté.</li>
+      <li>Aucune bibliothèque tierce de suivi : le code qui parle à Firebase est écrit à la main. Les seuls services externes contactés sont Firebase et, uniquement si vous connectez un assistant, le service MoveLoad qui porte cette autorisation.</li>
     </ul>
   </div>
 
   <h2>Où les données sont hébergées</h2>
-  <p>Chez Google, via Firebase (Firestore pour les données, Firebase Authentication pour les comptes). Les données sont stockées dans la région <strong>europe-west9, à Paris</strong>. Google agit comme sous-traitant ; des transferts hors de l'Union européenne restent possibles dans le cadre de ses propres engagements contractuels, que vous pouvez consulter dans ses conditions de traitement des données.</p>
+  <p>Chez Google, via Firebase (Firestore pour les données, Firebase Authentication pour les comptes) et Cloud Run pour le service qui porte les autorisations d'assistant. Tout est dans la région <strong>europe-west9, à Paris</strong>. Google agit comme sous-traitant ; des transferts hors de l'Union européenne restent possibles dans le cadre de ses propres engagements contractuels, que vous pouvez consulter dans ses conditions de traitement des données.</p>
 
   <h2>Combien de temps elles sont conservées</h2>
-  <p>Aussi longtemps que vous gardez votre compte. Supprimer une séance ou un test depuis l'application le retire aussi du tableau de bord de votre coach. Supprimer votre compte efface votre fiche, vos séances et vos tests côté serveur, ainsi que votre place dans vos équipes — <strong>c'est définitif</strong>. Les séances enregistrées sur votre téléphone, elles, restent : elles sont à vous.</p>
+  <p>Aussi longtemps que vous gardez votre compte. Supprimer une séance ou un test depuis l'application le retire aussi du tableau de bord de votre coach. Supprimer votre compte efface votre fiche, vos séances et vos tests côté serveur, ainsi que votre place dans vos équipes — <strong>c'est définitif</strong>. Deux traces techniques restent en base, et aucune ne contient de mesure : la liste de vos autorisations d'assistant (le nom et l'adresse du client, les dates) et les réglages que votre coach avait posés pour vous (seuils, remarques). Plus personne ne peut les lire, ni depuis l'application ni depuis le tableau de bord ; vous pouvez en demander l'effacement à l'adresse de contact. Les séances enregistrées sur votre téléphone, elles, restent : elles sont à vous.</p>
 
   <h2>Vos droits</h2>
   <p>Vous pouvez accéder à vos données, les corriger, les effacer, les emporter ailleurs, ou vous opposer à leur traitement. L'application en rend trois immédiats :</p>
@@ -118,6 +136,7 @@
       <li><strong>Effacer</strong> : Réglages → Compte → « Supprimer mon compte ».</li>
       <li><strong>Emporter</strong> : le bouton de partage sur une séance ou un test exporte les données brutes et les mesures en CSV.</li>
       <li><strong>Corriger</strong> : nom, date d'une séance, charge ressentie, rognage — tout se modifie dans l'app, et la correction remonte au coach.</li>
+      <li><strong>Reprendre</strong> : Réglages → Compte → « Partage avec une IA » retire l'accès d'un assistant, et celui de l'assistant de votre coach.</li>
     </ul>
   </div>
   <p>Pour le reste, écrivez à l'adresse de contact ci-dessus. Vous pouvez aussi saisir la CNIL si vous estimez vos droits méconnus.</p>
