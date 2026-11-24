@@ -681,6 +681,72 @@
       <span class="callout-mark">!</span>
       <p><strong>Effacer la mémoire du capteur</strong> (<span class="ui">Réglages</span> → <span class="ui">Capteur</span>) efface <em>tout</em> le journal d'un coup — le capteur ne permet pas de supprimer une séance individuellement. L'app t'avertit si des séances n'ont pas encore été téléchargées. Action irréversible.</p>
     </div>
+
+    <h3>Connecter un assistant<span class="h3-hint">Réglages → Compte → Partage avec une IA — une fois, et seulement si tu veux</span></h3>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">Tu peux autoriser un assistant — Claude — à lire tes séances et tes tests du matin, pour en discuter avec lui comme tu le ferais avec un entraîneur. Rien ne part sans toi, et tu reprends l'accès quand tu veux. Il faut une équipe rejointe <em>et</em> un compte connecté : sans les deux, la ligne n'apparaît pas, puisqu'il n'y aurait ni données à lire ni compte à qui les rattacher.</p>
+
+    <div class="access-block">
+      <code style="font-size:0.88rem; color:var(--accent); word-break:break-all; flex:1; min-width:220px;">https://moveload-connector-850213856393.europe-west9.run.app/mcp</code>
+      <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">L'adresse du connecteur MoveLoad : la seule à saisir, et elle ne change pas. Elle n'ouvre rien par elle-même — sans ton autorisation depuis l'app, elle ne répond rien de tes données.</p>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          <p class="step-title">Ajouter le connecteur dans Claude</p>
+          <p>Dans les réglages de Claude — le site, l'app Mac ou l'app iPhone, c'est le même compte partout —, va à la rubrique des connecteurs, choisis d'ajouter un connecteur personnalisé et colle l'adresse ci-dessus. Tu peux le nommer MoveLoad. Fais-le plutôt sur un ordinateur, c'est plus confortable, en gardant le téléphone à portée de main pour la suite.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          <p class="step-title">Taper dans l'app le code que Claude affiche</p>
+          <p>Huit caractères, de la forme <code>ABCD-1234</code>. Il n'y a ni <strong>I</strong>, ni <strong>O</strong>, ni <strong>0</strong>, ni <strong>1</strong> dans l'alphabet du code : ce qui ressemble à un zéro est un O, et il n'y en a pas — c'est fait pour qu'on ne cherche pas. Laisse la page de Claude ouverte, elle attend.</p>
+          <p>Dans l'app : <span class="ui">Réglages</span> → <span class="ui">Compte</span> → <span class="ui">Partage avec une IA</span>, puis <span class="ui">Connecter un assistant</span>. Les minuscules et le tiret n'ont pas d'importance. Le code vaut <strong>dix minutes</strong> et accepte <strong>cinq essais</strong> ; passé l'un ou l'autre, redemande-en un depuis Claude plutôt que d'insister, ça ne coûte rien.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          <p class="step-title">Lire qui demande — c'est l'étape qui compte</p>
+          <p>L'écran affiche d'abord une <strong>adresse</strong>, puis « se présente comme… ». L'adresse est vérifiée : le descriptif de l'assistant a dû y être publié. Le nom, lui, est celui qu'il se donne, et n'importe qui peut se dire Claude. Depuis le site et les apps de Claude, l'adresse commence par <code>https://claude.ai/oauth/</code> — le demandeur s'appelle alors « Claude », ou « Claude Code » si tu passes par l'outil en ligne de commande ; les deux sont légitimes.</p>
+          <p>Si tu ne reconnais pas l'adresse, <span class="ui">Refuser</span> est la bonne réponse, pas l'exception.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          <p class="step-title">Autoriser la lecture</p>
+          <p><span class="ui">Autoriser la lecture</span>, et Claude termine la connexion tout seul en quelques secondes. Demande-lui un résumé de tes trois dernières séances pour vérifier que ça marche.</p>
+          <p>L'assistant apparaît alors sous <span class="ui">Assistants connectés</span>, avec la date de sa dernière lecture. Elle dira « Jamais » tant qu'il n'a pas vraiment lu, ce qui est juste et non un défaut. Elle bouge sans toi, puisque c'est l'assistant qui lit quand il veut : elle se rafraîchit au retour dans l'app, et en tirant la liste vers le bas.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout warning">
+      <span class="callout-mark">!</span>
+      <p><strong>Ne tape jamais qu'un code que ton propre Claude vient d'afficher sous tes yeux.</strong> Un code tapé à la main n'est pas lié à l'appareil qui l'a demandé : n'importe qui peut lancer une connexion depuis <em>son</em> assistant et te souffler le code — « tape ça dans MoveLoad » —, par message ou par e-mail, de bonne foi apparente. Si tu le tapes et que tu autorises, ce sont ses yeux qui lisent tes données, pas les tiens. Aucune technique ne détecte ça ; ce qui le détecte, c'est l'adresse de l'étape 03, que tu ne reconnaîtras pas.</p>
+    </div>
+
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">Ce qui est lu</div>
+        <div class="spec-desc">Tes séances — la date, la durée, le bateau, l'effort ressenti, les temps en zones cardio et mécaniques, les pics mécaniques —, tes tests du matin sous forme d'indicateurs calculés et de score de forme, ton nom et tes équipes pour que l'assistant sache de qui il parle. L'onde de neuf secondes d'une séance de test et les intervalles entre battements d'un test ne partent que si l'assistant les demande expressément, une séance ou un test à la fois.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Ce qui ne part jamais</div>
+        <div class="spec-desc">Les échantillons bruts du capteur : ils restent sur ton téléphone et ne montent même pas au tableau de bord. Et les cinq réponses du questionnaire de forme — sommeil, fatigue, courbatures, humeur, stress — dont seul le score voyage, exactement comme vers le tableau de bord.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">L'IA de ton entraîneur</div>
+        <div class="spec-desc">C'est un interrupteur à part, sur le même écran : <span class="ui">Autoriser l'IA de mon entraîneur</span>. Connecter ton assistant ne donne rien à personne d'autre. Celui-là est à toi — ton entraîneur ne peut pas le poser à ta place, il voit seulement si tu l'as posé, parce qu'il a le droit de savoir ce qu'il peut lire. Tu le retires quand tu veux, sans rien lui demander : la lecture s'arrête aussitôt.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Reprendre un partage</div>
+        <div class="spec-desc"><span class="ui">Reprendre ce partage</span>, sous l'assistant. La lecture s'arrête immédiatement, et il ne peut pas revenir sans un nouveau code tapé par toi. Le partage repris ne disparaît pas de la liste : il se replie sous <span class="ui">Partages repris</span>. C'est voulu — la trace de ce qui a lu tes données est la tienne, et elle ne s'effacerait au bénéfice de personne.</div>
+      </div>
+    </div>
   </section>
 
   <!-- ================= COACH ================= -->
@@ -785,6 +851,11 @@
       <span class="callout-mark">!</span>
       <p><strong>Ce que tu ne vois pas, et pourquoi.</strong> Le questionnaire de bien-être rempli par l'athlète après chaque test — fatigue, sommeil, courbatures, stress, humeur — ne t'arrive que sous forme d'un score total. Les cinq réponses ne quittent jamais son téléphone. C'est la condition pour qu'il y réponde honnêtement, et un score honnête vaut mieux que cinq réponses prudentes. Le verdict, lui, décrit un état physiologique : il ne dit jamais quelle séance faire.</p>
     </div>
+
+
+    <h3>Ton assistant, côté coach<span class="h3-hint">Depuis l'app MoveLoad, pas depuis le tableau de bord</span></h3>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">Tu peux connecter ton propre assistant pour parler de tes athlètes avec lui. Ça se passe dans l'app, exactement comme décrit dans le <a href="#athlete">guide athlète</a> ci-dessus, avec une question de plus à l'écran d'autorisation : <span class="ui">Mes données seulement</span> ou <span class="ui">Mes données et celles de mes athlètes</span>.</p>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">Dans le second cas, <strong>tu ne verras que les athlètes qui ont posé l'interrupteur sur leur propre téléphone</strong>. Les autres restent invisibles, et rien ne te signale leur absence : leur accord leur appartient, et chacun peut se retirer sans te le dire. Si un athlète manque à ce que lit ton assistant alors qu'il est bien dans ton équipe, c'est la première chose à vérifier — avec lui, pas dans le tableau de bord.</p>
 
     <div class="callout">
       <span class="callout-mark">i</span>

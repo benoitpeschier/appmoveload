@@ -681,6 +681,72 @@
       <span class="callout-mark">!</span>
       <p><strong>Erasing the sensor's memory</strong> (<span class="ui">Settings</span> → <span class="ui">Sensor</span>) wipes the <em>whole</em> logbook at once — the sensor cannot delete one session on its own. The app warns you if some sessions have not been downloaded yet. Irreversible.</p>
     </div>
+
+    <h3>Connecting an assistant<span class="h3-hint">Settings → Account → Sharing with an AI — once, and only if you want to</span></h3>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">You can allow an assistant — Claude — to read your sessions and your morning tests, so you can talk them over with it the way you would with a coach. Nothing leaves without you, and you withdraw the access whenever you like. You need a team joined <em>and</em> an account signed in: without both, the row does not appear, since there would be neither data to read nor an account to attach it to.</p>
+
+    <div class="access-block">
+      <code style="font-size:0.88rem; color:var(--accent); word-break:break-all; flex:1; min-width:220px;">https://moveload-connector-850213856393.europe-west9.run.app/mcp</code>
+      <p style="margin:0; font-size:0.87rem; color:var(--ink-muted); flex:1; min-width:220px;">The MoveLoad connector address: the only thing to type, and it does not change. It opens nothing by itself — without your approval from the app, it answers nothing about your data.</p>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          <p class="step-title">Add the connector in Claude</p>
+          <p>In Claude's settings — the website, the Mac app or the iPhone app, it is the same account everywhere — go to the connectors section, choose to add a custom connector, and paste the address above. You can call it MoveLoad. A computer is the more comfortable place to do this; keep the phone within reach for what follows.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          <p class="step-title">Type the code Claude shows into the app</p>
+          <p>Eight characters, in the form <code>ABCD-1234</code>. There is no <strong>I</strong>, no <strong>O</strong>, no <strong>0</strong> and no <strong>1</strong> in the code's alphabet: anything that looks like a zero is an O, and there are none — that is deliberate, so you never have to squint. Leave Claude's page open, it is waiting.</p>
+          <p>In the app: <span class="ui">Settings</span> → <span class="ui">Account</span> → <span class="ui">Sharing with an AI</span>, then <span class="ui">Connect an assistant</span>. Lower case and the hyphen make no difference. The code is good for <strong>ten minutes</strong> and allows <strong>five attempts</strong>; past either, ask Claude for a new one rather than persisting — it costs nothing.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          <p class="step-title">Read who is asking — this is the step that matters</p>
+          <p>The screen shows an <strong>address</strong> first, then “calls itself…”. The address is verified: the assistant's own description had to be published there. The name is what it calls itself, and anyone can call themselves Claude. From Claude's website and apps the address begins with <code>https://claude.ai/oauth/</code> — the requester is then named “Claude”, or “Claude Code” if you are going through the command-line tool; both are legitimate.</p>
+          <p>If you do not recognise the address, <span class="ui">Refuse</span> is the right answer, not the exception.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          <p class="step-title">Allow reading</p>
+          <p><span class="ui">Allow reading</span>, and Claude finishes the connection on its own within seconds. Ask it to summarise your last three sessions to check that it works.</p>
+          <p>The assistant then appears under <span class="ui">Connected assistants</span>, with the date it last read. It will say “Never” until it has actually read something, which is correct and not a fault. That date moves without you, since the assistant reads when it chooses: it refreshes when you come back into the app, and when you pull the list down.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout warning">
+      <span class="callout-mark">!</span>
+      <p><strong>Never type a code other than one your own Claude has just shown you.</strong> A code typed by hand is not tied to the device that asked for it: anyone can start a connection from <em>their</em> assistant and pass you the code — “type this into MoveLoad” — by message or by email, in apparent good faith. If you type it and approve, it is their eyes reading your data, not yours. No technique detects this; what detects it is the address at step 03, which you will not recognise.</p>
+    </div>
+
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">What is read</div>
+        <div class="spec-desc">Your sessions — the date, the duration, the boat, the perceived exertion, the time in cardio and mechanical zones, the mechanical peaks — your morning tests as computed indicators and a wellness score, and your name and teams so the assistant knows who it is talking about. The nine-second wave of a test session and the beat-to-beat intervals of a test leave only if the assistant asks for them explicitly, one session or one test at a time.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">What never leaves</div>
+        <div class="spec-desc">The sensor's raw samples: they stay on your phone and do not even reach the dashboard. And the five answers to the wellness questionnaire — sleep, fatigue, soreness, mood, stress — of which only the score travels, exactly as towards the dashboard.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Your coach's AI</div>
+        <div class="spec-desc">That is a separate switch, on the same screen: <span class="ui">Allow my coach's AI</span>. Connecting your assistant gives nothing to anyone else. This one is yours — your coach cannot set it for you, and only sees whether you have set it, because he or she is entitled to know what can be read. You withdraw it whenever you like, without asking anyone: the reading stops at once.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Withdrawing a share</div>
+        <div class="spec-desc"><span class="ui">Withdraw this sharing</span>, under the assistant. Reading stops immediately, and it cannot come back without a new code typed by you. A withdrawn share does not vanish from the list: it folds away under <span class="ui">Withdrawn shares</span>. That is deliberate — the record of what has read your data is yours, and erasing it would be for nobody's benefit.</div>
+      </div>
+    </div>
   </section>
 
   <!-- ================= COACH ================= -->
@@ -785,6 +851,11 @@
       <span class="callout-mark">!</span>
       <p><strong>What you do not see, and why.</strong> The wellness questionnaire the athlete fills in after each test — fatigue, sleep, soreness, stress, mood — reaches you only as a total score. The five answers never leave their phone. That is the condition for answering it honestly, and an honest score beats five cautious answers. The verdict itself describes a physiological state: it never says which session to do.</p>
     </div>
+
+
+    <h3>Your assistant, as a coach<span class="h3-hint">From the MoveLoad app, not from the dashboard</span></h3>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">You can connect your own assistant to talk about your athletes with it. That happens in the app, exactly as described in the <a href="#athlete">athlete guide</a> above, with one extra question on the approval screen: <span class="ui">My data only</span> or <span class="ui">My data and my athletes&#39;</span>.</p>
+    <p style="font-size:0.87rem; color:var(--ink-muted);">In the second case, <strong>you will only see the athletes who have set the switch on their own phone</strong>. The others stay invisible, and nothing tells you they are missing: their consent is theirs, and each of them can withdraw without telling you. If an athlete is missing from what your assistant reads although they are in your team, that is the first thing to check — with them, not in the dashboard.</p>
 
     <div class="callout">
       <span class="callout-mark">i</span>
