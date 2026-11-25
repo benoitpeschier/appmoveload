@@ -998,6 +998,11 @@
     "Courbe d'accélération de la dernière séance comparée au record personnel, sur les six fenêtres de temps": "Acceleration curve of the last session against the personal record, over the six time windows",
     "Courbe — dernière séance vs record": "Curve — last session vs record",
     "Dernière synchro : —": "Last sync: —",
+    "Bon": "Good",
+    "Excellent": "Excellent",
+    "Horrible": "Awful",
+    "Mauvais": "Poor",
+    "Moyen": "Okay",
     "Dernière séance": "Last session",
     "Dernière séance : ": "Last session: ",
     "‹ Précédente": "‹ Previous",
@@ -2089,6 +2094,7 @@
     a.hr = last ? last.hr : [0, 0, 0];
     a.mech = last ? last.mech : [0, 0, 0];
     a.rpe = last ? last.rpe : null;
+    a.feeling = last ? last.feeling : null;
     // Oublié de cette liste depuis le début : `athleteViewFor` le posait pour
     // une séance ouverte depuis le calendrier, et la vue par défaut n'avait
     // donc jamais de temps au-dessus de la référence — `undefined`, lu comme
@@ -2419,6 +2425,10 @@
                 excludedWalking: typeof s.excludedWalkingSeconds === "number" ? s.excludedWalkingSeconds : null,
                 inactive: typeof s.inactiveSeconds === "number" ? s.inactiveSeconds : null,
                 rpe: (s.perceivedExertion === undefined || s.perceivedExertion === null) ? null : s.perceivedExertion,
+                // Les sensations déclarées, 1 à 5. Lues comme le RPE : une
+                // séance synchronisée avant le build 75 n'en porte pas, et
+                // `null` dit « pas déclaré » là où 0 dirait « horrible ».
+                feeling: (s.feeling === undefined || s.feeling === null) ? null : s.feeling,
                 // A session pushed without a boat was shown as K1 on the phone:
                 // until build 17 the app stored its default only once the
                 // athlete changed it. Read the same way here, or the session
@@ -2850,6 +2860,25 @@
   function rpeLabel(rpe) {
     return rpe == null ? "—" : rpe + "/10";
   }
+
+  /// Les sensations déclarées, en émoji et en mot.
+  ///
+  /// Les deux ensemble, comme dans l'app : la frimousse se lit d'un coup
+  /// d'œil dans une ligne dense, le mot lève l'ambiguïté entre deux visages
+  /// voisins. Rien du tout quand l'athlète n'a pas déclaré — une chaîne vide
+  /// plutôt qu'un tiret, parce que ça s'insère dans une ligne déjà ponctuée.
+  const SENSATION_EMOJI = ["\u{1F62B}", "\u{1F615}", "\u{1F610}", "\u{1F642}", "\u{1F604}"];
+  const SENSATION_MOT = ["Horrible", "Mauvais", "Moyen", "Bon", "Excellent"];
+  function sensationLabel(feeling) {
+    if (feeling == null) return "";
+    const i = Math.min(Math.max(Math.round(feeling), 1), 5) - 1;
+    return SENSATION_EMOJI[i] + " " + t(SENSATION_MOT[i]);
+  }
+  /// Le même, prêt à s'ajouter à une énumération : vide ou précédé du point.
+  function sensationSuffix(feeling) {
+    const label = sensationLabel(feeling);
+    return label ? " · " + label : "";
+  }
   function stackBar(values, colors) {
     const total = values.reduce((a,b) => a+b, 0) || 1;
     return values.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${colors[i]}"></span>`).join("");
@@ -2916,7 +2945,7 @@
         <div class="card-head">
           <div>
             <p class="athlete-name">${esc(a.name)}</p>
-            <p class="athlete-meta">${t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${a.lastSessionDateIsWrong ? t("date erronée") : relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""}</p>
+            <p class="athlete-meta">${t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${a.lastSessionDateIsWrong ? t("date erronée") : relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${sensationSuffix(a.feeling)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""}</p>
           </div>
           ${badge}
         </div>
@@ -4342,7 +4371,7 @@
       </div>
       <p class="detail-title">${esc(a.name)}</p>
       <div class="session-head">
-      <p class="athlete-meta" style="margin:0">${a.isSpecificSession ? t("Séance") : t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${a.lastSessionDateIsWrong ? t("date erronée") : relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
+      <p class="athlete-meta" style="margin:0">${a.isSpecificSession ? t("Séance") : t("Dernière séance")}${t(" : ")}${a.lastSessionName ? esc(a.lastSessionName) + " · " : ""}${a.lastSessionDateIsWrong ? t("date erronée") : relDate(a.lastSession)} · ${a.duration} min · RPE ${rpeLabel(a.rpe)}${sensationSuffix(a.feeling)}${a.lastSessionIsTest ? t(" · Test") : ""}${a.lastSessionIsConditioning ? t(" · PPG") : ""} ${a.note ? "— " + esc(a.note) : ""}</p>
       ${sessionNavHTML(a)}
       </div>
       <div class="detail-grid">
@@ -4544,6 +4573,7 @@
       excludedWalking: s.excludedWalking,
       inactive: s.inactive,
       rpe: s.rpe,
+      feeling: s.feeling,
       lastSessionIsTest: !!s.isTest,
       lastSessionIsConditioning: !!s.isConditioning,
       strokeSignal: s.strokeSignal,
@@ -5393,7 +5423,7 @@
 
     const rows = [[
       "date", "started_at", "athlete", "session", "is_test", "is_conditioning",
-      "boat", "duration_min", "rpe",
+      "boat", "duration_min", "rpe", "feeling",
       "hr_i1_min", "hr_i2_min", "hr_i3_min",
       "mech_z1_min", "mech_z2_min", "mech_z3_min", "above_45s_min",
       // Sans ces deux colonnes, `duration_min` et les six temps en zones ne
@@ -5404,6 +5434,7 @@
     list.forEach(x => rows.push([
       x.date, x.startedAtLabel, a.name, x.name, x.isTest, x.isConditioning,
       x.boatType || "", x.duration, x.rpe === null ? "" : x.rpe,
+      x.feeling === null ? "" : x.feeling,
       csvMinutes(x.hr[0]), csvMinutes(x.hr[1]), csvMinutes(x.hr[2]),
       csvMinutes(x.mech[0]), csvMinutes(x.mech[1]), csvMinutes(x.mech[2]),
       csvMinutes(x.aboveAnchor || 0),
@@ -5455,7 +5486,7 @@
       let inner;
       if (calMode === "month") {
         const chips = hits.map(({a,s}) => {
-          const tipLabel = esc(a.name + " " + (s.startedAtLabel || "") + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + loadBars(s).label);
+          const tipLabel = esc(a.name + " " + (s.startedAtLabel || "") + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + sensationSuffix(s.feeling) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + loadBars(s).label);
           return `<span class="a-chip open-session" style="background:${a.color}" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-session="${esc(s.id)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">${a.initial}</span>`;
         }).join("");
         inner = `<div class="day-num">${date.getDate()}${hrvPill(iso)}</div><div class="day-chips">${chips}</div>`;
@@ -5464,7 +5495,7 @@
           const load = loadBars(s);
           const total = load.values.reduce((x,y)=>x+y,0) || 1;
           const bar = load.values.map((v,i) => `<span style="width:${(v/total*100).toFixed(1)}%;background:${load.colors[i]}"></span>`).join("");
-          const tipLabel = esc(a.name + " " + (s.startedAtLabel || "") + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + load.label);
+          const tipLabel = esc(a.name + " " + (s.startedAtLabel || "") + (s.name ? " · " + s.name : "") + " — " + s.duration + " min · RPE " + rpeLabel(s.rpe) + sensationSuffix(s.feeling) + (s.isConditioning ? t(" · PPG") + " · " : " · ") + load.label);
           return `<div class="week-chip open-session" data-tip="${tipLabel}" data-id="${esc(a.id)}" data-session="${esc(s.id)}" role="button" tabindex="0" aria-label="${t("Voir la séance de")} ${esc(a.name)}">
             <span class="a-chip" style="background:${a.color}">${a.initial}</span>
             <span class="mini-bar">${bar}</span>
