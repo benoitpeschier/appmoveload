@@ -747,6 +747,61 @@
         <div class="spec-desc"><span class="ui">Reprendre ce partage</span>, sous l'assistant. La lecture s'arrête immédiatement, et il ne peut pas revenir sans un nouveau code tapé par toi. Le partage repris ne disparaît pas de la liste : il se replie sous <span class="ui">Partages repris</span>. C'est voulu — la trace de ce qui a lu tes données est la tienne, et elle ne s'effacerait au bénéfice de personne.</div>
       </div>
     </div>
+
+    <h3>Envoyer une séance vers Nolio<span class="h3-hint">Par ton assistant — rien à installer de plus</span></h3>
+
+    <p>Une fois ton assistant connecté à MoveLoad, il peut aussi écrire dans <strong>Nolio</strong> : il y recrée la séance avec <strong>la courbe cardiaque seconde par seconde</strong>. Ni l'app ni le tableau de bord ne détiennent le moindre accès à ton compte Nolio — c'est ton assistant qui tient les deux bouts, et c'est ce qui rend l'opération possible sans réglage.</p>
+
+    <ol class="steps">
+      <li class="step">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          <p class="step-title">Brancher Nolio sur ton assistant</p>
+          <p>Dans Claude, ajoute le connecteur Nolio et connecte-toi avec <strong>ton propre compte Nolio</strong>. C'est important : l'import de fichier de Nolio dépose toujours la séance sur <em>le calendrier du compte connecté</em>. Si c'est ton entraîneur qui le fait depuis le sien, la séance atterrit chez lui, pas chez toi.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          <p class="step-title">Demander</p>
+          <p>« Envoie ma séance d'hier vers Nolio avec la courbe cardio. » L'assistant retrouve la séance, lit la courbe, en écrit un fichier et l'envoie. Tu n'as rien à exporter ni à transférer.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          <p class="step-title">Vérifier avant, pas après</p>
+          <p>Nolio <strong>ne dédoublonne pas</strong> : le même fichier envoyé deux fois crée deux séances. Demande-lui de regarder ton calendrier Nolio d'abord — il sait le faire — plutôt que d'avoir à supprimer ensuite.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          <p class="step-title">Patienter quelques instants</p>
+          <p>Nolio accepte le fichier puis l'analyse en différé : la séance n'apparaît pas à la seconde. Si elle manque au bout de quelques minutes, c'est l'analyse qui a échoué, pas l'envoi.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout warning">
+      <span class="callout-mark">!</span>
+      <p><strong>Si ta montre pousse déjà vers Nolio, tu auras deux séances pour une.</strong> La courbe de MoveLoad ne peut pas se greffer sur celle que la montre y a déposée : elle ne peut arriver que comme une séance neuve. Tant que les deux poussent, c'est à toi de choisir laquelle garder — et celle de MoveLoad n'apporte rien de plus côté cardio si la montre fait déjà le travail.</p>
+    </div>
+
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">Ce qui traverse</div>
+        <div class="spec-desc">La courbe cardiaque seconde par seconde, la date, la durée, et ton effort ressenti. Une seconde que la sangle n'a pas mesurée reste <strong>vide</strong> : elle ne devient pas un battement inventé, et la courbe chez Nolio ne montre pas de palier qui n'a pas eu lieu.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Ce qui ne traverse pas</div>
+        <div class="spec-desc">La charge mécanique. Nolio n'a pas de champ pour elle, et c'est justement ce que MoveLoad apporte de plus ; l'assistant peut la poser dans le commentaire de la séance, mais elle n'y sera ni une courbe ni un chiffre qu'on suit.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Les séances anciennes</div>
+        <div class="spec-desc">Les séances analysées avant la mise à jour n'embarquent pas encore de courbe. Ouvre-les une fois dans l'app : elle se recalcule, repart vers le tableau de bord, et devient envoyable. L'assistant te dira franchement si une séance n'en a pas.</div>
+      </div>
+    </div>
   </section>
 
   <!-- ================= COACH ================= -->

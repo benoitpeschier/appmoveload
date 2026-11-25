@@ -747,6 +747,61 @@
         <div class="spec-desc"><span class="ui">Withdraw this sharing</span>, under the assistant. Reading stops immediately, and it cannot come back without a new code typed by you. A withdrawn share does not vanish from the list: it folds away under <span class="ui">Withdrawn shares</span>. That is deliberate — the record of what has read your data is yours, and erasing it would be for nobody's benefit.</div>
       </div>
     </div>
+
+    <h3>Sending a session to Nolio<span class="h3-hint">Through your assistant — nothing else to install</span></h3>
+
+    <p>Once your assistant is connected to MoveLoad, it can also write to <strong>Nolio</strong>: it recreates the session there with <strong>the heart-rate curve, second by second</strong>. Neither the app nor the dashboard holds any access to your Nolio account — your assistant holds both ends, and that is what makes this work with no setup.</p>
+
+    <ol class="steps">
+      <li class="step">
+        <span class="step-num">01</span>
+        <div class="step-body">
+          <p class="step-title">Connect Nolio to your assistant</p>
+          <p>In Claude, add the Nolio connector and sign in with <strong>your own Nolio account</strong>. This matters: Nolio's file import always drops the session on <em>the connected account's calendar</em>. If your coach does it from theirs, the session lands with them, not with you.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">02</span>
+        <div class="step-body">
+          <p class="step-title">Ask</p>
+          <p>"Send yesterday's session to Nolio with the heart-rate curve." The assistant finds the session, reads the curve, writes a file from it and uploads it. Nothing for you to export or transfer.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">03</span>
+        <div class="step-body">
+          <p class="step-title">Check before, not after</p>
+          <p>Nolio <strong>does not de-duplicate</strong>: the same file sent twice creates two sessions. Ask it to look at your Nolio calendar first — it knows how — rather than having to delete afterwards.</p>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">04</span>
+        <div class="step-body">
+          <p class="step-title">Give it a moment</p>
+          <p>Nolio accepts the file and parses it later: the session does not appear instantly. If it is still missing after a few minutes, the parsing failed, not the upload.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout warning">
+      <span class="callout-mark">!</span>
+      <p><strong>If your watch already pushes to Nolio, you will get two sessions for one.</strong> MoveLoad's curve cannot be grafted onto the one your watch left there: it can only arrive as a new session. While both push, it is up to you which to keep — and MoveLoad's adds nothing on the cardio side if the watch already does that job.</p>
+    </div>
+
+    <div class="spec">
+      <div class="spec-row" style="border-top:none">
+        <div class="spec-field">What travels</div>
+        <div class="spec-desc">The heart-rate curve second by second, the date, the duration, and your perceived exertion. A second the strap did not measure stays <strong>empty</strong>: it does not become an invented beat, and the curve in Nolio shows no plateau that never happened.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">What does not</div>
+        <div class="spec-desc">Mechanical load. Nolio has no field for it, and that is precisely what MoveLoad adds; the assistant can put it in the session's comment, but it will be neither a curve there nor a figure you can track.</div>
+      </div>
+      <div class="spec-row">
+        <div class="spec-field">Older sessions</div>
+        <div class="spec-desc">Sessions analysed before the update carry no curve yet. Open one in the app: it is recomputed, goes back up to the dashboard, and becomes sendable. The assistant will say plainly if a session has none.</div>
+      </div>
+    </div>
   </section>
 
   <!-- ================= COACH ================= -->
