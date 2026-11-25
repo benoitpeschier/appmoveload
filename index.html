@@ -846,6 +846,15 @@
     "30 jours": "30 days",
     "6 mois": "6 months",
     "Afficher ou masquer cette zone": "Show or hide this zone",
+    "Afficher ou masquer la tendance": "Show or hide the trend",
+    "Évolution — impacts de rampe": "Load over time — ramp impacts",
+    "g cumulés par jour": "cumulative g per day",
+    "saut": "jump",
+    "sauts": "jumps",
+    "Un départ de rampe est repéré sans que l'athlète ait rien à déclarer : immobilité sur la rampe, glissade, choc, puis bascule. La colonne additionne les pointes de la journée — trois sauts à 8 g pèsent plus que deux. Une séance sans les trois axes du capteur n'est pas jugeable et ne compte pas pour zéro.": "A ramp start is found without the athlete declaring anything: held still on the ramp, the slide, the impact, then the tilt. The column adds up the day's peaks — three jumps at 8 g weigh more than two. A session without the sensor's three axes cannot be judged and does not count as zero.",
+    "Aucun saut de rampe sur cette période.": "No ramp jump in this period.",
+    "Tendance": "Trend",
+    "La courbe lisse les minutes par jour de calendrier, repos compris : elle descend quand les séances s'espacent, et ne dit donc pas la charge d'une séance. La bande vaut un écart-type de part et d'autre. Masquer une zone recalcule la courbe au lieu de la laisser en place.": "The curve smooths minutes per calendar day, rest days included: it falls when sessions thin out, so it does not describe a single session. The band is one standard deviation either side. Hiding a zone recomputes the curve rather than leaving it as it was.",
     "Aucune séance sur cette période.": "No session in this period.",
     "Compte": "Account",
     "Évolution — charge cardio": "Load over time — cardio",
@@ -2429,6 +2438,11 @@
                 // séance synchronisée avant le build 75 n'en porte pas, et
                 // `null` dit « pas déclaré » là où 0 dirait « horrible ».
                 feeling: (s.feeling === undefined || s.feeling === null) ? null : s.feeling,
+                // La pointe de chaque départ de rampe. `null` = séance non
+                // jugeable (pas les trois axes, ou analysée avant le build
+                // 77) ; `[]` = regardée, aucun saut. Les deux ne s'affichent
+                // pas pareil, donc on ne les confond pas ici.
+                rampJumpPeaksG: Array.isArray(s.rampJumpPeaksG) ? s.rampJumpPeaksG : null,
                 // A session pushed without a boat was shown as K1 on the phone:
                 // until build 17 the app stored its default only once the
                 // athlete changed it. Read the same way here, or the session
@@ -4056,8 +4070,11 @@
     if (!sessions.length) return null;
     const byDay = new Map();
     sessions.forEach(s => {
-      const cur = byDay.get(s.date) || { hr: [0, 0, 0], mech: [0, 0, 0], above: [0], count: 0 };
+      const cur = byDay.get(s.date) || { hr: [0, 0, 0], mech: [0, 0, 0], above: [0], g: [0], jumps: 0, count: 0 };
       for (let i = 0; i < 3; i++) { cur.hr[i] += s.hr[i]; cur.mech[i] += s.mech[i]; }
+      // Les g s'additionnent sur la journée : c'est la dose encaissée, et
+      // trois réceptions à 8 g ne valent pas deux.
+      (s.rampJumpPeaksG || []).forEach(p => { cur.g[0] += p; cur.jumps += 1; });
       // Un tableau d'un seul élément là où les deux autres en ont trois : le
       // dessin, l'empilement et l'infobulle sont écrits pour une liste de
       // séries, et une série unique en est une. Rien à dupliquer.
@@ -4078,31 +4095,93 @@
       const iso = isoDate(d);
       const v = byDay.get(iso);
       out.push({ iso, hr: v ? v.hr : [0, 0, 0], mech: v ? v.mech : [0, 0, 0],
-                 above: v ? v.above : [0], count: v ? v.count : 0 });
+                 above: v ? v.above : [0], g: v ? v.g : [0], jumps: v ? v.jumps : 0,
+                 count: v ? v.count : 0 });
     }
     return out;
   }
 
   // Les zones masquées par l'entraîneur, par graphique. Un Set d'index 0/1/2,
   // sur le modèle d'activeAthletes dans le calendrier.
-  const loadTrendHidden = { hr: new Set(), mech: new Set(), above: new Set() };
+  const loadTrendHidden = { hr: new Set(), mech: new Set(), above: new Set(), g: new Set() };
+  // Les graphiques dont la tendance est masquée. Même geste que les zones.
+  const loadTrendNoCurve = new Set();
+
+  /// La courbe de tendance : moyenne glissante pondérée par un noyau gaussien,
+  /// avec une bande d'un écart-type pondéré de part et d'autre.
+  ///
+  /// Même calcul que la courbe « écart au vainqueur » du tableau de bord
+  /// slalom, à une différence qui compte : là-bas un point est une course et
+  /// l'intersaison est un trou où la courbe se coupe ; ici l'axe est une suite
+  /// de jours **pleins**, zéros compris, parce qu'un jour sans séance est une
+  /// charge nulle et non une mesure manquante. La tendance se lit donc en
+  /// minutes par jour de calendrier, repos inclus — et pas en minutes par
+  /// séance, ce qui serait une autre question et une autre courbe.
+  ///
+  /// La largeur de bande suit la fenêtre : 3,5 jours au minimum, ce qui
+  /// approche la moyenne glissante de sept jours dont on a l'habitude en
+  /// charge d'entraînement, puis un douzième de la fenêtre au-delà — sur
+  /// « Tout », une largeur fixe de quelques jours ne lisserait plus rien.
+  function trendOf(values, yMax) {
+    const n = values.length;
+    if (n < 4) return [];
+    const bandwidth = Math.max(3.5, n / 12), out = [];
+    for (let k = 0; k <= 90; k++) {
+      const x = (n - 1) * k / 90;
+      let sw = 0, sy = 0, sy2 = 0;
+      for (let i = 0; i < n; i++) {
+        const w = Math.exp(-0.5 * ((i - x) / bandwidth) ** 2);
+        const y = Math.min(values[i], yMax);
+        sw += w; sy += w * y; sy2 += w * y * y;
+      }
+      if (sw < 1) { out.push(null); continue; }
+      const mu = sy / sw, sd = Math.sqrt(Math.max(0, sy2 / sw - mu * mu));
+      out.push({ x, y: mu, lo: Math.max(0, mu - sd), hi: Math.min(yMax, mu + sd) });
+    }
+    return out;
+  }
+
+  /// Tracé arrondi (Catmull-Rom → Bézier) d'une suite de points écran.
+  function smoothPath(points) {
+    if (points.length < 2) return "";
+    let d = `M${points[0][0]},${points[0][1]}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i], p1 = points[i];
+      const p2 = points[i + 1], p3 = points[i + 2] || p2;
+      d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6}`
+         + ` ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6}`
+         + ` ${p2[0]},${p2[1]}`;
+    }
+    return d;
+  }
 
   function loadTrendSVG(points, kind) {
     const w = 900, h = 210, padL = 38, padR = 12, padT = 12, padB = 24;
     const plotW = w - padL - padR, plotH = h - padT - padB;
     const key = kind;
+    // Les trois premiers graphiques comptent des secondes et s'affichent en
+    // minutes ; celui des g compte des g. D'où une échelle plutôt qu'un /60
+    // écrit en dur trois lignes plus bas.
+    const estG = kind === "g";
+    const echelle = estG ? 1 : 1 / 60;
     const colors = kind === "hr"
       ? ["var(--i1)", "var(--i2)", "var(--i3)"]
       : kind === "mech"
         ? ["var(--z1)", "var(--z2)", "var(--z3)"]
-        // La même couleur que la barre de l'encadré « Temps au-dessus de la
-        // référence 45 s » : c'est la même mesure, vue dans le temps.
-        : ["var(--z3)"];
+        : estG
+          // Le rouge de l'impact, et le seul de ce graphique : il n'y a qu'une
+          // série, donc aucune confusion possible avec I3.
+          ? ["var(--i3)"]
+          // La même couleur que la barre de l'encadré « Temps au-dessus de la
+          // référence 45 s » : c'est la même mesure, vue dans le temps.
+          : ["var(--z3)"];
     const names = kind === "hr"
       ? ["I1", "I2", "I3"]
       : kind === "mech"
         ? [t("Zone 1"), t("Zone 2"), t("Zone 3")]
-        : [t("au-dessus de la référence")];
+        : estG
+          ? [t("g cumulés")]
+          : [t("au-dessus de la référence")];
     const zones = colors.map((_, j) => j);
     const topZone = zones[zones.length - 1];
     const hidden = loadTrendHidden[key];
@@ -4126,7 +4205,7 @@
     // c'est ce qui rend le geste utile plutôt que décoratif.
     const cum = points.map(p => {
       let acc = 0;
-      return zones.map(j => { if (!hidden.has(j)) acc += p[key][j] / 60; return acc; });
+      return zones.map(j => { if (!hidden.has(j)) acc += p[key][j] * echelle; return acc; });
     });
     const maxV = Math.max(1, ...cum.map(c => c[topZone]));
     const yFor = v => padT + plotH - (v / maxV) * plotH;
@@ -4143,6 +4222,26 @@
       if (!(hgt > 0.05)) return "";
       return `<rect x="${xa(i).toFixed(1)}" y="${top.toFixed(1)}" width="${colW.toFixed(1)}" height="${hgt.toFixed(1)}" fill="${colors[j]}" fill-opacity="0.8"/>`;
     }).join("")).join("");
+    // La tendance porte sur le total *affiché* : masquer une zone la
+    // recalcule, elle ne se contente pas de disparaître du dessin. L'abscisse
+    // de la grille est fractionnaire, donc le centre de colonne se calcule au
+    // lieu de se lire dans xm().
+    let trendSVG = "";
+    if (!loadTrendNoCurve.has(key) && shown.length) {
+      const grille = trendOf(cum.map(c => c[topZone]), maxV);
+      const segments = [[]];
+      grille.forEach(q => q ? segments[segments.length - 1].push(q)
+                            : segments[segments.length - 1].length && segments.push([]));
+      const xg = x => padL + (x + 0.5) * bw;
+      trendSVG = segments.filter(sg => sg.length > 1).map(sg => {
+        const haut = smoothPath(sg.map(q => [xg(q.x), yFor(q.hi)]));
+        const bas = smoothPath([...sg].reverse().map(q => [xg(q.x), yFor(q.lo)]));
+        return `<path d="${haut} L${bas.slice(1)} Z" fill="var(--ink)" fill-opacity="0.07"/>`
+          + `<path d="${smoothPath(sg.map(q => [xg(q.x), yFor(q.y)]))}" fill="none"`
+          + ` stroke="var(--ink)" stroke-opacity="0.72" stroke-width="2.5"`
+          + ` stroke-linecap="round" stroke-linejoin="round"/>`;
+      }).join("");
+    }
     const totalLine = "";
 
     // La cible est la colonne elle-même : on survole et on clique la barre
@@ -4153,12 +4252,14 @@
       if (!p.count || !shown.length) return "";
       const z = p[key];
       if (!shown.reduce((acc, j) => acc + z[j], 0)) return "";
-      const parts = shown.map(j => names[j] + " " + fmtMinSec(z[j]));
+      const parts = estG
+        ? [p.jumps + " " + t(p.jumps > 1 ? "sauts" : "saut"), z[0].toFixed(1) + " g"]
+        : shown.map(j => names[j] + " " + fmtMinSec(z[j]));
       // « I1 3:00 · I2 1:00 · total 4:00 » a un sens ; « au-dessus de la
       // référence 4:00 · total 4:00 » n'en a aucun. Le total ne s'écrit que
       // s'il additionne plusieurs choses.
-      if (shown.length > 1) parts.push(t("total") + " " + fmtMinSec(shown.reduce((acc, j) => acc + z[j], 0)));
-      if (p.count > 1) parts.push(p.count + " " + t("séances"));
+      if (!estG && shown.length > 1) parts.push(t("total") + " " + fmtMinSec(shown.reduce((acc, j) => acc + z[j], 0)));
+      if (!estG && p.count > 1) parts.push(p.count + " " + t("séances"));
       const value = parts.join(" · ");
       const base = yFor(0), top = Math.min(yFor(cum[i][topZone]), base - 16);
       return `<rect class="hoverpt load-trend-day" x="${xa(i).toFixed(1)}" y="${top.toFixed(1)}" width="${colW.toFixed(1)}" height="${(base - top).toFixed(1)}" fill="transparent" data-day="${p.iso}" data-label="${shortDate(p.iso)}" data-value="${esc(value)}" role="button" tabindex="0" aria-label="${t("Voir cette journée dans le calendrier")} — ${shortDate(p.iso)}"/>`;
@@ -4176,11 +4277,13 @@
         ? `<text x="${xm(i).toFixed(1)}" y="${h - 7}" text-anchor="middle" font-size="9" fill="var(--ink-muted)">${shortDate(p.iso)}</text>`
         : "").join("");
 
-    const aria = kind === "above"
-      ? t("Évolution du temps passé au-dessus de la référence, jour par jour")
-      : t("Évolution du temps passé dans chaque zone, jour par jour");
+    const aria = estG
+      ? t("Évolution des impacts de rampe, jour par jour")
+      : kind === "above"
+        ? t("Évolution du temps passé au-dessus de la référence, jour par jour")
+        : t("Évolution du temps passé dans chaque zone, jour par jour");
     return `<svg width="100%" viewBox="0 0 ${w} ${h}" role="img" aria-label="${aria}" style="height:auto">
-      ${yTicks}${bands}${totalLine}${xLabels}${dots}
+      ${yTicks}${bands}${trendSVG}${totalLine}${xLabels}${dots}
     </svg>`;
   }
 
@@ -4188,6 +4291,7 @@
     const points = loadTrendSeries(a, loadTrendDays);
     const title = kind === "hr" ? t("Évolution — charge cardio")
       : kind === "mech" ? t("Évolution — charge mécanique")
+      : kind === "g" ? t("Évolution — impacts de rampe")
       : t("Évolution — temps au-dessus de la référence");
     const names = kind === "hr"
       ? [["I1", "var(--i1)"], ["I2", "var(--i2)"], ["I3", "var(--i3)"]]
@@ -4205,7 +4309,12 @@
       const on = !hidden.has(j);
       return `<span class="chip ${on ? "" : "off"}" data-kind="${key}" data-zone="${j}" tabindex="0" role="button" aria-pressed="${on}" title="${t("Afficher ou masquer cette zone")}">
         <span class="dot" style="background:${c}"></span>${nm}</span>`;
-    }).join("");
+    }).join("")
+    // La pastille de la tendance accompagne toujours les autres, y compris
+    // sur « au-dessus de la référence » qui n'avait pas de légende : elle ne
+    // masque pas la donnée, seulement la lecture qu'on en superpose.
+    + `<span class="chip ${loadTrendNoCurve.has(key) ? "off" : ""}" data-kind="${key}" data-zone="curve" tabindex="0" role="button" aria-pressed="${!loadTrendNoCurve.has(key)}" title="${t("Afficher ou masquer la tendance")}">
+        <span class="dot" style="background:var(--ink)"></span>${t("Tendance")}</span>`;
     const allHidden = names.length > 0 && hidden.size === names.length;
     // Une colonne vide n'est pas la même chose selon le graphique. Pour les
     // zones, « il y a eu des séances » suffit. Pour le temps au-dessus de la
@@ -4213,12 +4322,16 @@
     // été confirmée — ce qui se dit, plutôt que de laisser un axe plat.
     const hasData = points && (kind === "above"
       ? points.some(p => p.above[0] > 0)
-      : points.some(p => p.count));
+      : kind === "g"
+        ? points.some(p => p.jumps > 0)
+        : points.some(p => p.count));
     const seg = kind === "hr" ? `<span class="seg" id="loadTrendSeg">${LOAD_TREND_PERIODS.map(d =>
       `<button data-days="${d}" class="${d === loadTrendDays ? "active" : ""}">${t(LOAD_TREND_LABEL[d])}</button>`).join("")}</span>` : "";
     const emptyNote = kind === "above"
       ? t("Aucun temps au-dessus de la référence — ou référence 45 s pas encore confirmée pour cet athlète.")
-      : t("Aucune séance sur cette période.");
+      : kind === "g"
+        ? t("Aucun saut de rampe sur cette période.")
+        : t("Aucune séance sur cette période.");
 
     // À gauche du sélecteur de période, parce que c'est ce sélecteur qui
     // décide de ce que le fichier contiendra : les deux se lisent ensemble.
@@ -4231,7 +4344,7 @@
 
     return `<div class="detail-section" style="grid-column:1/-1">
       <div class="load-trend-head">
-        <h3 style="margin:0">${title} <span class="load-trend-unit">${t("minutes par jour")}</span></h3>
+        <h3 style="margin:0">${title} <span class="load-trend-unit">${kind === "g" ? t("g cumulés par jour") : t("minutes par jour")}</span></h3>
         <span class="head-tools">${csvBtn}${seg}</span>
       </div>
       ${hasData
@@ -4241,6 +4354,12 @@
         : `<p class="empty-note">${emptyNote}</p>`}
       ${kind === "hr" && hasData
         ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir la journée de cet athlète dans le calendrier, ou une pastille pour masquer une zone.")}</p>`
+        : ""}
+      ${hasData && !loadTrendNoCurve.has(key)
+        ? `<p class="chart-note">${t("La courbe lisse les minutes par jour de calendrier, repos compris : elle descend quand les séances s'espacent, et ne dit donc pas la charge d'une séance. La bande vaut un écart-type de part et d'autre. Masquer une zone recalcule la courbe au lieu de la laisser en place.")}</p>`
+        : ""}
+      ${kind === "g" && hasData
+        ? `<p class="chart-note">${t("Un départ de rampe est repéré sans que l'athlète ait rien à déclarer : immobilité sur la rampe, glissade, choc, puis bascule. La colonne additionne les pointes de la journée — trois sauts à 8 g pèsent plus que deux. Une séance sans les trois axes du capteur n'est pas jugeable et ne compte pas pour zéro.")}</p>`
         : ""}
       ${kind === "above" && hasData
         ? `<p class="chart-note">${t("Le temps passé plus fort que la référence 45 s, jour par jour. Compté seconde par seconde sur le signal brut, là où les zones lissent sur quinze secondes : un effort court y est visible et ne l'est pas ailleurs. Une séance PPG n'en produit pas.")}</p>`
@@ -4455,6 +4574,7 @@
         ${loadTrendCard(a, "hr")}
         ${loadTrendCard(a, "mech")}
         ${loadTrendCard(a, "above")}
+        ${(a.sessions || []).some(x => (x.rampJumpPeaksG || []).length) ? loadTrendCard(a, "g") : ""}
       </div>`;
   }
 
@@ -4651,9 +4771,15 @@
 
     detail.querySelectorAll(".load-trend-legend .chip").forEach(chip => {
       const toggle = () => {
-        const set = loadTrendHidden[chip.dataset.kind];
-        const zone = Number(chip.dataset.zone);
-        if (set.has(zone)) set.delete(zone); else set.add(zone);
+        const kind = chip.dataset.kind;
+        if (chip.dataset.zone === "curve") {
+          if (loadTrendNoCurve.has(kind)) loadTrendNoCurve.delete(kind);
+          else loadTrendNoCurve.add(kind);
+        } else {
+          const set = loadTrendHidden[kind];
+          const zone = Number(chip.dataset.zone);
+          if (set.has(zone)) set.delete(zone); else set.add(zone);
+        }
         renderDetail(id, sessionId);
       };
       chip.addEventListener("click", toggle);
