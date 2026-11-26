@@ -69,6 +69,7 @@
        pas 1,31 contre une carte claire, et #30D158 tient 1,88. Un chiffre ou un
        intitulé prend donc l'encre, jamais le remplissage — mesuré, pas supposé. */
     --i1-ink: #0A5FB4;
+    --i2-ink: #A85F00;
     --i3-ink: #C0251C;
     --z1-ink: #0F7230;
     --z1-soft: rgba(48,209,88,.16);
@@ -132,6 +133,7 @@
     --warn-ink: #FFB454;
 
     --i1-ink: #5BAEFF;
+    --i2-ink: #FFB454;
     --i3-ink: #FFA8A1;
     --i3-soft: rgba(255,59,48,.16);
     --z1-ink: #5BE07F;
@@ -184,6 +186,7 @@
       --warn-ink: #FFB454;
 
       --i1-ink: #5BAEFF;
+      --i2-ink: #FFB454;
       --i3-ink: #FFA8A1;
       --i3-soft: rgba(255,59,48,.16);
       --z1-ink: #5BE07F;
@@ -854,7 +857,7 @@
     "Un départ de rampe est repéré sans que l'athlète ait rien à déclarer : immobilité sur la rampe, glissade, choc, puis bascule. La colonne additionne les pointes de la journée — trois sauts à 8 g pèsent plus que deux. Une séance sans les trois axes du capteur n'est pas jugeable et ne compte pas pour zéro.": "A ramp start is found without the athlete declaring anything: held still on the ramp, the slide, the impact, then the tilt. The column adds up the day's peaks — three jumps at 8 g weigh more than two. A session without the sensor's three axes cannot be judged and does not count as zero.",
     "Aucun saut de rampe sur cette période.": "No ramp jump in this period.",
     "Tendance": "Trend",
-    "La courbe lisse les minutes par jour de calendrier, repos compris : elle descend quand les séances s'espacent, et ne dit donc pas la charge d'une séance. La bande vaut un écart-type de part et d'autre. Masquer une zone recalcule la courbe au lieu de la laisser en place.": "The curve smooths minutes per calendar day, rest days included: it falls when sessions thin out, so it does not describe a single session. The band is one standard deviation either side. Hiding a zone recomputes the curve rather than leaving it as it was.",
+    "Une courbe par zone, lissée sur les minutes par jour de calendrier, repos compris : elle descend quand les séances s'espacent, et ne dit donc pas la charge d'une séance. Les courbes se lisent contre l'axe et non contre l'empilement — celle d'une zone du milieu passe à la hauteur de ses minutes, pas au sommet de son segment. Masquer une zone retire sa courbe et laisse les autres intactes.": "One curve per zone, smoothed over minutes per calendar day, rest days included: it falls when sessions thin out, so it does not describe a single session. The curves read against the axis, not against the stack — a middle zone's curve sits at the height of its own minutes, not at the top of its segment. Hiding a zone removes its curve and leaves the others untouched.",
     "Aucune séance sur cette période.": "No session in this period.",
     "Compte": "Account",
     "Évolution — charge cardio": "Load over time — cardio",
@@ -4175,6 +4178,15 @@
           // La même couleur que la barre de l'encadré « Temps au-dessus de la
           // référence 45 s » : c'est la même mesure, vue dans le temps.
           : ["var(--z3)"];
+    // Le remplissage d'une barre n'est pas l'encre d'un trait : #FFD60A tient
+    // 1,31 de contraste sur une carte claire, ce qui suffit à une surface de
+    // 8 px de haut et pas du tout à une courbe de 2 px. Chaque zone a donc son
+    // encre, et c'est elle qui trace.
+    const inks = kind === "hr"
+      ? ["var(--i1-ink)", "var(--i2-ink)", "var(--i3-ink)"]
+      : kind === "mech"
+        ? ["var(--z1-ink)", "var(--z2-ink)", "var(--z3-ink)"]
+        : estG ? ["var(--i3-ink)"] : ["var(--z3-ink)"];
     const names = kind === "hr"
       ? ["I1", "I2", "I3"]
       : kind === "mech"
@@ -4222,24 +4234,37 @@
       if (!(hgt > 0.05)) return "";
       return `<rect x="${xa(i).toFixed(1)}" y="${top.toFixed(1)}" width="${colW.toFixed(1)}" height="${hgt.toFixed(1)}" fill="${colors[j]}" fill-opacity="0.8"/>`;
     }).join("")).join("");
-    // La tendance porte sur le total *affiché* : masquer une zone la
-    // recalcule, elle ne se contente pas de disparaître du dessin. L'abscisse
-    // de la grille est fractionnaire, donc le centre de colonne se calcule au
-    // lieu de se lire dans xm().
+    // **Une courbe par zone**, et non une sur le total empilé : ce qu'on suit,
+    // c'est si le temps en I3 monte pendant que le I1 baisse, ce qu'une somme
+    // ne peut pas dire. Chaque courbe est calculée sur sa seule zone, donc
+    // masquer une zone retire sa courbe et laisse les autres intactes.
+    //
+    // Les courbes se lisent **contre l'axe**, pas contre l'empilement : celle
+    // de Z2 passe à la hauteur des minutes de Z2, pas au sommet du segment Z2,
+    // qui est posé sur Z1. Seule la zone du bas coïncide avec son segment.
+    //
+    // La bande d'écart-type n'est tracée que s'il n'y a qu'une courbe : trois
+    // bandes qui se recouvrent brouillent le peu que chacune apporte.
     let trendSVG = "";
     if (!loadTrendNoCurve.has(key) && shown.length) {
-      const grille = trendOf(cum.map(c => c[topZone]), maxV);
-      const segments = [[]];
-      grille.forEach(q => q ? segments[segments.length - 1].push(q)
-                            : segments[segments.length - 1].length && segments.push([]));
       const xg = x => padL + (x + 0.5) * bw;
-      trendSVG = segments.filter(sg => sg.length > 1).map(sg => {
-        const haut = smoothPath(sg.map(q => [xg(q.x), yFor(q.hi)]));
-        const bas = smoothPath([...sg].reverse().map(q => [xg(q.x), yFor(q.lo)]));
-        return `<path d="${haut} L${bas.slice(1)} Z" fill="var(--ink)" fill-opacity="0.07"/>`
-          + `<path d="${smoothPath(sg.map(q => [xg(q.x), yFor(q.y)]))}" fill="none"`
-          + ` stroke="var(--ink)" stroke-opacity="0.72" stroke-width="2.5"`
-          + ` stroke-linecap="round" stroke-linejoin="round"/>`;
+      const seule = shown.length === 1;
+      trendSVG = shown.map(j => {
+        const grille = trendOf(points.map(p => p[key][j] * echelle), maxV);
+        const segments = [[]];
+        grille.forEach(q => q ? segments[segments.length - 1].push(q)
+                              : segments[segments.length - 1].length && segments.push([]));
+        return segments.filter(sg => sg.length > 1).map(sg => {
+          const bande = seule
+            ? `<path d="${smoothPath(sg.map(q => [xg(q.x), yFor(q.hi)]))} L`
+              + `${smoothPath([...sg].reverse().map(q => [xg(q.x), yFor(q.lo)])).slice(1)} Z"`
+              + ` fill="${colors[j]}" fill-opacity="0.12"/>`
+            : "";
+          return bande
+            + `<path d="${smoothPath(sg.map(q => [xg(q.x), yFor(q.y)]))}" fill="none"`
+            + ` stroke="${inks[j]}" stroke-width="${seule ? 2.5 : 2}"`
+            + ` stroke-linecap="round" stroke-linejoin="round"/>`;
+        }).join("");
       }).join("");
     }
     const totalLine = "";
@@ -4356,7 +4381,7 @@
         ? `<p class="chart-note">${t("Une colonne par jour : sa hauteur est le volume de la journée, empilé par zone. Plusieurs séances dans la même journée sont additionnées ; un jour sans séance n'a pas de colonne. Clique une colonne pour ouvrir la journée de cet athlète dans le calendrier, ou une pastille pour masquer une zone.")}</p>`
         : ""}
       ${hasData && !loadTrendNoCurve.has(key)
-        ? `<p class="chart-note">${t("La courbe lisse les minutes par jour de calendrier, repos compris : elle descend quand les séances s'espacent, et ne dit donc pas la charge d'une séance. La bande vaut un écart-type de part et d'autre. Masquer une zone recalcule la courbe au lieu de la laisser en place.")}</p>`
+        ? `<p class="chart-note">${t("Une courbe par zone, lissée sur les minutes par jour de calendrier, repos compris : elle descend quand les séances s'espacent, et ne dit donc pas la charge d'une séance. Les courbes se lisent contre l'axe et non contre l'empilement — celle d'une zone du milieu passe à la hauteur de ses minutes, pas au sommet de son segment. Masquer une zone retire sa courbe et laisse les autres intactes.")}</p>`
         : ""}
       ${kind === "g" && hasData
         ? `<p class="chart-note">${t("Un départ de rampe est repéré sans que l'athlète ait rien à déclarer : immobilité sur la rampe, glissade, choc, puis bascule. La colonne additionne les pointes de la journée — trois sauts à 8 g pèsent plus que deux. Une séance sans les trois axes du capteur n'est pas jugeable et ne compte pas pour zéro.")}</p>`
